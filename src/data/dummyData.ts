@@ -2,7 +2,7 @@
 import {Reservation, Restaurant, Review, TimeSlot, User} from '../types';
 
 export const dummyUser: User = {
-    id: 1,
+id: 1,
     firstName: "Maria",
     lastName: "Christou",
     email: "maria.christou@email.com",

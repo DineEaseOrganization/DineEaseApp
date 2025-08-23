@@ -1,15 +1,28 @@
 // src/screens/profile/ProfileScreen.tsx
-import React, {useState} from 'react';
-import {Alert, Image, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View,} from 'react-native';
-import {dummyReviews, dummyUser} from '../../data/dummyData';
-import {ProfileScreenProps} from '../../navigation/AppNavigator';
+import React, { useState } from 'react';
+import {
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { dummyReviews } from '../../data/dummyData';
+import { ProfileScreenProps } from '../../navigation/AppNavigator';
+import { useAuth } from '../../context/AuthContext';
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [emailUpdates, setEmailUpdates] = useState(true);
+    const { user, logout } = useAuth();
 
     const userReviewsCount = dummyReviews.length;
-    const favoritesCount = dummyUser.favoriteRestaurants.length;
+    // In real app, this would be fetched from the user's actual favorites
+    const favoritesCount = 5; // Mock count
 
     const handleEditProfile = () => {
         Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
@@ -20,15 +33,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
             'Logout',
             'Are you sure you want to logout?',
             [
-                {text: 'Cancel', style: 'cancel'},
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Logout', style: 'destructive', onPress: () => {
-                        Alert.alert('Logged Out', 'You have been logged out successfully.');
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await logout();
+                            // Navigation will be handled automatically by auth state change
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to logout. Please try again.');
+                        }
                     }
                 }
             ]
         );
     };
+
+    // If user is not available, this shouldn't render (protected by ProtectedScreen)
+    if (!user) {
+        return null;
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -42,15 +67,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
                 <View style={styles.userSection}>
                     <View style={styles.userInfo}>
                         <Image
-                            source={{uri: dummyUser.profileImage}}
+                            source={{
+                                uri: user.profileImage ||
+                                    'https://images.unsplash.com/photo-1494790108755-2616b612b647?w=150'
+                            }}
                             style={styles.profileImage}
                         />
                         <View style={styles.userDetails}>
                             <Text style={styles.userName}>
-                                {dummyUser.firstName} {dummyUser.lastName}
+                                {user.firstName} {user.lastName}
                             </Text>
-                            <Text style={styles.userEmail}>{dummyUser.email}</Text>
-                            <Text style={styles.userPhone}>{dummyUser.phone}</Text>
+                            <Text style={styles.userEmail}>{user.email}</Text>
+                            <Text style={styles.userPhone}>{user.phone}</Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
@@ -118,7 +146,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
                         <Switch
                             value={notificationsEnabled}
                             onValueChange={setNotificationsEnabled}
-                            trackColor={{false: '#f0f0f0', true: '#007AFF'}}
+                            trackColor={{ false: '#f0f0f0', true: '#007AFF' }}
                         />
                     </View>
 
@@ -127,7 +155,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
                         <Switch
                             value={emailUpdates}
                             onValueChange={setEmailUpdates}
-                            trackColor={{false: '#f0f0f0', true: '#007AFF'}}
+                            trackColor={{ false: '#f0f0f0', true: '#007AFF' }}
                         />
                     </View>
 
@@ -159,7 +187,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.bottomSpacing}/>
+                <View style={styles.bottomSpacing} />
             </ScrollView>
         </SafeAreaView>
     );

@@ -1,5 +1,5 @@
 // src/screens/auth/RegisterScreen.tsx
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -12,12 +12,13 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 interface RegisterScreenProps {
     navigation: any;
 }
 
-const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
+const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -26,6 +27,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [agreeToTerms, setAgreeToTerms] = useState(false);
+    const { register } = useAuth();
 
     const handleRegister = async () => {
         if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
@@ -60,24 +62,36 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
         setIsLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            const success = await register({
+                firstName,
+                lastName,
+                email,
+                phone,
+                password
+            });
 
-            Alert.alert(
-                'Registration Successful',
-                'Welcome to DineEase! Your account has been created.',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => {
-                            // Navigate to main app or login
-                            navigation.replace('MainApp');
+            if (success) {
+                Alert.alert(
+                    'Registration Successful',
+                    'Welcome to DineEase! Your account has been created.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                navigation.goBack();
+                            }
                         }
-                    }
-                ]
-            );
-        }, 2000);
+                    ]
+                );
+            } else {
+                Alert.alert('Registration Failed', 'Unable to create account. Please try again.');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'An error occurred during registration. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const isValidEmail = (email: string) => {
@@ -86,7 +100,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     };
 
     const isValidPhone = (phone: string) => {
-        // Basic phone validation - you can make this more sophisticated
         const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,}$/;
         return phoneRegex.test(phone);
     };
@@ -103,6 +116,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
         Alert.alert('Privacy Policy', 'Privacy Policy content would be displayed here.');
     };
 
+    const handleGoBack = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -115,7 +134,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                         <View style={styles.header}>
                             <TouchableOpacity
                                 style={styles.backButton}
-                                onPress={() => navigation.goBack()}
+                                onPress={handleGoBack}
                             >
                                 <Text style={styles.backButtonText}>← Back</Text>
                             </TouchableOpacity>
@@ -126,7 +145,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                         {/* Registration Form */}
                         <View style={styles.form}>
                             <View style={styles.nameRow}>
-                                <View style={[styles.inputContainer, {flex: 1, marginRight: 8}]}>
+                                <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
                                     <Text style={styles.inputLabel}>First Name</Text>
                                     <TextInput
                                         style={styles.input}
@@ -136,7 +155,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                                         autoCapitalize="words"
                                     />
                                 </View>
-                                <View style={[styles.inputContainer, {flex: 1, marginLeft: 8}]}>
+                                <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
                                     <Text style={styles.inputLabel}>Last Name</Text>
                                     <TextInput
                                         style={styles.input}
@@ -235,9 +254,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                         {/* Social Registration */}
                         <View style={styles.socialContainer}>
                             <View style={styles.dividerContainer}>
-                                <View style={styles.divider}/>
+                                <View style={styles.divider} />
                                 <Text style={styles.dividerText}>Or sign up with</Text>
-                                <View style={styles.divider}/>
+                                <View style={styles.divider} />
                             </View>
 
                             <View style={styles.socialButtons}>
@@ -285,6 +304,7 @@ const styles = StyleSheet.create({
     backButton: {
         alignSelf: 'flex-start',
         marginBottom: 20,
+        paddingVertical: 10,
     },
     backButtonText: {
         fontSize: 16,

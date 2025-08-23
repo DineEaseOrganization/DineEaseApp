@@ -1,9 +1,9 @@
 // src/navigation/AppNavigator.tsx
 import React from 'react';
-import {NavigationContainer, RouteProp} from '@react-navigation/native';
-import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
-import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Text} from 'react-native';
+import { NavigationContainer, RouteProp } from '@react-navigation/native';
+import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
+import { BottomTabNavigationProp, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Text } from 'react-native';
 
 // Import screens
 import RestaurantListScreen from '../screens/restaurants/RestaurantListScreen';
@@ -15,13 +15,41 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import ReviewScreen from '../screens/reviews/ReviewScreen';
 import AllReviewsScreen from '../screens/reviews/AllReviewsScreen';
 import FavoritesScreen from '../screens/favorites/FavoritesScreen';
-import UpdatesScreen from '../screens/updates/UpdatesScreen'; // Add this import
-// Import types
-import {Reservation, Restaurant} from '../types';
+import UpdatesScreen from '../screens/updates/UpdatesScreen';
 import SearchScreen from "../screens/restaurants/RestaurantSearchScreen";
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
+
+// Import components
+import ProtectedScreenWithNavigation from '../components/ProtectedScreenWithNavigation';
+
+// Import types
+import { Reservation, Restaurant } from '../types';
 
 // Define the parameter lists for type safety
 export type RootStackParamList = {
+    MainTabs: undefined;
+    Login: undefined;
+    Register: undefined;
+    RestaurantDetail: { restaurant: Restaurant };
+    BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number };
+    BookingConfirmation: {
+        booking: {
+            restaurant: Restaurant;
+            date: Date;
+            time: string;
+            partySize: number;
+            customerName: string;
+            customerPhone: string;
+            customerEmail?: string;
+            specialRequests?: string;
+            confirmationCode: string;
+        };
+    };
+    ReviewScreen: { reservation: Reservation };
+};
+
+export type DiscoverStackParamList = {
     RestaurantList: undefined;
     RestaurantDetail: { restaurant: Restaurant };
     BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number };
@@ -57,34 +85,27 @@ export type ProfileStackParamList = {
     Favorites: undefined;
 };
 
-// Add Updates stack
 export type UpdatesStackParamList = {
     UpdatesList: undefined;
 };
 
 export type TabParamList = {
-    Discover: {
-        screen?: string;
-        params?: any;
-    } | undefined;
-    Search: {
-        screen?: string;
-        params?: any;
-    } | undefined;
-    Updates: undefined; // Add this line
+    Discover: undefined;
+    Search: undefined;
+    Updates: undefined;
     Bookings: undefined;
     Profile: undefined;
 };
 
 // Navigation prop types for screens
-export type RestaurantListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RestaurantList'>;
-export type RestaurantDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RestaurantDetail'>;
-export type BookingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'BookingScreen'>;
-export type BookingConfirmationScreenNavigationProp = StackNavigationProp<RootStackParamList, 'BookingConfirmation'>;
-export type ReviewScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ReviewScreen'>;
+export type RestaurantListScreenNavigationProp = StackNavigationProp<DiscoverStackParamList, 'RestaurantList'>;
+export type RestaurantDetailScreenNavigationProp = StackNavigationProp<DiscoverStackParamList, 'RestaurantDetail'>;
+export type BookingScreenNavigationProp = StackNavigationProp<DiscoverStackParamList, 'BookingScreen'>;
+export type BookingConfirmationScreenNavigationProp = StackNavigationProp<DiscoverStackParamList, 'BookingConfirmation'>;
+export type ReviewScreenNavigationProp = StackNavigationProp<DiscoverStackParamList, 'ReviewScreen'>;
 
 export type SearchScreenNavigationProp = StackNavigationProp<SearchStackParamList, 'SearchMap'>;
-export type UpdatesScreenNavigationProp = BottomTabNavigationProp<TabParamList>; // Add this line
+export type UpdatesScreenNavigationProp = BottomTabNavigationProp<TabParamList>;
 export type BookingsScreenNavigationProp = BottomTabNavigationProp<TabParamList>;
 
 export type ProfileScreenNavigationProp = StackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
@@ -92,10 +113,10 @@ export type AllReviewsScreenNavigationProp = StackNavigationProp<ProfileStackPar
 export type FavoritesScreenNavigationProp = StackNavigationProp<ProfileStackParamList, 'Favorites'>;
 
 // Route prop types for screens
-export type RestaurantDetailScreenRouteProp = RouteProp<RootStackParamList, 'RestaurantDetail'>;
-export type BookingScreenRouteProp = RouteProp<RootStackParamList, 'BookingScreen'>;
-export type BookingConfirmationScreenRouteProp = RouteProp<RootStackParamList, 'BookingConfirmation'>;
-export type ReviewScreenRouteProp = RouteProp<RootStackParamList, 'ReviewScreen'>;
+export type RestaurantDetailScreenRouteProp = RouteProp<DiscoverStackParamList, 'RestaurantDetail'>;
+export type BookingScreenRouteProp = RouteProp<DiscoverStackParamList, 'BookingScreen'>;
+export type BookingConfirmationScreenRouteProp = RouteProp<DiscoverStackParamList, 'BookingConfirmation'>;
+export type ReviewScreenRouteProp = RouteProp<DiscoverStackParamList, 'ReviewScreen'>;
 
 // Combined props types for screens
 export interface RestaurantListScreenProps {
@@ -126,7 +147,7 @@ export interface SearchScreenProps {
     navigation: SearchScreenNavigationProp;
 }
 
-export interface UpdatesScreenProps { // Add this interface
+export interface UpdatesScreenProps {
     navigation: UpdatesScreenNavigationProp;
 }
 
@@ -147,47 +168,48 @@ export interface FavoritesScreenProps {
 }
 
 // Create navigators
-const Stack = createStackNavigator<RootStackParamList>();
+const RootStack = createStackNavigator<RootStackParamList>();
+const DiscoverStack = createStackNavigator<DiscoverStackParamList>();
 const SearchStack = createStackNavigator<SearchStackParamList>();
 const BookingsStack = createStackNavigator<BookingsStackParamList>();
 const ProfileStackNav = createStackNavigator<ProfileStackParamList>();
-const UpdatesStack = createStackNavigator<UpdatesStackParamList>(); // Add this line
+const UpdatesStack = createStackNavigator<UpdatesStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-// Restaurant Stack Navigator
-const RestaurantStackNavigator: React.FC = () => {
+// Discover Stack Navigator (Public)
+const DiscoverStackNavigator: React.FC = () => {
     return (
-        <Stack.Navigator>
-            <Stack.Screen
+        <DiscoverStack.Navigator>
+            <DiscoverStack.Screen
                 name="RestaurantList"
                 component={RestaurantListScreen}
                 options={{headerShown: false}}
             />
-            <Stack.Screen
+            <DiscoverStack.Screen
                 name="RestaurantDetail"
                 component={RestaurantDetailScreen}
                 options={{headerShown: false}}
             />
-            <Stack.Screen
+            <DiscoverStack.Screen
                 name="BookingScreen"
                 component={BookingScreen}
                 options={{headerShown: false}}
             />
-            <Stack.Screen
+            <DiscoverStack.Screen
                 name="BookingConfirmation"
                 component={BookingConfirmationScreen}
                 options={{headerShown: false}}
             />
-            <Stack.Screen
+            <DiscoverStack.Screen
                 name="ReviewScreen"
                 component={ReviewScreen}
                 options={{headerShown: false}}
             />
-        </Stack.Navigator>
+        </DiscoverStack.Navigator>
     );
 };
 
-// Search Stack Navigator
+// Search Stack Navigator (Public)
 const SearchStackNavigator: React.FC = () => {
     return (
         <SearchStack.Navigator>
@@ -210,52 +232,70 @@ const SearchStackNavigator: React.FC = () => {
     );
 };
 
-// Updates Stack Navigator - Add this entire section
-const UpdatesStackNavigator: React.FC = () => {
+// Protected Updates Stack Navigator
+const ProtectedUpdatesStackNavigator: React.FC = () => {
     return (
-        <UpdatesStack.Navigator>
-            <UpdatesStack.Screen
-                name="UpdatesList"
-                component={UpdatesScreen}
-                options={{headerShown: false}}
-            />
-        </UpdatesStack.Navigator>
+        <ProtectedScreenWithNavigation
+            title="Stay Updated"
+            description="Sign in to receive personalized notifications about your reservations, restaurant updates, and special offers."
+            icon="🔔"
+        >
+            <UpdatesStack.Navigator>
+                <UpdatesStack.Screen
+                    name="UpdatesList"
+                    component={UpdatesScreen}
+                    options={{headerShown: false}}
+                />
+            </UpdatesStack.Navigator>
+        </ProtectedScreenWithNavigation>
     );
 };
 
-// Bookings Stack Navigator
-const BookingsStackNavigator: React.FC = () => {
+// Protected Bookings Stack Navigator
+const ProtectedBookingsStackNavigator: React.FC = () => {
     return (
-        <BookingsStack.Navigator>
-            <BookingsStack.Screen
-                name="BookingsList"
-                component={BookingsScreen}
-                options={{headerShown: false}}
-            />
-        </BookingsStack.Navigator>
+        <ProtectedScreenWithNavigation
+            title="Your Reservations"
+            description="Sign in to view and manage your restaurant reservations, past visits, and booking history."
+            icon="📅"
+        >
+            <BookingsStack.Navigator>
+                <BookingsStack.Screen
+                    name="BookingsList"
+                    component={BookingsScreen}
+                    options={{headerShown: false}}
+                />
+            </BookingsStack.Navigator>
+        </ProtectedScreenWithNavigation>
     );
 };
 
-// Profile Stack Navigator
-const ProfileStackNavigator: React.FC = () => {
+// Protected Profile Stack Navigator
+const ProtectedProfileStackNavigator: React.FC = () => {
     return (
-        <ProfileStackNav.Navigator>
-            <ProfileStackNav.Screen
-                name="ProfileMain"
-                component={ProfileScreen}
-                options={{headerShown: false}}
-            />
-            <ProfileStackNav.Screen
-                name="AllReviews"
-                component={AllReviewsScreen}
-                options={{headerShown: false}}
-            />
-            <ProfileStackNav.Screen
-                name="Favorites"
-                component={FavoritesScreen}
-                options={{headerShown: false}}
-            />
-        </ProfileStackNav.Navigator>
+        <ProtectedScreenWithNavigation
+            title="Your Profile"
+            description="Sign in to access your personal profile, reviews, favorite restaurants, and account settings."
+            icon="👤"
+        >
+            <ProfileStackNav.Navigator>
+                <ProfileStackNav.Screen
+                    name="ProfileMain"
+                    component={ProfileScreen}
+                    options={{headerShown: false}}
+                />
+                <ProfileStackNav.Screen
+                    name="AllReviews"
+                    component={AllReviewsScreen}
+                    options={{headerShown: false}}
+                />
+                <ProfileStackNav.Screen
+                    name="Favorites"
+                    component={FavoritesScreen}
+                    options={{headerShown: false}}
+                />
+            </ProfileStackNav.Navigator>
+        </ProtectedScreenWithNavigation>
     );
 };
 
@@ -276,7 +316,7 @@ const MainTabNavigator: React.FC = () => {
         >
             <Tab.Screen
                 name="Discover"
-                component={RestaurantStackNavigator}
+                component={DiscoverStackNavigator}
                 options={{
                     tabBarIcon: ({color}) => (
                         <Text style={{color, fontSize: 20}}>🍽️</Text>
@@ -296,19 +336,17 @@ const MainTabNavigator: React.FC = () => {
             />
             <Tab.Screen
                 name="Updates"
-                component={UpdatesStackNavigator}
+                component={ProtectedUpdatesStackNavigator}
                 options={{
                     tabBarIcon: ({color}) => (
                         <Text style={{color, fontSize: 20}}>🔔</Text>
                     ),
                     tabBarLabel: 'Updates',
-                    // Optional: Add badge for unread notifications
-                    // tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
                 }}
             />
             <Tab.Screen
                 name="Bookings"
-                component={BookingsStackNavigator}
+                component={ProtectedBookingsStackNavigator}
                 options={{
                     tabBarIcon: ({color}) => (
                         <Text style={{color, fontSize: 20}}>📅</Text>
@@ -318,7 +356,7 @@ const MainTabNavigator: React.FC = () => {
             />
             <Tab.Screen
                 name="Profile"
-                component={ProfileStackNavigator}
+                component={ProtectedProfileStackNavigator}
                 options={{
                     tabBarIcon: ({color}) => (
                         <Text style={{color, fontSize: 20}}>👤</Text>
@@ -330,11 +368,32 @@ const MainTabNavigator: React.FC = () => {
     );
 };
 
-// Main App Navigator
+// Root Navigator with Auth Screens
 const AppNavigator: React.FC = () => {
     return (
         <NavigationContainer>
-            <MainTabNavigator/>
+            <RootStack.Navigator screenOptions={{ headerShown: false }}>
+                <RootStack.Screen
+                    name="MainTabs"
+                    component={MainTabNavigator}
+                />
+                <RootStack.Screen
+                    name="Login"
+                    component={LoginScreen}
+                    options={{
+                        presentation: 'modal',
+                        headerShown: false,
+                    }}
+                />
+                <RootStack.Screen
+                    name="Register"
+                    component={RegisterScreen}
+                    options={{
+                        presentation: 'modal',
+                        headerShown: false,
+                    }}
+                />
+            </RootStack.Navigator>
         </NavigationContainer>
     );
 };

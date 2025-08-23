@@ -1,5 +1,5 @@
 // src/screens/auth/LoginScreen.tsx
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -12,15 +12,17 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 interface LoginScreenProps {
     navigation: any;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const { login } = useAuth();
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -35,25 +37,27 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
         setIsLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            const success = await login(email, password);
 
-            // Mock login validation
-            if (email === 'maria@example.com' && password === 'password123') {
+            if (success) {
                 Alert.alert('Success', 'Login successful!', [
                     {
                         text: 'OK',
                         onPress: () => {
-                            // Navigate to main app
-                            navigation.replace('MainApp');
+                            // Navigation will be handled automatically by auth state change
+                            navigation.goBack();
                         }
                     }
                 ]);
             } else {
                 Alert.alert('Login Failed', 'Invalid email or password.');
             }
-        }, 1500);
+        } catch (error) {
+            Alert.alert('Error', 'An error occurred during login. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const isValidEmail = (email: string) => {
@@ -69,6 +73,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
         navigation.navigate('Register');
     };
 
+    const handleGoBack = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -79,8 +89,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                     <View style={styles.content}>
                         {/* Header */}
                         <View style={styles.header}>
+                            <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+                                <Text style={styles.backButtonText}>← Back</Text>
+                            </TouchableOpacity>
                             <Text style={styles.title}>Welcome Back</Text>
                             <Text style={styles.subtitle}>Sign in to your account</Text>
+                        </View>
+
+                        {/* Demo credentials info */}
+                        <View style={styles.demoInfo}>
+                            <Text style={styles.demoTitle}>Demo Credentials:</Text>
+                            <Text style={styles.demoText}>Email: maria@example.com</Text>
+                            <Text style={styles.demoText}>Password: password123</Text>
                         </View>
 
                         {/* Login Form */}
@@ -135,9 +155,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                         {/* Social Login */}
                         <View style={styles.socialContainer}>
                             <View style={styles.dividerContainer}>
-                                <View style={styles.divider}/>
+                                <View style={styles.divider} />
                                 <Text style={styles.dividerText}>Or continue with</Text>
-                                <View style={styles.divider}/>
+                                <View style={styles.divider} />
                             </View>
 
                             <View style={styles.socialButtons}>
@@ -184,6 +204,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
     },
+    backButton: {
+        alignSelf: 'flex-start',
+        marginBottom: 20,
+        paddingVertical: 10,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
     title: {
         fontSize: 32,
         fontWeight: 'bold',
@@ -194,6 +224,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
+    },
+    demoInfo: {
+        backgroundColor: '#e3f2fd',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 32,
+        borderWidth: 1,
+        borderColor: '#bbdefb',
+    },
+    demoTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#1976d2',
+        marginBottom: 8,
+    },
+    demoText: {
+        fontSize: 14,
+        color: '#1976d2',
+        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     },
     form: {
         marginBottom: 32,
