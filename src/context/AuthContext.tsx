@@ -1,129 +1,293 @@
 // src/context/AuthContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, {createContext, ReactNode, useContext, useEffect, useState} from 'react';
+import {ApiError, authService} from '../services/api';
 
 interface User {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    profileImage?: string;
+  customerId: string; // Changed from number to string (UUID)
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  phoneCountryCode?: string;
+  emailVerified: boolean;
+  profileImage?: string;
 }
 
 interface AuthContextType {
-    user: User | null;
-    isAuthenticated: boolean;
-    login: (email: string, password: string) => Promise<boolean>;
-    logout: () => Promise<void>;
-    register: (userData: RegisterData) => Promise<boolean>;
-    loading: boolean;
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  logout: () => Promise<void>;
+  register: (userData: RegisterData) => Promise<{ success: boolean; message: string }>;
+  verifyEmail: (code: string) => Promise<{ success: boolean; message: string }>;
+  resendVerificationCode: (email: string) => Promise<{ success: boolean; message: string; cooldownSeconds?: number }>;
+  checkVerificationStatus: () => Promise<VerificationStatus>;
+  loading: boolean;
+  refreshUserData: () => Promise<void>;
 }
 
 interface RegisterData {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    password: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  phoneCountryCode: string;
+  password: string;
+}
+
+interface VerificationStatus {
+  emailVerified: boolean;
+  email: string;
+  needsVerification: boolean;
+  canResendCode: boolean;
+  cooldownSeconds?: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = '@dineease_user';
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+  // Check for stored user data on app launch
+  useEffect(() => {
+    checkStoredAuth();
+  }, []);
 
-    // Check for stored user data on app launch
-    useEffect(() => {
-        checkStoredAuth();
-    }, []);
-
-    const checkStoredAuth = async () => {
-        try {
-            const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-        } catch (error) {
-            console.error('Error checking stored auth:', error);
-        } finally {
-            setLoading(false);
+  const checkStoredAuth = async () => {
+    try {
+      const isAuth = await authService.isAuthenticated();
+      if (isAuth) {
+        const userData = await authService.getUserData();
+        if (userData) {
+          setUser(userData);
         }
-    };
+      }
+    } catch (error) {
+      console.error('Error checking stored auth:', error);
+      // Clear invalid auth data
+      await authService.logout();
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const login = async (email: string, password: string): Promise<boolean> => {
-        try {
-            // Mock authentication - replace with actual API call
-            if (email === 'maria@example.com' && password === 'password123') {
-                const userData: User = {
-                    id: 1,
-                    firstName: 'Maria',
-                    lastName: 'Christou',
-                    email: 'maria@example.com',
-                    phone: '+357 99 789012',
-                    profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b647?w=150'
-                };
+  const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await authService.login(email, password);
 
-                setUser(userData);
-                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Login error:', error);
-            return false;
+      if (response.success && response.data) {
+        const userData: User = {
+          customerId: response.data.customerId,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          email: response.data.email,
+          phone: response.data.phone,
+          phoneCountryCode: response.data.phoneCountryCode,
+          emailVerified: response.data.emailVerified,
+          profileImage: response.data.profileImage,
+        };
+
+        setUser(userData);
+
+        return {
+          success: true,
+          message: response.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.message || 'Login failed',
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: 'An error occurred during login. Please try again.',
+      };
+    }
+  };
+
+  const register = async (userData: RegisterData): Promise<{ success: boolean; message: string }> => {
+    try {
+      console.log('📤 Registering user:', userData.email);
+
+      const response = await authService.register({
+        email: userData.email,
+        password: userData.password,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        phone: userData.phone,
+        phoneCountryCode: userData.phoneCountryCode,
+      });
+
+      console.log('📥 Registration response:', response);
+
+      if (response.success && response.data) {
+        const newUser: User = {
+          customerId: response.data.customerId,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          email: response.data.email,
+          phone: response.data.phone,
+          phoneCountryCode: response.data.phoneCountryCode,
+          emailVerified: response.data.emailVerified,
+          profileImage: response.data.profileImage,
+        };
+
+        setUser(newUser);
+
+        return {
+          success: true,
+          message: response.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.message || 'Registration failed',
+      };
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: 'An error occurred during registration. Please try again.',
+      };
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+    }
+  };
+
+  const verifyEmail = async (code: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await authService.verifyEmail(code);
+
+      if (response.success && response.emailVerified) {
+        // Update user state
+        if (user) {
+          setUser({
+            ...user,
+            emailVerified: true,
+          });
         }
-    };
+      }
 
-    const register = async (userData: RegisterData): Promise<boolean> => {
-        try {
-            // Mock registration - replace with actual API call
-            const newUser: User = {
-                id: Date.now(), // Mock ID
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                email: userData.email,
-                phone: userData.phone,
-                profileImage: undefined
-            };
+      return {
+        success: response.success,
+        message: response.message,
+      };
+    } catch (error) {
+      console.error('Email verification error:', error);
 
-            setUser(newUser);
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-            return true;
-        } catch (error) {
-            console.error('Registration error:', error);
-            return false;
-        }
-    };
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
 
-    const logout = async (): Promise<void> => {
-        try {
-            setUser(null);
-            await AsyncStorage.removeItem(STORAGE_KEY);
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-    };
+      return {
+        success: false,
+        message: 'Failed to verify email. Please try again.',
+      };
+    }
+  };
 
-    const value: AuthContextType = {
-        user,
-        isAuthenticated: !!user,
-        login,
-        logout,
-        register,
-        loading
-    };
+  const resendVerificationCode = async (email: string): Promise<{
+    success: boolean;
+    message: string;
+    cooldownSeconds?: number
+  }> => {
+    try {
+      const response = await authService.resendVerificationCode(email);
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+      return {
+        success: response.success,
+        message: response.message,
+        cooldownSeconds: response.cooldownSeconds,
+      };
+    } catch (error) {
+      console.error('Resend verification error:', error);
+
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Failed to resend verification code. Please try again.',
+      };
+    }
+  };
+
+  const checkVerificationStatus = async (): Promise<VerificationStatus> => {
+    try {
+      return await authService.checkVerificationStatus();
+    } catch (error) {
+      console.error('Check verification status error:', error);
+      throw error;
+    }
+  };
+
+  const refreshUserData = async (): Promise<void> => {
+    try {
+      const userData = await authService.getUserData();
+      if (userData) {
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Refresh user data error:', error);
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    login,
+    logout,
+    register,
+    verifyEmail,
+    resendVerificationCode,
+    checkVerificationStatus,
+    loading,
+    refreshUserData,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
