@@ -19,6 +19,7 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     CHANGE_PASSWORD: '/auth/change-password',
+    PASSWORD_STRENGTH: '/auth/password-strength',
 
     // Profile endpoints
     GET_PROFILE: '/auth/profile',

@@ -124,7 +124,9 @@ export interface ProfileResponse {
   phone: string;
   phoneCountryCode: string;
   emailVerified: boolean;
+  phoneVerified: boolean;
   profileImage?: string;
+  active: Boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -147,6 +149,7 @@ export interface DeleteAccountRequest {
   password: string;
   reason?: string;
   permanentDelete?: boolean;
+  action?: 'DEACTIVATE' | 'DELETE';
 }
 
 export interface DeleteAccountResponse {
@@ -183,12 +186,14 @@ export interface ChangePasswordRequest {
 export interface ChangePasswordResponse {
   success: boolean;
   message: string;
+  forceLogoutAllDevices: boolean;
 }
 
 export interface PasswordStrengthResponse {
-  score: number;
+  isValid: boolean;
   strength: 'weak' | 'fair' | 'good' | 'strong';
-  feedback: string[];
+  violations: string[];
+  suggestions: string[];
 }
 
 // ============ ERROR RESPONSE ============

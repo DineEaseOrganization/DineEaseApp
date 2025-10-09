@@ -69,7 +69,7 @@ class PasswordService {
    */
   async checkPasswordStrength(password: string): Promise<PasswordStrengthResponse> {
     return await apiClient.get<PasswordStrengthResponse>(
-      `${API_CONFIG.ENDPOINTS.CHANGE_PASSWORD}/strength?password=${encodeURIComponent(password)}`
+      `${API_CONFIG.ENDPOINTS.PASSWORD_STRENGTH}?password=${encodeURIComponent(password)}`
     );
   }
 }

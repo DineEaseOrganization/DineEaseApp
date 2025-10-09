@@ -9,6 +9,7 @@ interface User {
   email: string;
   phone: string;
   phoneCountryCode?: string;
+  phoneVerified?: boolean;
   emailVerified: boolean;
   profileImage?: string;
 }

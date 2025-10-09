@@ -106,7 +106,7 @@ axiosInstance.interceptors.response.use(
           STORAGE_KEYS.USER_DATA,
         ]);
 
-        apiError.message = detail || 'Your session has expired. Please login again.';
+        apiError.message = detail || errorData?.message || 'Your session has expired. Please login again.';
       }
 
       // 403 Forbidden
