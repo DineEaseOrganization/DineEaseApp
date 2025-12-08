@@ -24,6 +24,12 @@ import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import ProtectedScreenWithNavigation from '../components/ProtectedScreenWithNavigation';
 
 import {Reservation, Restaurant} from '../types';
+import DevicesScreen from "../screens/profile/DevicesScreen";
+import CommunicationsScreen from "../screens/profile/CommunicationsScreen";
+import YourDetailsScreen from "../screens/profile/YourDetailsScreen";
+import AccountSettingsScreen from "../screens/profile/AccountSettings";
+import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
+import DeleteAccountScreen from "../screens/profile/DeleteAccountScreen";
 
 // Define the parameter lists for type safety
 export type RootStackParamList = {
@@ -85,6 +91,12 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   AllReviews: undefined;
   Favorites: undefined;
+  AccountSettings: undefined;
+  YourDetails: undefined;
+  Communications: undefined;
+  Devices: undefined;
+  ChangePassword: undefined;
+  DeleteAccount: undefined;
 };
 
 export type UpdatesStackParamList = {
@@ -294,6 +306,36 @@ const ProtectedProfileStackNavigator: React.FC = () => {
         <ProfileStackNav.Screen
           name="Favorites"
           component={FavoritesScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="AccountSettings"
+          component={AccountSettingsScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="YourDetails"
+          component={YourDetailsScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="Communications"
+          component={CommunicationsScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="Devices"
+          component={DevicesScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="DeleteAccount"
+          component={DeleteAccountScreen}
           options={{headerShown: false}}
         />
       </ProfileStackNav.Navigator>

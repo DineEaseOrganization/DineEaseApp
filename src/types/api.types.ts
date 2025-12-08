@@ -1,5 +1,38 @@
 // src/types/api.types.ts
 
+
+export interface DeviceDTO {
+  deviceId: string;
+  deviceName: string | null;
+  platform: string | null;
+  platformVersion: string | null;
+  deviceModel: string | null;
+  appVersion: string | null;
+  isActive: boolean;
+  isTrusted: boolean;
+  lastUsed: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+  isCurrentDevice: boolean;
+}
+
+export interface DeviceListResponse {
+  success: boolean;
+  devices: DeviceDTO[];
+  totalDevices: number;
+  currentDeviceId: string | null;
+}
+
+export interface DeviceActionResponse {
+  success: boolean;
+  message: string;
+  deviceId?: string;
+}
+
+export interface TrustDeviceRequest {
+  trusted: boolean;
+}
+
 // Device Info
 export interface DeviceInfo {
   deviceUuid: string; // Changed from deviceId
@@ -124,7 +157,9 @@ export interface ProfileResponse {
   phone: string;
   phoneCountryCode: string;
   emailVerified: boolean;
+  phoneVerified: boolean;
   profileImage?: string;
+  active: Boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -147,6 +182,7 @@ export interface DeleteAccountRequest {
   password: string;
   reason?: string;
   permanentDelete?: boolean;
+  action?: 'DEACTIVATE' | 'DELETE';
 }
 
 export interface DeleteAccountResponse {
@@ -183,12 +219,14 @@ export interface ChangePasswordRequest {
 export interface ChangePasswordResponse {
   success: boolean;
   message: string;
+  forceLogoutAllDevices: boolean;
 }
 
 export interface PasswordStrengthResponse {
-  score: number;
+  isValid: boolean;
   strength: 'weak' | 'fair' | 'good' | 'strong';
-  feedback: string[];
+  violations: string[];
+  suggestions: string[];
 }
 
 // ============ ERROR RESPONSE ============

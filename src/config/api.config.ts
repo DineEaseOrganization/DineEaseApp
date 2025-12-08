@@ -19,11 +19,17 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     CHANGE_PASSWORD: '/auth/change-password',
+    PASSWORD_STRENGTH: '/auth/password-strength',
 
     // Profile endpoints
     GET_PROFILE: '/auth/profile',
     UPDATE_PROFILE: '/auth/profile',
     DELETE_ACCOUNT: '/auth/account',
+
+    // Device management endpoints - ADD THESE
+    LIST_DEVICES: '/auth/devices/trusted',
+    REMOVE_DEVICE: '/auth/devices',  // Uses /:deviceId
+    UPDATE_DEVICE_TRUST: '/auth/devices', // Uses /:deviceId/trust
   },
   TIMEOUT: 30000, // 30 seconds
 };
