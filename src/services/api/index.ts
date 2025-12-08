@@ -5,6 +5,7 @@ export {apiClient, ApiError, axiosInstance} from './apiClient';
 export {authService, AuthService} from './authService';
 export {profileService, ProfileService} from './profileService';
 export {passwordService, PasswordService} from './passwordService';
+export * from './deviceService';
 
 // Re-export types for convenience
 export type * from '../../types/api.types';

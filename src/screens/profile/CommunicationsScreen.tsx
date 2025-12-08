@@ -9,157 +9,177 @@ interface CommunicationsScreenProps {
 
 const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({navigation}) => {
   // Push Notifications State
-  const [pushNotifications, setPushNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(false);
 
   // Reservation Updates State
   const [reservationEmail, setReservationEmail] = useState(true);
-  const [reservationPush, setReservationPush] = useState(true);
+  const [reservationPush, setReservationPush] = useState(false);
 
   // Waitlist Updates State
   const [waitlistEmail, setWaitlistEmail] = useState(false);
-  const [waitlistPush, setWaitlistPush] = useState(true);
+  const [waitlistPush, setWaitlistPush] = useState(false);
 
   // Marketing State
-  const [marketingEmail, setMarketingEmail] = useState(true);
+  const [marketingEmail, setMarketingEmail] = useState(false);
+
+  const showComingSoonAlert = () => {
+    Alert.alert(
+        'Feature Coming Soon',
+        'This communication preference will be available in an upcoming release.',
+        [{text: 'OK'}]
+    );
+  };
 
   const handlePushNotificationsToggle = () => {
-    if (!pushNotifications) {
-      Alert.alert(
-        'Enable Notifications',
-        'Allow notifications from DineEase to stay in the know about your upcoming bookings, new features and more.',
-        [
-          {text: 'Cancel', style: 'cancel'},
-          {text: 'Yes, notify me', onPress: () => setPushNotifications(true)}
-        ]
-      );
-    } else {
-      setPushNotifications(false);
+    showComingSoonAlert();
+  };
+
+  const handleReservationEmailToggle = () => {
+    // Only show alert when trying to disable (since it's enabled by default)
+    if (reservationEmail) {
+      showComingSoonAlert();
     }
   };
 
+  const handleReservationPushToggle = () => {
+    showComingSoonAlert();
+  };
+
+  const handleWaitlistEmailToggle = () => {
+    showComingSoonAlert();
+  };
+
+  const handleWaitlistPushToggle = () => {
+    showComingSoonAlert();
+  };
+
+  const handleMarketingEmailToggle = () => {
+    showComingSoonAlert();
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Communications</Text>
-        </View>
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>Communications</Text>
+          </View>
 
-        <View style={styles.content}>
-          {/* Push Notifications Banner */}
-          {!pushNotifications && (
-            <View style={styles.banner}>
-              <Ionicons name="notifications-off-outline" size={48} color="#666" style={styles.bannerIcon}/>
-              <Text style={styles.bannerTitle}>Looks like all your notifications are off</Text>
-              <Text style={styles.bannerDescription}>
-                Allow notifications from DineEase to stay in the know about your upcoming bookings, new features and
-                more.
+          <View style={styles.content}>
+            {/* Push Notifications Banner */}
+            {!pushNotifications && (
+                <View style={styles.banner}>
+                  <Ionicons name="notifications-off-outline" size={48} color="#666" style={styles.bannerIcon}/>
+                  <Text style={styles.bannerTitle}>Looks like all your notifications are off</Text>
+                  <Text style={styles.bannerDescription}>
+                    Allow notifications from DineEase to stay in the know about your upcoming bookings, new features and
+                    more.
+                  </Text>
+                  <TouchableOpacity
+                      style={styles.bannerButton}
+                      onPress={handlePushNotificationsToggle}
+                  >
+                    <Text style={styles.bannerButtonText}>Yes, notify me</Text>
+                  </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Reservation Updates */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Reservation updates</Text>
+              <Text style={styles.sectionDescription}>
+                Get updates about your reservations including confirmations, reminders, and cancellations.
               </Text>
-              <TouchableOpacity
-                style={styles.bannerButton}
-                onPress={() => setPushNotifications(true)}
-              >
-                <Text style={styles.bannerButtonText}>Yes, notify me</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
-          {/* Reservation Updates */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reservation updates</Text>
-            <Text style={styles.sectionDescription}>
-              Get updates about your reservations including confirmations, reminders, and cancellations.
-            </Text>
-
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceLeft}>
-                <Ionicons name="mail-outline" size={20} color="#666"/>
-                <Text style={styles.preferenceText}>Email</Text>
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceLeft}>
+                  <Ionicons name="mail-outline" size={20} color="#666"/>
+                  <Text style={styles.preferenceText}>Email</Text>
+                </View>
+                <Switch
+                    value={reservationEmail}
+                    onValueChange={handleReservationEmailToggle}
+                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
+                    thumbColor="#fff"
+                />
               </View>
-              <Switch
-                value={reservationEmail}
-                onValueChange={setReservationEmail}
-                trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                thumbColor="#fff"
-              />
+
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceLeft}>
+                  <Ionicons name="notifications-outline" size={20} color="#666"/>
+                  <Text style={styles.preferenceText}>Push notifications</Text>
+                </View>
+                <Switch
+                    value={reservationPush}
+                    onValueChange={handleReservationPushToggle}
+                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
+                    thumbColor="#fff"
+                    disabled={!pushNotifications}
+                />
+              </View>
             </View>
 
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceLeft}>
-                <Ionicons name="notifications-outline" size={20} color="#666"/>
-                <Text style={styles.preferenceText}>Push notifications</Text>
+            {/* Waitlist Updates */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Waitlist updates</Text>
+              <Text style={styles.sectionDescription}>
+                Standard text messaging rates may apply. You can opt out at any time.
+              </Text>
+
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceLeft}>
+                  <Ionicons name="mail-outline" size={20} color="#666"/>
+                  <Text style={styles.preferenceText}>Email</Text>
+                </View>
+                <Switch
+                    value={waitlistEmail}
+                    onValueChange={handleWaitlistEmailToggle}
+                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
+                    thumbColor="#fff"
+                />
               </View>
-              <Switch
-                value={reservationPush}
-                onValueChange={setReservationPush}
-                trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                thumbColor="#fff"
-                disabled={!pushNotifications}
-              />
+
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceLeft}>
+                  <Ionicons name="notifications-outline" size={20} color="#666"/>
+                  <Text style={styles.preferenceText}>Push notifications</Text>
+                </View>
+                <Switch
+                    value={waitlistPush}
+                    onValueChange={handleWaitlistPushToggle}
+                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
+                    thumbColor="#fff"
+                    disabled={!pushNotifications}
+                />
+              </View>
+            </View>
+
+            {/* Marketing */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Marketing</Text>
+              <Text style={styles.sectionDescription}>
+                Stay current on trending restaurants, top picks & must-try spots.
+              </Text>
+
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceLeft}>
+                  <Ionicons name="mail-outline" size={20} color="#666"/>
+                  <Text style={styles.preferenceText}>Email</Text>
+                </View>
+                <Switch
+                    value={marketingEmail}
+                    onValueChange={handleMarketingEmailToggle}
+                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
+                    thumbColor="#fff"
+                />
+              </View>
             </View>
           </View>
-
-          {/* Waitlist Updates */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Waitlist updates</Text>
-            <Text style={styles.sectionDescription}>
-              Standard text messaging rates may apply. You can opt out at any time.
-            </Text>
-
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceLeft}>
-                <Ionicons name="mail-outline" size={20} color="#666"/>
-                <Text style={styles.preferenceText}>Email</Text>
-              </View>
-              <Switch
-                value={waitlistEmail}
-                onValueChange={setWaitlistEmail}
-                trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                thumbColor="#fff"
-              />
-            </View>
-
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceLeft}>
-                <Ionicons name="notifications-outline" size={20} color="#666"/>
-                <Text style={styles.preferenceText}>Push notifications</Text>
-              </View>
-              <Switch
-                value={waitlistPush}
-                onValueChange={setWaitlistPush}
-                trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                thumbColor="#fff"
-                disabled={!pushNotifications}
-              />
-            </View>
-          </View>
-
-          {/* Marketing */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Marketing</Text>
-            <Text style={styles.sectionDescription}>
-              Stay current on trending restaurants, top picks & must-try spots.
-            </Text>
-
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceLeft}>
-                <Ionicons name="mail-outline" size={20} color="#666"/>
-                <Text style={styles.preferenceText}>Email</Text>
-              </View>
-              <Switch
-                value={marketingEmail}
-                onValueChange={setMarketingEmail}
-                trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                thumbColor="#fff"
-              />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
   );
 };
 

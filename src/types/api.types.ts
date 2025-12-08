@@ -1,5 +1,38 @@
 // src/types/api.types.ts
 
+
+export interface DeviceDTO {
+  deviceId: string;
+  deviceName: string | null;
+  platform: string | null;
+  platformVersion: string | null;
+  deviceModel: string | null;
+  appVersion: string | null;
+  isActive: boolean;
+  isTrusted: boolean;
+  lastUsed: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+  isCurrentDevice: boolean;
+}
+
+export interface DeviceListResponse {
+  success: boolean;
+  devices: DeviceDTO[];
+  totalDevices: number;
+  currentDeviceId: string | null;
+}
+
+export interface DeviceActionResponse {
+  success: boolean;
+  message: string;
+  deviceId?: string;
+}
+
+export interface TrustDeviceRequest {
+  trusted: boolean;
+}
+
 // Device Info
 export interface DeviceInfo {
   deviceUuid: string; // Changed from deviceId
