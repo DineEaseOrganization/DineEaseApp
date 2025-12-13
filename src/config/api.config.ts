@@ -1,6 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: 'http://192.168.0.25:8086/customer-authentication',
+  RESTAURANT_SERVICE_URL: 'http://192.168.0.25:8081/restaurant',
   ENDPOINTS: {
     // Auth endpoints
     REGISTER: '/auth/register',
@@ -9,6 +10,8 @@ export const API_CONFIG = {
     LOGOUT_ALL: '/auth/logout-all',
     LOGOUT_DEVICE: '/auth/logout-device',
     REFRESH_TOKEN: '/auth/refresh',
+
+    //restaurant endpoints
 
     // Email verification endpoints
     VERIFY_EMAIL: '/auth/verify-email',

@@ -30,6 +30,8 @@ import YourDetailsScreen from "../screens/profile/YourDetailsScreen";
 import AccountSettingsScreen from "../screens/profile/AccountSettings";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 import DeleteAccountScreen from "../screens/profile/DeleteAccountScreen";
+import CuisineRestaurantsScreen from '../screens/restaurants/CuisineRestaurantsScreen';
+import NearbyRestaurantsScreen from "../screens/restaurants/NearbyRestaurantsScreen";
 
 // Define the parameter lists for type safety
 export type RootStackParamList = {
@@ -59,7 +61,18 @@ export type RootStackParamList = {
 
 export type DiscoverStackParamList = {
   RestaurantList: undefined;
-  RestaurantDetail: { restaurant: Restaurant };
+  CuisineRestaurants: {  // Add this
+    cuisineType: string;
+    latitude: number;
+    longitude: number;
+    radius?: number;
+  };
+  NearbyRestaurants: {
+        latitude: number;
+        longitude: number;
+        radius?: number;
+    };
+    RestaurantDetail: { restaurant: Restaurant };
   BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number };
   BookingConfirmation: {
     booking: {
@@ -200,6 +213,19 @@ const DiscoverStackNavigator: React.FC = () => {
         options={{headerShown: false}}
       />
       <DiscoverStack.Screen
+        name="CuisineRestaurants"
+        component={CuisineRestaurantsScreen}
+        options={({route}) => ({
+            title: `${route.params.cuisineType} Restaurants`,
+        })}
+      />
+        <DiscoverStack.Screen
+            name="NearbyRestaurants"
+            component={NearbyRestaurantsScreen}
+            options={{ title: "Nearby Restaurants" }}
+        />
+
+        <DiscoverStack.Screen
         name="RestaurantDetail"
         component={RestaurantDetailScreen}
         options={{headerShown: false}}

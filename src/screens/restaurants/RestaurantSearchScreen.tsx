@@ -1,1272 +1,1011 @@
-import React, {JSX, useEffect, useState} from 'react';
+import React, { useEffect, useState, useRef } from "react";
 import {
-    Dimensions,
-    FlatList,
-    Image,
-    ImageStyle,
-    ListRenderItem,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
+    View,
     Text,
     TextInput,
-    TextStyle,
     TouchableOpacity,
-    View,
-    ViewStyle,
-} from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
-import {Restaurant} from "../../types";
-import {dummyRestaurants} from "../../data/dummyData";
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Image,
+    Dimensions,
+    Animated,
+    Easing,
+    Keyboard,
+    Alert
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import { restaurantService } from "../../services/api";
+import { mapRestaurantDetailToRestaurant } from "../../types";
+import { useNavigation } from "@react-navigation/native";
+import { useLocation } from "../../hooks/useLocation";
 
-// Import your existing types
+const { height } = Dimensions.get("window");
 
-const {width, height} = Dimensions.get('window');
+const RestaurantSearchScreen = () => {
+    const navigation = useNavigation();
+    const { location, loading: locationLoading } = useLocation();
 
-// TypeScript interfaces for the search screen
-interface MapRegion {
-    latitude: number;
-    longitude: number;
-    latitudeDelta: number;
-    longitudeDelta: number;
-}
+    const [restaurants, setRestaurants] = useState([]);
+    const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [currentRegion, setCurrentRegion] = useState(null);
+    const [searchPin, setSearchPin] = useState(null);
+    const [searchRadius, setSearchRadius] = useState(10);
 
-interface MapCoordinate {
-    latitude: number;
-    longitude: number;
-}
+    // Search state
+    const [searchText, setSearchText] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [showResults, setShowResults] = useState(false);
 
-interface SearchFilters {
-    cuisine: string;
-    priceRange: string;
-    rating: string;
-    openNow: boolean;
-    distance: number;
-}
+    const mapRef = useRef(null);
+    const slideAnim = useRef(new Animated.Value(0)).current;
+    const searchTimeout = useRef(null);
 
-interface EnhancedRestaurant extends Restaurant {
-    mapCoordinate?: MapCoordinate;
-    openNow?: boolean;
-    distance?: number;
-}
-
-interface MapViewProps {
-    style: ViewStyle;
-    region: MapRegion | null;
-    children?: React.ReactNode;
-    onPress?: () => void;
-}
-
-interface MarkerProps {
-    coordinate: MapCoordinate;
-    children: React.ReactNode;
-    onPress?: () => void;
-}
-
-// Mock React Native MapView component for demonstration
-const MapView: React.FC<MapViewProps> = ({style, region, children, onPress}) => (
-    <View style={[style, {backgroundColor: '#E3F2FD'}]}>
-        <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: '#E8F5E8',
-        }}>
-            {/* Mock map background with streets */}
-            <View style={{
-                position: 'absolute',
-                top: '30%',
-                left: 0,
-                right: 0,
-                height: 2,
-                backgroundColor: '#DDD',
-            }}/>
-            <View style={{
-                position: 'absolute',
-                top: '60%',
-                left: 0,
-                right: 0,
-                height: 2,
-                backgroundColor: '#DDD',
-            }}/>
-            <View style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: '30%',
-                width: 2,
-                backgroundColor: '#DDD',
-            }}/>
-            <View style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: '70%',
-                width: 2,
-                backgroundColor: '#DDD',
-            }}/>
-            {children}
-        </View>
-    </View>
-);
-
-const Marker: React.FC<MarkerProps> = ({coordinate, children, onPress}) => (
-    <TouchableOpacity
-        style={{
-            position: 'absolute',
-            left: `${coordinate.longitude}%`,
-            top: `${coordinate.latitude}%`,
-            transform: [{translateX: -15}, {translateY: -15}],
-        }}
-        onPress={onPress}
-    >
-        {children}
-    </TouchableOpacity>
-);
-
-interface SearchScreenProps {
-    navigation: {
-        navigate: (screen: string, params?: any) => void;
+    const showPreview = () => {
+        Animated.timing(slideAnim, {
+            toValue: 1,
+            duration: 250,
+            easing: Easing.ease,
+            useNativeDriver: true,
+        }).start();
     };
-}
 
-const SearchScreen: React.FC<SearchScreenProps> = ({navigation}) => {
-    const [userLocation, setUserLocation] = useState<MapRegion | null>(null);
-    const [searchLocation, setSearchLocation] = useState<string>('');
-    const [selectedLocation, setSelectedLocation] = useState<string>('Nearby');
-    const [restaurants, setRestaurants] = useState<EnhancedRestaurant[]>([]);
-    const [selectedRestaurant, setSelectedRestaurant] = useState<EnhancedRestaurant | null>(null);
-    const [showFilters, setShowFilters] = useState<boolean>(false);
-    const [showLocationSuggestions, setShowLocationSuggestions] = useState<boolean>(false);
-    const [mapView, setMapView] = useState<boolean>(true);
-    const [filters, setFilters] = useState<SearchFilters>({
-        cuisine: '',
-        priceRange: '',
-        rating: '',
-        openNow: false,
-        distance: 5
-    });
+    const hidePreview = () => {
+        Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+        }).start(() => setSelectedRestaurant(null));
+    };
 
-    // Enhanced restaurant data with coordinates for map
-    const restaurantsWithCoordinates: EnhancedRestaurant[] = dummyRestaurants.map((restaurant, index) => ({
-        ...restaurant,
-        // Mock map coordinates for display (in a real app, use actual lat/lng)
-        mapCoordinate: {latitude: 25 + index * 10, longitude: 30 + index * 8},
-        openNow: index % 2 === 0, // Mock open/closed status
-        distance: (index + 1) * 1.2, // Mock distance
-    }));
+    const searchLocation = async (query) => {
+        if (query.length < 3) {
+            setSearchResults([]);
+            return;
+        }
 
-    const locationSuggestions: string[] = [
-        "Nicosia, Cyprus",
-        "Limassol, Cyprus",
-        "Larnaca, Cyprus",
-        "Paphos, Cyprus",
-        "Ayia Napa, Cyprus",
-        "London, UK",
-        "Athens, Greece",
-        "Istanbul, Turkey"
-    ];
+        try {
+            setSearchLoading(true);
+
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?` +
+                `format=json&` +
+                `q=${encodeURIComponent(query)}&` +
+                `limit=8&` +
+                `addressdetails=1`,
+                {
+                    headers: {
+                        'User-Agent': 'DineEaseApp/1.0'
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            const formatted = data.map(item => ({
+                name: item.display_name,
+                latitude: parseFloat(item.lat),
+                longitude: parseFloat(item.lon),
+                type: item.type,
+                address: item.address,
+                placeId: item.place_id
+            }));
+
+            setSearchResults(formatted);
+            setShowResults(formatted.length > 0);
+        } catch (error) {
+            console.error('Search error:', error);
+            Alert.alert('Search Error', 'Failed to search location. Please try again.');
+        } finally {
+            setSearchLoading(false);
+        }
+    };
+
+    const handleSearchChange = (text) => {
+        setSearchText(text);
+
+        if (searchTimeout.current) {
+            clearTimeout(searchTimeout.current);
+        }
+
+        if (text.length < 3) {
+            setSearchResults([]);
+            setShowResults(false);
+            return;
+        }
+
+        searchTimeout.current = setTimeout(() => {
+            searchLocation(text);
+        }, 500);
+    };
+
+    const goToCurrentLocation = () => {
+        if (location) {
+            const region = {
+                latitude: location.latitude,
+                longitude: location.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            };
+            setCurrentRegion(region);
+            mapRef.current?.animateToRegion(region, 1000);
+            loadRestaurants(location.latitude, location.longitude);
+            setSearchText('');
+            setSearchResults([]);
+            setShowResults(false);
+            setSearchPin(null);
+        }
+    };
+
+    const handleSearchResultSelect = async (result) => {
+        console.log('Selected location:', result);
+
+        const newRegion = {
+            latitude: result.latitude,
+            longitude: result.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+        };
+
+        console.log('Moving map to:', newRegion);
+
+        setSearchPin({
+            latitude: result.latitude,
+            longitude: result.longitude,
+        });
+
+        setCurrentRegion(newRegion);
+
+        if (mapRef.current) {
+            mapRef.current.animateToRegion(newRegion, 1000);
+        }
+
+        const displayName = result.name.split(',').slice(0, 2).join(',');
+        setSearchText(displayName);
+        setShowResults(false);
+        Keyboard.dismiss();
+
+        await loadRestaurants(result.latitude, result.longitude);
+    };
+
+    const handleMapLongPress = async (event) => {
+        const { latitude, longitude } = event.nativeEvent.coordinate;
+
+        console.log('Map long pressed at:', latitude, longitude);
+
+        setSearchPin({ latitude, longitude });
+
+        const newRegion = {
+            latitude,
+            longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+        };
+
+        setCurrentRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 500);
+
+        await loadRestaurants(latitude, longitude);
+
+        setSearchText('Custom location');
+    };
+
+    const loadRestaurants = async (lat, lng, radius = searchRadius) => {
+        try {
+            setLoading(true);
+            console.log('Loading restaurants at:', lat, lng, 'radius:', radius);
+
+            const res = await restaurantService.getNearbyRestaurants(lat, lng, radius, 0, 50);
+
+            console.log('Found restaurants:', res.restaurants.length);
+
+            setRestaurants([]);
+
+            if (res.restaurants.length === 0) {
+                Alert.alert(
+                    'No Restaurants Found',
+                    `No restaurants found within ${radius}km. Try increasing the search radius or searching a different location.`,
+                    [{ text: 'OK' }]
+                );
+                return;
+            }
+
+            const mapped = res.restaurants.map((r) => ({
+                ...mapRestaurantDetailToRestaurant(r),
+                distance: calculateDistance(lat, lng, r.latitude, r.longitude),
+                openNow: r.isActive,
+                mapCoordinate: {
+                    latitude: r.latitude,
+                    longitude: r.longitude,
+                },
+            }));
+
+            setRestaurants(mapped);
+        } catch (error) {
+            console.error("Failed loading restaurants:", error);
+            Alert.alert('Error', 'Failed to load restaurants. Please try again.');
+            setRestaurants([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
 
     useEffect(() => {
-        // Simulate getting user location
-        setUserLocation({
-            latitude: 35.1676,
-            longitude: 33.3736,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-        });
-        setRestaurants(restaurantsWithCoordinates);
-    }, []);
+        if (!location) return;
 
-    const handleLocationSearch = (location: string): void => {
-        setSelectedLocation(location);
-        setSearchLocation(location);
-        setShowLocationSuggestions(false);
-        // In real app, you'd update map region and fetch restaurants for this location
+        const initialRegion = {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+        };
+
+        setCurrentRegion(initialRegion);
+        loadRestaurants(location.latitude, location.longitude);
+    }, [location]);
+
+    if (locationLoading || !location) {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Getting your location...</Text>
+            </View>
+        );
+    }
+
+    const handleMarkerPress = (restaurant) => {
+        setSelectedRestaurant(restaurant);
+        mapRef.current?.animateToRegion(
+            {
+                ...restaurant.mapCoordinate,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            },
+            300
+        );
+        showPreview();
     };
 
-    const handleRestaurantPress = (restaurant: Restaurant): void => {
-        navigation.navigate('RestaurantDetail', {restaurant});
+    const handleListItemPress = (restaurant) => {
+        handleMarkerPress(restaurant);
     };
 
-    const renderStars = (rating: number): string => {
-        const fullStars = Math.floor(rating);
-        const stars = Array(fullStars).fill('★').join('');
-        return stars;
-    };
-
-    const renderRestaurantCard: ListRenderItem<EnhancedRestaurant> = ({item}) => (
+    const renderRestaurantItem = ({ item }) => (
         <TouchableOpacity
-            style={styles.restaurantCard}
-            onPress={() => handleRestaurantPress(item)}
+            style={styles.card}
+            onPress={() => handleListItemPress(item)}
         >
-            <Image source={{uri: item.coverImageUrl}} style={styles.restaurantImage}/>
+            <Image
+                source={{ uri: item.coverImageUrl || 'https://via.placeholder.com/120' }}
+                style={styles.cardImage}
+            />
 
-            <View style={styles.restaurantInfo}>
-                <View style={styles.restaurantHeader}>
-                    <Text style={styles.restaurantName} numberOfLines={1}>{item.name}</Text>
-                    <View style={styles.priceRange}>
-                        <Text style={styles.priceText}>{item.priceRange}</Text>
-                    </View>
-                </View>
+            <View style={styles.cardContent}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <Text style={styles.cardCuisine}>{item.cuisineType}</Text>
 
-                <Text style={styles.cuisineType}>{item.cuisineType}</Text>
-
-                <View style={styles.restaurantMeta}>
-                    <View style={styles.rating}>
-                        <Text style={styles.stars}>{renderStars(item.averageRating)}</Text>
-                        <Text style={styles.ratingText}>{item.averageRating}</Text>
-                        <Text style={styles.reviewCount}>({item.totalReviews})</Text>
-                    </View>
-
-                    <View style={styles.distance}>
-                        <Ionicons name="location-outline" size={16} color="#666"/>
-                        <Text style={styles.distanceText}>{item.distance?.toFixed(1) || '1.2'} km</Text>
-                    </View>
-                </View>
-
-                <View style={styles.statusContainer}>
-                    <View style={[styles.statusBadge, {backgroundColor: item.openNow ? '#E7F5E7' : '#FFF0F0'}]}>
-                        <Text style={[styles.statusText, {color: item.openNow ? '#2E7D32' : '#D32F2F'}]}>
-                            {item.openNow ? 'Open' : 'Closed'}
-                        </Text>
-                    </View>
+                <View style={styles.row}>
+                    <Text style={styles.ratingStar}>★</Text>
+                    <Text style={styles.ratingText}>{item.averageRating.toFixed(1)}</Text>
+                    <Text style={styles.reviewCount}>({item.totalReviews})</Text>
+                    <Text style={styles.dot}>•</Text>
+                    <Text style={styles.distanceText}>
+                        {item.distance?.toFixed(1)} km
+                    </Text>
                 </View>
 
                 <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
-            </View>
-        </TouchableOpacity>
-    );
 
-    const renderFilterChip = (title: string, isActive: boolean = false): JSX.Element => (
-        <TouchableOpacity style={[styles.filterChip, isActive && styles.activeFilterChip]}>
-            <Text style={[styles.filterChipText, isActive && styles.activeFilterChipText]}>
-                {title}
-            </Text>
+                <Text
+                    style={[
+                        styles.openNow,
+                        item.openNow ? styles.open : styles.closed,
+                    ]}
+                >
+                    {item.openNow ? "Open" : "Closed"}
+                </Text>
+            </View>
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
-
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.locationSection}>
-                    <View style={styles.locationHeader}>
-                        <Ionicons name="location" size={20} color="#007AFF"/>
-                        <Text style={styles.locationLabel}>Search location</Text>
-                    </View>
-
-                    <View style={styles.searchContainer}>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Enter location..."
-                            value={searchLocation}
-                            onChangeText={(text) => {
-                                setSearchLocation(text);
-                                setShowLocationSuggestions(text.length > 2);
-                            }}
-                        />
-                        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon}/>
-                    </View>
-
-                    <Text style={styles.selectedLocation}>{selectedLocation}</Text>
-                </View>
-
-                {/* Filter chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
-                    <TouchableOpacity
-                        style={styles.filterButton}
-                        onPress={() => setShowFilters(true)}
-                    >
-                        <Ionicons name="options-outline" size={16} color="#333"/>
-                        <Text style={styles.filterButtonText}>Filters</Text>
-                    </TouchableOpacity>
-
-                    {renderFilterChip('Open now')}
-                    {renderFilterChip('Top rated')}
-                    {renderFilterChip('Nearby', true)}
-                    {renderFilterChip('$-$$')}
-                    {renderFilterChip('Mediterranean')}
-                </ScrollView>
-
-                {/* View toggle */}
-                <View style={styles.viewToggle}>
-                    <TouchableOpacity
-                        style={[styles.toggleButton, mapView && styles.activeToggle]}
-                        onPress={() => setMapView(true)}
-                    >
-                        <Text style={[styles.toggleText, mapView && styles.activeToggleText]}>Map</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.toggleButton, !mapView && styles.activeToggle]}
-                        onPress={() => setMapView(false)}
-                    >
-                        <Text style={[styles.toggleText, !mapView && styles.activeToggleText]}>List</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Content */}
-            {mapView ? (
-                <View style={styles.mapContainer}>
-                    <MapView
-                        style={styles.map}
-                        region={userLocation}
-                    >
-                        {/* User location marker */}
-                        <View style={styles.userMarker}>
-                            <View style={styles.userMarkerInner}/>
-                            <View style={styles.userMarkerPulse}/>
-                        </View>
-
-                        {/* Restaurant markers */}
-                        {restaurants.map((restaurant) => (
-                            <Marker
-                                key={restaurant.id}
-                                coordinate={restaurant.mapCoordinate || {latitude: 30, longitude: 35}}
-                                onPress={() => setSelectedRestaurant(restaurant)}
-                            >
-                                <View style={[
-                                    styles.restaurantMarker,
-                                    selectedRestaurant?.id === restaurant.id && styles.selectedMarker
-                                ]}>
-                                    <Text style={styles.markerText}>{restaurant.priceRange}</Text>
-                                </View>
-                            </Marker>
-                        ))}
-                    </MapView>
-
-                    {/* Map controls */}
-                    <View style={styles.mapControls}>
-                        <TouchableOpacity style={styles.mapControlButton}>
-                            <Text style={styles.mapControlText}>+</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.mapControlButton}>
-                            <Text style={styles.mapControlText}>-</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Locate button */}
-                    <TouchableOpacity style={styles.locateButton}>
-                        <Ionicons name="navigate" size={24} color="#666"/>
-                    </TouchableOpacity>
-
-                    {/* Restaurant list at bottom */}
-                    <View style={styles.bottomSheet}>
-                        <View style={styles.bottomSheetHandle}/>
-                        <Text style={styles.resultsText}>{restaurants.length} restaurants found</Text>
-                        <FlatList
-                            data={restaurants}
-                            renderItem={renderRestaurantCard}
-                            keyExtractor={(item) => item.id.toString()}
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={styles.restaurantList}
-                        />
-                    </View>
-                </View>
-            ) : (
-                <View style={styles.listContainer}>
-                    <View style={styles.listHeader}>
-                        <Text style={styles.resultsText}>
-                            {restaurants.length} restaurants near {selectedLocation}
-                        </Text>
-                    </View>
-                    <FlatList
-                        data={restaurants}
-                        renderItem={renderRestaurantCard}
-                        keyExtractor={(item) => item.id.toString()}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.restaurantList}
+        <View style={styles.container}>
+            {/* SEARCH BAR */}
+            <View style={styles.searchContainer}>
+                <View style={styles.searchInputContainer}>
+                    <Text style={styles.searchIcon}>🔍</Text>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search any city or country..."
+                        value={searchText}
+                        onChangeText={handleSearchChange}
+                        onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                        returnKeyType="search"
+                        placeholderTextColor="#999"
                     />
+                    {searchLoading && (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                    )}
+                    {searchText.length > 0 && !searchLoading && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                setSearchText('');
+                                setSearchResults([]);
+                                setShowResults(false);
+                            }}
+                            style={styles.clearButton}
+                        >
+                            <Text style={styles.clearButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                        style={styles.searchHereButton}
+                        onPress={() => {
+                            if (currentRegion) {
+                                setSearchPin({
+                                    latitude: currentRegion.latitude,
+                                    longitude: currentRegion.longitude,
+                                });
+                                loadRestaurants(currentRegion.latitude, currentRegion.longitude);
+                                setSearchText('Current map location');
+                                setShowResults(false);
+                                Keyboard.dismiss();
+                            }
+                        }}
+                    >
+                        <Text style={styles.searchHereIcon}>📍</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
 
-            {/* Location suggestions modal */}
-            <Modal
-                visible={showLocationSuggestions}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowLocationSuggestions(false)}
-            >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    onPress={() => setShowLocationSuggestions(false)}
-                >
-                    <View style={styles.suggestionsContainer}>
-                        {locationSuggestions
-                            .filter(location =>
-                                location.toLowerCase().includes(searchLocation.toLowerCase())
-                            )
-                            .map((location, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    style={styles.suggestionItem}
-                                    onPress={() => handleLocationSearch(location)}
-                                >
-                                    <Ionicons name="location-outline" size={20} color="#666"/>
-                                    <Text style={styles.suggestionText}>{location}</Text>
-                                </TouchableOpacity>
-                            ))}
-                    </View>
-                </TouchableOpacity>
-            </Modal>
-
-            {/* Restaurant detail modal */}
-            <Modal
-                visible={selectedRestaurant !== null}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={() => setSelectedRestaurant(null)}
-            >
-                {selectedRestaurant && (
-                    <View style={styles.detailModal}>
-                        <View style={styles.detailHeader}>
-                            <Image
-                                source={{uri: selectedRestaurant.coverImageUrl}}
-                                style={styles.detailImage}
-                            />
+                {/* RADIUS SELECTOR */}
+                <View style={styles.radiusContainer}>
+                    <Text style={styles.radiusLabel}>Radius:</Text>
+                    <View style={styles.radiusButtons}>
+                        {[5, 10, 20, 50].map((radius) => (
                             <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={() => setSelectedRestaurant(null)}
+                                key={radius}
+                                style={[
+                                    styles.radiusButton,
+                                    searchRadius === radius && styles.radiusButtonActive
+                                ]}
+                                onPress={() => {
+                                    setSearchRadius(radius);
+                                    if (currentRegion) {
+                                        // Pass the new radius directly
+                                        loadRestaurants(currentRegion.latitude, currentRegion.longitude, radius);
+                                    }
+                                }}
                             >
-                                <Ionicons name="close" size={24} color="#fff"/>
+                                <Text style={[
+                                    styles.radiusButtonText,
+                                    searchRadius === radius && styles.radiusButtonTextActive
+                                ]}>
+                                    {radius}km
+                                </Text>
                             </TouchableOpacity>
-                        </View>
+                        ))}
+                    </View>
+                </View>
 
-                        <ScrollView style={styles.detailContent}>
-                            <View style={styles.detailInfo}>
-                                <Text style={styles.detailName}>{selectedRestaurant.name}</Text>
-                                <Text style={styles.detailCuisine}>{selectedRestaurant.cuisineType}</Text>
-
-                                <View style={styles.detailMeta}>
-                                    <View style={styles.detailRating}>
-                                        <Text
-                                            style={styles.detailStars}>{renderStars(selectedRestaurant.averageRating)}</Text>
-                                        <Text style={styles.detailRatingText}>{selectedRestaurant.averageRating}</Text>
-                                        <Text
-                                            style={styles.detailReviewCount}>({selectedRestaurant.totalReviews} reviews)</Text>
-                                    </View>
-                                    <Text style={styles.detailPrice}>{selectedRestaurant.priceRange}</Text>
-                                </View>
-
-                                <View style={styles.detailStatus}>
-                                    <View style={styles.statusItem}>
-                                        <Ionicons name="time-outline" size={16} color="#666"/>
-                                        <Text style={styles.detailStatusText}>
-                                            {selectedRestaurant.openNow ? 'Open now' : 'Closed'}
+                {/* SEARCH RESULTS DROPDOWN */}
+                {showResults && searchResults.length > 0 && (
+                    <View style={styles.searchResultsContainer}>
+                        <FlatList
+                            data={searchResults}
+                            keyExtractor={(item, index) => `search-${index}-${item.placeId || item.latitude}`}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.searchResultItem}
+                                    onPress={() => handleSearchResultSelect(item)}
+                                >
+                                    <Text style={styles.searchResultIcon}>📍</Text>
+                                    <View style={styles.searchResultTextContainer}>
+                                        <Text style={styles.searchResultName}>
+                                            {item.name.split(',')[0]}
+                                        </Text>
+                                        <Text style={styles.searchResultAddress} numberOfLines={2}>
+                                            {item.name}
                                         </Text>
                                     </View>
-                                    <View style={styles.statusItem}>
-                                        <Ionicons name="location-outline" size={16} color="#666"/>
-                                        <Text
-                                            style={styles.detailStatusText}>{selectedRestaurant.distance?.toFixed(1) || '1.2'} km
-                                            away</Text>
-                                    </View>
-                                </View>
-
-                                <Text style={styles.detailAddress}>{selectedRestaurant.address}</Text>
-                                <Text style={styles.detailDescription}>{selectedRestaurant.description}</Text>
-                            </View>
-                        </ScrollView>
-
-                        <View style={styles.detailActions}>
-                            <TouchableOpacity
-                                style={styles.reserveButton}
-                                onPress={() => {
-                                    setSelectedRestaurant(null);
-                                    navigation.navigate('BookingScreen', {
-                                        restaurant: selectedRestaurant,
-                                        selectedDate: new Date(),
-                                        partySize: 2
-                                    });
-                                }}
-                            >
-                                <Text style={styles.reserveButtonText}>Reserve a Table</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.menuButton}
-                                onPress={() => {
-                                    setSelectedRestaurant(null);
-                                    navigation.navigate('RestaurantDetail', {restaurant: selectedRestaurant});
-                                }}
-                            >
-                                <Text style={styles.menuButtonText}>View Details</Text>
-                            </TouchableOpacity>
-                        </View>
+                                </TouchableOpacity>
+                            )}
+                            style={styles.searchResultsList}
+                            nestedScrollEnabled={true}
+                        />
                     </View>
                 )}
-            </Modal>
+            </View>
 
-            {/* Filters modal */}
-            <Modal
-                visible={showFilters}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={() => setShowFilters(false)}
-            >
-                <View style={styles.filtersModal}>
-                    <View style={styles.filtersHeader}>
-                        <Text style={styles.filtersTitle}>Filters</Text>
-                        <TouchableOpacity onPress={() => setShowFilters(false)}>
-                            <Ionicons name="close" size={24} color="#333"/>
-                        </TouchableOpacity>
-                    </View>
-
-                    <ScrollView style={styles.filtersContent}>
-                        {/* Cuisine filter */}
-                        <View style={styles.filterSection}>
-                            <Text style={styles.filterLabel}>Cuisine Type</Text>
-                            <View style={styles.filterOptions}>
-                                {['All', 'Mediterranean', 'Greek', 'Japanese', 'British'].map((cuisine) => (
-                                    <TouchableOpacity
-                                        key={cuisine}
-                                        style={[
-                                            styles.filterOption,
-                                            filters.cuisine === cuisine && styles.activeFilterOption
-                                        ]}
-                                        onPress={() => setFilters({...filters, cuisine})}
-                                    >
-                                        <Text style={[
-                                            styles.filterOptionText,
-                                            filters.cuisine === cuisine && styles.activeFilterOptionText
-                                        ]}>
-                                            {cuisine}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        {/* Price range filter */}
-                        <View style={styles.filterSection}>
-                            <Text style={styles.filterLabel}>Price Range</Text>
-                            <View style={styles.priceRangeContainer}>
-                                {['$', '$$', '$$$', '$$$$'].map((price) => (
-                                    <TouchableOpacity
-                                        key={price}
-                                        style={[
-                                            styles.priceOption,
-                                            filters.priceRange === price && styles.activePriceOption
-                                        ]}
-                                        onPress={() => setFilters({...filters, priceRange: price})}
-                                    >
-                                        <Text style={[
-                                            styles.priceOptionText,
-                                            filters.priceRange === price && styles.activePriceOptionText
-                                        ]}>
-                                            {price}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        {/* Open now toggle */}
-                        <View style={styles.filterSection}>
-                            <TouchableOpacity
-                                style={styles.toggleContainer}
-                                onPress={() => setFilters({...filters, openNow: !filters.openNow})}
-                            >
-                                <Text style={styles.filterLabel}>Open now</Text>
-                                <View style={[styles.toggle, filters.openNow && styles.activeToggleFilter]}>
-                                    <View style={[styles.toggleThumb, filters.openNow && styles.activeToggleThumb]}/>
+            {/* MAP */}
+            {currentRegion && (
+                <MapView
+                    ref={mapRef}
+                    style={styles.map}
+                    initialRegion={currentRegion}
+                    region={currentRegion}
+                    showsUserLocation={true}
+                    showsMyLocationButton={false}
+                    onRegionChangeComplete={(region) => {
+                        setCurrentRegion(region);
+                    }}
+                    onLongPress={handleMapLongPress}
+                >
+                    {/* Search Pin */}
+                    {searchPin && (
+                        <Marker
+                            coordinate={searchPin}
+                            pinColor="red"
+                            title="Search Location"
+                            description="Tap and hold on map to move"
+                        >
+                            <View style={styles.searchPinContainer}>
+                                <View style={styles.searchPin}>
+                                    <Text style={styles.searchPinText}>📍</Text>
                                 </View>
-                            </TouchableOpacity>
-                        </View>
-                    </ScrollView>
+                                <View style={styles.searchPinShadow} />
+                            </View>
+                        </Marker>
+                    )}
 
-                    <View style={styles.filtersActions}>
-                        <TouchableOpacity
-                            style={styles.clearButton}
-                            onPress={() => setFilters({
-                                cuisine: '',
-                                priceRange: '',
-                                rating: '',
-                                openNow: false,
-                                distance: 5
-                            })}
+                    {/* Restaurant markers */}
+                    {restaurants.map((r) => (
+                        <Marker
+                            key={r.id}
+                            coordinate={r.mapCoordinate}
+                            onPress={() => handleMarkerPress(r)}
                         >
-                            <Text style={styles.clearButtonText}>Clear All</Text>
+                            <View
+                                style={[
+                                    styles.marker,
+                                    selectedRestaurant?.id === r.id && styles.selectedMarker,
+                                ]}
+                            >
+                                <Text style={[
+                                    styles.markerText,
+                                    selectedRestaurant?.id === r.id && styles.selectedMarkerText
+                                ]}>
+                                    {r.priceRange || "$$"}
+                                </Text>
+                            </View>
+                        </Marker>
+                    ))}
+                </MapView>
+            )}
+
+            {/* Floating home button */}
+            <TouchableOpacity
+                style={styles.floatingHomeButton}
+                onPress={goToCurrentLocation}
+            >
+                <Text style={styles.floatingHomeIcon}>🏠</Text>
+            </TouchableOpacity>
+
+            {/* Instruction banner */}
+            <View style={styles.instructionContainer}>
+                <Text style={styles.instructionText}>
+                    💡 Long press map to drop pin • 📍 Search here • 🏠 Go home • Radius: {searchRadius}km
+                </Text>
+            </View>
+
+            {/* RESTAURANT LIST */}
+            <View style={styles.listContainer}>
+                <View style={styles.listHeader}>
+                    <Text style={styles.resultsText}>
+                        {restaurants.length} restaurants ({searchRadius}km)
+                    </Text>
+                    {currentRegion && (
+                        <TouchableOpacity
+                            style={styles.refreshButton}
+                            onPress={() => {
+                                loadRestaurants(currentRegion.latitude, currentRegion.longitude);
+                            }}
+                        >
+                            <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
                         </TouchableOpacity>
+                    )}
+                </View>
+
+                {loading ? (
+                    <ActivityIndicator size="large" color="#dc3545" style={{marginTop: 20}} />
+                ) : restaurants.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Text style={styles.emptyStateText}>
+                            No restaurants found within {searchRadius}km
+                        </Text>
+                        <Text style={styles.emptyStateSubtext}>
+                            Try increasing the search radius or searching a different location
+                        </Text>
                         <TouchableOpacity
-                            style={styles.applyButton}
-                            onPress={() => setShowFilters(false)}
+                            style={styles.emptyStateButton}
+                            onPress={goToCurrentLocation}
                         >
-                            <Text style={styles.applyButtonText}>Apply Filters</Text>
+                            <Text style={styles.emptyStateButtonText}>🏠 Go to My Location</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
-            </Modal>
-        </SafeAreaView>
+                ) : (
+                    <FlatList
+                        data={restaurants}
+                        renderItem={renderRestaurantItem}
+                        keyExtractor={(item) => item.id.toString()}
+                        contentContainerStyle={{ paddingBottom: 200 }}
+                    />
+                )}
+            </View>
+
+            {/* PREVIEW CARD */}
+            {selectedRestaurant && (
+                <Animated.View
+                    style={[
+                        styles.previewCard,
+                        {
+                            transform: [
+                                {
+                                    translateY: slideAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [300, 0],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
+                    <TouchableOpacity
+                        onPress={hidePreview}
+                        style={styles.closeButton}
+                    >
+                        <Text style={{ fontSize: 18 }}>✕</Text>
+                    </TouchableOpacity>
+
+                    <Image
+                        source={{ uri: selectedRestaurant.coverImageUrl || 'https://via.placeholder.com/400' }}
+                        style={styles.previewImage}
+                    />
+
+                    <View style={styles.previewContent}>
+                        <Text style={styles.previewTitle}>{selectedRestaurant.name}</Text>
+                        <Text style={styles.previewSubtitle}>
+                            {selectedRestaurant.cuisineType} • {selectedRestaurant.averageRating.toFixed(1)}★
+                        </Text>
+                        <Text style={styles.previewDistance}>
+                            {selectedRestaurant.distance?.toFixed(1)} km away
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.previewButton}
+                            onPress={() => {
+                                hidePreview();
+                                navigation.navigate("RestaurantDetail", { restaurant: selectedRestaurant });
+                            }}
+                        >
+                            <Text style={styles.previewButtonText}>View Restaurant</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Animated.View>
+            )}
+        </View>
     );
 };
 
+export default RestaurantSearchScreen;
+
 const styles = StyleSheet.create({
-    container: {
+    container: { flex: 1, backgroundColor: '#fff' },
+    center: {
         flex: 1,
-        backgroundColor: '#ffffff',
-    } as ViewStyle,
-    header: {
-        backgroundColor: '#fff',
-        paddingHorizontal: 16,
-        paddingBottom: 16,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: '#666',
+    },
+
+    // SEARCH STYLES
+    searchContainer: {
+        backgroundColor: "#fff",
+        zIndex: 10,
+        elevation: 5,
         shadowColor: '#000',
         shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
-    } as ViewStyle,
-    locationSection: {
-        marginBottom: 16,
-    } as ViewStyle,
-    locationHeader: {
+    },
+    searchInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
-    } as ViewStyle,
-    locationLabel: {
-        marginLeft: 8,
-        fontSize: 14,
-        color: '#666',
-    } as TextStyle,
-    searchContainer: {
-        position: 'relative',
-        marginBottom: 8,
-    } as ViewStyle,
-    searchInput: {
-        backgroundColor: '#f8f8f8',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        paddingRight: 40,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    } as TextStyle,
+        backgroundColor: '#f1f1f1',
+        borderRadius: 10,
+        margin: 10,
+        marginBottom: 5,
+        paddingHorizontal: 12,
+        height: 44,
+    },
     searchIcon: {
-        position: 'absolute',
-        right: 12,
-        top: 12,
-    } as ViewStyle,
-    selectedLocation: {
-        textAlign: 'center',
+        fontSize: 18,
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
         fontSize: 16,
-        fontWeight: '600',
-        color: '#007AFF',
-    } as TextStyle,
-    filtersContainer: {
-        marginBottom: 16,
-    } as ViewStyle,
-    filterButton: {
+        color: '#333',
+    },
+    clearButton: {
+        padding: 4,
+        marginLeft: 4,
+    },
+    clearButtonText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    searchHereButton: {
+        padding: 4,
+        marginLeft: 8,
+        // backgroundColor: '#FF3B30',
+        borderRadius: 6,
+        width: 32,
+        height: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    searchHereIcon: {
+        fontSize: 16,
+    },
+
+    // RADIUS SELECTOR
+    radiusContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        marginRight: 8,
-    } as ViewStyle,
-    filterButtonText: {
-        marginLeft: 4,
-        fontSize: 14,
-        color: '#333',
-    } as TextStyle,
-    filterChip: {
+        paddingHorizontal: 10,
+        paddingBottom: 10,
         backgroundColor: '#fff',
+    },
+    radiusLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#333',
+        marginRight: 10,
+    },
+    radiusButtons: {
+        flexDirection: 'row',
+        flex: 1,
+        gap: 8,
+    },
+    radiusButton: {
+        flex: 1,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        backgroundColor: '#f1f1f1',
+        alignItems: 'center',
         borderWidth: 1,
         borderColor: '#e0e0e0',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        marginRight: 8,
-    } as ViewStyle,
-    activeFilterChip: {
+    },
+    radiusButtonActive: {
         backgroundColor: '#007AFF',
         borderColor: '#007AFF',
-    } as ViewStyle,
-    filterChipText: {
-        fontSize: 14,
-        color: '#333',
-    } as TextStyle,
-    activeFilterChipText: {
+    },
+    radiusButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#666',
+    },
+    radiusButtonTextActive: {
         color: '#fff',
-    } as TextStyle,
-    viewToggle: {
-        flexDirection: 'row',
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
-        padding: 4,
-    } as ViewStyle,
-    toggleButton: {
-        flex: 1,
-        paddingVertical: 8,
-        alignItems: 'center',
-        borderRadius: 6,
-    } as ViewStyle,
-    activeToggle: {
+    },
+
+    // SEARCH RESULTS DROPDOWN
+    searchResultsContainer: {
         backgroundColor: '#fff',
+        marginHorizontal: 10,
+        marginBottom: 10,
+        borderRadius: 10,
+        maxHeight: 300,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+    },
+    searchResultsList: {
+        borderRadius: 10,
+    },
+    searchResultItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    searchResultIcon: {
+        fontSize: 18,
+        marginRight: 12,
+    },
+    searchResultTextContainer: {
+        flex: 1,
+    },
+    searchResultName: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 2,
+    },
+    searchResultAddress: {
+        fontSize: 13,
+        color: '#666',
+    },
+
+    // MAP
+    map: {
+        height: height * 0.45,
+        width: "100%",
+    },
+
+    // FLOATING HOME BUTTON
+    floatingHomeButton: {
+        position: 'absolute',
+        right: 16,
+        top: height * 0.45 - 60,
+        backgroundColor: '#007AFF',
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        zIndex: 5,
+    },
+    floatingHomeIcon: {
+        fontSize: 24,
+    },
+
+    // INSTRUCTION BANNER
+    instructionContainer: {
+        backgroundColor: '#FFF9E6',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#FFE4A3',
+    },
+    instructionText: {
+        fontSize: 11,
+        color: '#996515',
+        textAlign: 'center',
+        fontWeight: '500',
+    },
+
+    // SEARCH PIN
+    searchPinContainer: {
+        alignItems: 'center',
+    },
+    searchPin: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        // backgroundColor: '#FF3B30',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 3,
+        borderColor: '#fff',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    searchPinText: {
+        fontSize: 24,
+    },
+    searchPinShadow: {
+        width: 12,
+        height: 6,
+        borderRadius: 6,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        marginTop: 2,
+    },
+
+    // RESTAURANT LIST
+    listContainer: {
+        flex: 1,
+        backgroundColor: "#fff",
+        paddingHorizontal: 10,
+        paddingTop: 10,
+    },
+    listHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    resultsText: {
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    refreshButton: {
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    refreshButtonText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+
+    // EMPTY STATE
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 40,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    },
+    emptyStateSubtext: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    emptyStateButton: {
+        marginTop: 20,
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 25,
+    },
+    emptyStateButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+
+    // RESTAURANT MARKERS
+    marker: {
+        backgroundColor: "white",
+        borderWidth: 2,
+        borderColor: '#007AFF',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
+    selectedMarker: {
+        backgroundColor: "#007AFF",
+        borderColor: "#003f7f",
+    },
+    markerText: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: '#333',
+    },
+    selectedMarkerText: {
+        color: '#fff',
+    },
+
+    // RESTAURANT CARDS
+    card: {
+        flexDirection: "row",
+        marginBottom: 12,
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        elevation: 2,
         shadowColor: '#000',
         shadowOffset: {width: 0, height: 1},
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        elevation: 2,
-    } as ViewStyle,
-    toggleText: {
-        fontSize: 14,
-        color: '#666',
-    } as TextStyle,
-    activeToggleText: {
-        color: '#333',
-        fontWeight: '600',
-    } as TextStyle,
-    mapContainer: {
+        overflow: "hidden",
+    },
+    cardImage: {
+        width: 120,
+        height: 120,
+    },
+    cardContent: {
         flex: 1,
-        position: 'relative',
-    } as ViewStyle,
-    map: {
-        flex: 1,
-    } as ViewStyle,
-    userMarker: {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: [{translateX: -8}, {translateY: -8}],
-    } as ViewStyle,
-    userMarkerInner: {
-        width: 16,
-        height: 16,
-        backgroundColor: '#007AFF',
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: '#fff',
-    } as ViewStyle,
-    userMarkerPulse: {
-        position: 'absolute',
-        width: 32,
-        height: 32,
-        backgroundColor: '#007AFF',
-        borderRadius: 16,
-        opacity: 0.3,
-        top: -8,
-        left: -8,
-    } as ViewStyle,
-    restaurantMarker: {
-        backgroundColor: '#007AFF',
+        padding: 10,
+    },
+    cardName: { fontSize: 16, fontWeight: "bold", color: '#333' },
+    cardCuisine: { color: "#666", fontSize: 14, marginTop: 2 },
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 6,
+    },
+    ratingStar: { color: "#FFD700", fontSize: 14 },
+    ratingText: { marginLeft: 4, fontWeight: "600", color: '#333' },
+    reviewCount: { marginLeft: 4, color: "#777", fontSize: 12 },
+    dot: { marginHorizontal: 6, color: "#777" },
+    distanceText: { color: "#555", fontSize: 12 },
+    address: { color: "#666", fontSize: 12, marginTop: 2 },
+    openNow: {
+        marginTop: 6,
         paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
-    } as ViewStyle,
-    selectedMarker: {
-        backgroundColor: '#D32F2F',
-        transform: [{scale: 1.2}],
-    } as ViewStyle,
-    markerText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-    } as TextStyle,
-    mapControls: {
-        position: 'absolute',
-        top: 20,
-        right: 16,
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-    } as ViewStyle,
-    mapControlButton: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    } as ViewStyle,
-    mapControlText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-    } as TextStyle,
-    locateButton: {
-        position: 'absolute',
-        bottom: 280,
-        right: 16,
-        width: 48,
-        height: 48,
-        backgroundColor: '#fff',
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-    } as ViewStyle,
-    bottomSheet: {
-        position: 'absolute',
+        paddingVertical: 3,
+        borderRadius: 6,
+        alignSelf: "flex-start",
+        fontSize: 11,
+        fontWeight: "bold",
+    },
+    open: { backgroundColor: "#D4EDDA", color: "#155724" },
+    closed: { backgroundColor: "#F8D7DA", color: "#721C24" },
+
+    // PREVIEW CARD
+    previewCard: {
+        position: "absolute",
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: height * 0.4,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: -2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-    } as ViewStyle,
-    bottomSheetHandle: {
-        width: 40,
-        height: 4,
-        backgroundColor: '#ddd',
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginTop: 8,
-        marginBottom: 16,
-    } as ViewStyle,
-    listContainer: {
-        flex: 1,
-    } as ViewStyle,
-    listHeader: {
-        backgroundColor: '#fff',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    } as ViewStyle,
-    resultsText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginHorizontal: 16,
-        marginBottom: 8,
-    } as TextStyle,
-    restaurantList: {
-        padding: 16,
-    } as ViewStyle,
-    restaurantCard: {
-        backgroundColor: '#fff',
+        backgroundColor: "#fff",
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        padding: 15,
+        elevation: 25,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+    },
+    previewImage: {
+        width: "100%",
+        height: 140,
         borderRadius: 12,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        overflow: 'hidden',
-    } as ViewStyle,
-    restaurantImage: {
-        width: '100%',
-        height: 120,
-    } as ImageStyle,
-    restaurantInfo: {
-        padding: 12,
-    } as ViewStyle,
-    restaurantHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 4,
-    } as ViewStyle,
-    restaurantName: {
+        marginBottom: 12,
+    },
+    previewContent: { paddingHorizontal: 5 },
+    previewTitle: { fontSize: 20, fontWeight: "bold", color: '#333' },
+    previewSubtitle: { color: "#666", marginTop: 4, fontSize: 14 },
+    previewDistance: { marginTop: 4, color: "#555", fontSize: 13 },
+    previewButton: {
+        marginTop: 12,
+        backgroundColor: "#007AFF",
+        padding: 14,
+        borderRadius: 10,
+        alignItems: "center",
+    },
+    previewButtonText: {
+        color: "#fff",
         fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        flex: 1,
-        marginRight: 8,
-    } as TextStyle,
-    priceRange: {
-        backgroundColor: '#f0f0f0',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    } as ViewStyle,
-    priceText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#333',
-    } as TextStyle,
-    cuisineType: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-    } as TextStyle,
-    restaurantMeta: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    } as ViewStyle,
-    rating: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    } as ViewStyle,
-    stars: {
-        fontSize: 14,
-        color: '#FFD700',
-        marginRight: 4,
-    } as TextStyle,
-    ratingText: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginLeft: 4,
-        color: '#333',
-    } as TextStyle,
-    reviewCount: {
-        fontSize: 14,
-        color: '#666',
-        marginLeft: 4,
-    } as TextStyle,
-    distance: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    } as ViewStyle,
-    distanceText: {
-        fontSize: 14,
-        color: '#666',
-        marginLeft: 4,
-    } as TextStyle,
-    statusContainer: {
-        marginBottom: 8,
-    } as ViewStyle,
-    statusBadge: {
-        alignSelf: 'flex-start',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    } as ViewStyle,
-    statusText: {
-        fontSize: 12,
-        fontWeight: '500',
-    } as TextStyle,
-    address: {
-        fontSize: 12,
-        color: '#666',
-    } as TextStyle,
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-start',
-        paddingTop: Platform.OS === 'ios' ? 100 : 80,
-    } as ViewStyle,
-    suggestionsContainer: {
-        backgroundColor: '#fff',
-        marginHorizontal: 16,
-        borderRadius: 12,
-        maxHeight: 200,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-    } as ViewStyle,
-    suggestionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    } as ViewStyle,
-    suggestionText: {
-        fontSize: 16,
-        color: '#333',
-        marginLeft: 12,
-    } as TextStyle,
-    detailModal: {
-        flex: 1,
-        backgroundColor: '#fff',
-    } as ViewStyle,
-    detailHeader: {
-        position: 'relative',
-    } as ViewStyle,
-    detailImage: {
-        width: '100%',
-        height: 200,
-    } as ImageStyle,
+        fontWeight: "600",
+    },
     closeButton: {
-        position: 'absolute',
-        top: Platform.OS === 'ios' ? 50 : 20,
-        right: 16,
-        width: 32,
-        height: 32,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-    } as ViewStyle,
-    detailContent: {
-        flex: 1,
-    } as ViewStyle,
-    detailInfo: {
-        padding: 20,
-    } as ViewStyle,
-    detailName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    } as TextStyle,
-    detailCuisine: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 16,
-    } as TextStyle,
-    detailMeta: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    } as ViewStyle,
-    detailRating: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    } as ViewStyle,
-    detailStars: {
-        fontSize: 18,
-        color: '#FFD700',
-        marginRight: 6,
-    } as TextStyle,
-    detailRatingText: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginLeft: 6,
-        color: '#333',
-    } as TextStyle,
-    detailReviewCount: {
-        fontSize: 16,
-        color: '#666',
-        marginLeft: 6,
-    } as TextStyle,
-    detailPrice: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    } as TextStyle,
-    detailStatus: {
-        flexDirection: 'row',
-        marginBottom: 16,
-    } as ViewStyle,
-    statusItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 24,
-    } as ViewStyle,
-    detailStatusText: {
-        fontSize: 14,
-        color: '#666',
-        marginLeft: 4,
-    } as TextStyle,
-    detailAddress: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 12,
-    } as TextStyle,
-    detailDescription: {
-        fontSize: 16,
-        color: '#333',
-        lineHeight: 24,
-    } as TextStyle,
-    detailActions: {
-        padding: 20,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-    } as ViewStyle,
-    reserveButton: {
-        backgroundColor: '#007AFF',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginBottom: 12,
-    } as ViewStyle,
-    reserveButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    } as TextStyle,
-    menuButton: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    } as ViewStyle,
-    menuButtonText: {
-        color: '#333',
-        fontSize: 16,
-        fontWeight: '600',
-    } as TextStyle,
-    filtersModal: {
-        flex: 1,
-        backgroundColor: '#fff',
-    } as ViewStyle,
-    filtersHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 60 : 20,
-        paddingBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    } as ViewStyle,
-    filtersTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    } as TextStyle,
-    filtersContent: {
-        flex: 1,
-        paddingHorizontal: 20,
-    } as ViewStyle,
-    filterSection: {
-        marginVertical: 20,
-    } as ViewStyle,
-    filterLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 12,
-    } as TextStyle,
-    filterOptions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    } as ViewStyle,
-    filterOption: {
-        backgroundColor: '#f8f8f8',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        position: "absolute",
+        top: 15,
+        right: 15,
+        backgroundColor: "#fff",
+        zIndex: 10,
+        padding: 8,
         borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    } as ViewStyle,
-    activeFilterOption: {
-        backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
-    } as ViewStyle,
-    filterOptionText: {
-        fontSize: 14,
-        color: '#333',
-    } as TextStyle,
-    activeFilterOptionText: {
-        color: '#fff',
-    } as TextStyle,
-    priceRangeContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    } as ViewStyle,
-    priceOption: {
-        flex: 1,
-        backgroundColor: '#f8f8f8',
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginHorizontal: 4,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    } as ViewStyle,
-    activePriceOption: {
-        backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
-    } as ViewStyle,
-    priceOptionText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-    } as TextStyle,
-    activePriceOptionText: {
-        color: '#fff',
-    } as TextStyle,
-    toggleContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    } as ViewStyle,
-    toggle: {
-        width: 50,
-        height: 30,
-        backgroundColor: '#e0e0e0',
-        borderRadius: 15,
-        padding: 2,
-        justifyContent: 'center',
-    } as ViewStyle,
-    activeToggleFilter: {
-        backgroundColor: '#007AFF',
-    } as ViewStyle,
-    toggleThumb: {
-        width: 26,
-        height: 26,
-        backgroundColor: '#fff',
-        borderRadius: 13,
+        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 1},
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.2,
-        shadowRadius: 2,
-        elevation: 2,
-    } as ViewStyle,
-    activeToggleThumb: {
-        transform: [{translateX: 20}],
-    } as ViewStyle,
-    filtersActions: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-        gap: 12,
-    } as ViewStyle,
-    clearButton: {
-        flex: 1,
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    } as ViewStyle,
-    clearButtonText: {
-        color: '#333',
-        fontSize: 16,
-        fontWeight: '600',
-    } as TextStyle,
-    applyButton: {
-        flex: 1,
-        backgroundColor: '#007AFF',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    } as ViewStyle,
-    applyButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    } as TextStyle,
+        shadowRadius: 3,
+    },
 });
-
-export default SearchScreen;
