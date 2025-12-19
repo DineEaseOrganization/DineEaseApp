@@ -1,297 +1,734 @@
-// src/screens/restaurants/RestaurantListScreen.tsx - OpenTable Style Light Theme
-import React, {useState} from 'react';
+// src/screens/restaurants/RestaurantListScreen.tsx
+import React, {useEffect, useState} from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import {dummyRestaurants, dummyTimeSlots} from '../../data/dummyData';
-import {Restaurant} from '../../types';
 import {RestaurantListScreenProps} from '../../navigation/AppNavigator';
+import {CuisineStat, RestaurantDetail, TimeRange, TopCategory} from "../../types/api.types";
+import {restaurantService} from "../../services/api";
+import {useLocation} from '../../hooks/useLocation';
+import {mapRestaurantDetailToRestaurant, Restaurant} from "../../types";
+import PartyDateTimePicker from '../booking/PartyDateTimePicker';
+import { formatPartyDateTime } from '../../utils/Datetimeutils'; // Import the hook
 
 const {width} = Dimensions.get('window');
 
 const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({navigation}) => {
     const [partySize, setPartySize] = useState(2);
-    const [selectedTime, setSelectedTime] = useState('Now');
-    const [selectedLocation, setSelectedLocation] = useState('Nearby');
+    const [selectedTime, setSelectedTime] = useState('ASAP');
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [showPickerModal, setShowPickerModal] = useState(false);
+    const [locationName, setLocationName] = useState('Loading...'); // NEW: Store location name
+    const [searchRadius, setSearchRadius] = useState(10); // Default 10km
 
-    const cuisineTypes = [
-        {
-            name: 'Mediterranean',
-            image: 'https://images.unsplash.com/photo-1544511916-0148ccdeb877?w=100&h=100&fit=crop'
-        },
-        {name: 'Greek', image: 'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?w=100&h=100&fit=crop'},
-        {name: 'Japanese', image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=100&h=100&fit=crop'},
-        {name: 'Italian', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=100&h=100&fit=crop'},
-        {name: 'British', image: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=100&h=100&fit=crop'},
-    ];
+    // Data state
+    const [featuredRestaurants, setFeaturedRestaurants] = useState<RestaurantDetail[]>([]);
+    const [topRestaurants, setTopRestaurants] = useState<RestaurantDetail[]>([]);
+    const [cuisines, setCuisines] = useState<CuisineStat[]>([]);
+    const [activeTopCategory, setActiveTopCategory] = useState<TopCategory>(TopCategory.BOOKED);
+    const [nearbyRestaurants, setNearbyRestaurants] = useState<Restaurant[]>([]);
 
-    const featuredRestaurants = dummyRestaurants.slice(0, 2);
-    const topRestaurants = dummyRestaurants;
+    // Loading states
+    const [loadingFeatured, setLoadingFeatured] = useState(true);
+    const [loadingTop, setLoadingTop] = useState(true);
+    const [loadingCuisines, setLoadingCuisines] = useState(true);
+    const [loadingNearby, setLoadingNearby] = useState(true);
 
-    const handleRestaurantPress = (restaurant: Restaurant) => {
-        navigation.navigate('RestaurantDetail', {restaurant});
+
+    // Use the location hook
+    const {location: userLocation, loading: locationLoading, refreshLocation, isUsingDefault} = useLocation();
+
+    useEffect(() => {
+        // Only load data when we have location
+        if (userLocation) {
+            loadData();
+            getLocationName(); // NEW: Get readable location name
+        }
+    }, [userLocation]);
+
+    useEffect(() => {
+        if (userLocation) {
+            loadTopRestaurants(activeTopCategory);
+        }
+    }, [activeTopCategory, userLocation]);
+
+    const loadData = async () => {
+        if (!userLocation) return;
+
+        await Promise.all([
+            loadFeaturedRestaurants(),
+            loadTopRestaurants(activeTopCategory),
+            loadCuisines(),
+            loadNearbyRestaurants()
+        ]);
     };
 
-    const renderFeaturedRestaurant = ({item}: { item: Restaurant }) => (
-        <TouchableOpacity
-            style={styles.featuredCard}
-            onPress={() => handleRestaurantPress(item)}
-        >
-            <Image source={{uri: item.coverImageUrl}} style={styles.featuredImage}/>
-            <View style={styles.featuredOverlay}>
-                <View style={styles.featuredContent}>
-                    <Text style={styles.featuredName}>{item.name}</Text>
-                    <View style={styles.featuredDetails}>
-                        <Text style={styles.featuredPrice}>{item.priceRange}</Text>
-                        <Text style={styles.featuredCuisine}>{item.cuisineType}</Text>
-                        <View style={styles.featuredRating}>
-                            <Text style={styles.star}>★</Text>
-                            <Text style={styles.ratingText}>{item.averageRating}</Text>
-                        </View>
-                        <Text style={styles.distance}>2.4 mi</Text>
-                    </View>
-                    {/* Time slots */}
-                    <View style={styles.timeSlots}>
-                        {dummyTimeSlots.slice(0, 3).map((slot, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={styles.timeSlot}
-                                onPress={() => {
-                                    console.log(`Book table at ${slot.time} for ${item.name}`);
-                                    // Navigate to booking screen with pre-selected time
-                                    navigation.navigate('BookingScreen', {
-                                        restaurant: item,
-                                        selectedDate: new Date(),
-                                        partySize: partySize
-                                    });
-                                }}
-                            >
-                                <Text style={styles.timeSlotText}>{slot.time}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-                <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={() => {
-                        console.log(`Save/unsave ${item.name}`);
-                        // Toggle save state for restaurant
-                    }}
-                >
-                    <Text style={styles.saveIcon}>♡</Text>
-                </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
+    // NEW: Get readable location name from coordinates
+    const getLocationName = async () => {
+        if (!userLocation) return;
+
+        try {
+            // Use Nominatim reverse geocoding (free, no API key needed)
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?` +
+              `format=json&` +
+              `lat=${userLocation.latitude}&` +
+              `lon=${userLocation.longitude}&` +
+              `zoom=10&` +
+              `addressdetails=1`,
+              {
+                  headers: {
+                      'User-Agent': 'DineEaseApp/1.0'
+                  }
+              }
+            );
+
+            const data = await response.json();
+
+            // Extract city/town/suburb name
+            const address = data.address;
+            const locationName = address.city ||
+              address.town ||
+              address.suburb ||
+              address.village ||
+              address.county ||
+              'Current Location';
+
+            setLocationName(locationName);
+        } catch (error) {
+            console.error('Error getting location name:', error);
+            setLocationName('Current Location');
+        }
+    };
+
+    const loadNearbyRestaurants = async (radius = searchRadius) => {
+        if (!userLocation) return;
+
+        try {
+            setLoadingNearby(true);
+            const response = await restaurantService.getNearbyRestaurants(
+              userLocation.latitude,
+              userLocation.longitude,
+              radius,
+              0,
+              20
+            );
+
+            // Backend returns: { restaurants: [...], hasMore: true }
+            setNearbyRestaurants(response.restaurants.map(mapRestaurantDetailToRestaurant));
+
+        } catch (err) {
+            console.error('Error loading nearby restaurants:', err);
+        } finally {
+            setLoadingNearby(false);
+        }
+    };
+
+    const loadFeaturedRestaurants = async (radius = searchRadius) => {
+        if (!userLocation) return;
+
+        try {
+            setLoadingFeatured(true);
+            const data = await restaurantService.getFeaturedRestaurants(
+              10,
+              userLocation.latitude,
+              userLocation.longitude,
+              radius
+            );
+            setFeaturedRestaurants(data.map(mapRestaurantDetailToRestaurant));
+        } catch (error) {
+            console.error('Error loading featured restaurants:', error);
+            Alert.alert('Error', 'Failed to load featured restaurants');
+        } finally {
+            setLoadingFeatured(false);
+        }
+    };
+
+    const loadTopRestaurants = async (category: TopCategory, radius = searchRadius) => {
+        if (!userLocation) return;
+
+        try {
+            setLoadingTop(true);
+
+            // Try THIS_WEEK first
+            let data = await restaurantService.getTopRestaurants(
+              category,
+              TimeRange.THIS_WEEK,
+              userLocation.latitude,
+              userLocation.longitude,
+              radius,
+              10
+            );
+
+            // If no results, fallback to ALL_TIME
+            if (data.restaurants.length === 0) {
+                console.log('No results for THIS_WEEK, trying ALL_TIME');
+                data = await restaurantService.getTopRestaurants(
+                  category,
+                  TimeRange.ALL_TIME,
+                  userLocation.latitude,
+                  userLocation.longitude,
+                  radius,
+                  10
+                );
+            }
+
+            setTopRestaurants(data.restaurants.map(mapRestaurantDetailToRestaurant));
+        } catch (error) {
+            console.error('Error loading top restaurants:', error);
+            Alert.alert('Error', 'Failed to load top restaurants');
+        } finally {
+            setLoadingTop(false);
+        }
+    };
+
+    const loadCuisines = async (radius = searchRadius) => {
+        if (!userLocation) return;
+
+        try {
+            setLoadingCuisines(true);
+            const data = await restaurantService.getAvailableCuisines(
+              userLocation.latitude,
+              userLocation.longitude,
+              radius
+            );
+            setCuisines(data.slice(0, 10)); // Top 10 cuisines
+        } catch (error) {
+            console.error('Error loading cuisines:', error);
+            Alert.alert('Error', 'Failed to load cuisines');
+        } finally {
+            setLoadingCuisines(false);
+        }
+    };
+
+    const handleRestaurantPress = (restaurant: RestaurantDetail) => {
+        navigation.navigate('RestaurantDetail', {
+            restaurant,
+            partySize,
+            selectedDate,
+            selectedTime
+        });
+    };
+
+    const handleCuisinePress = (cuisineType: string) => {
+        if (!userLocation) return;
+
+        navigation.navigate('CuisineRestaurants', {
+            cuisineType: cuisineType,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            radius: searchRadius
+        });
+    };
+
+    // NEW: Format date/time display
+
+    // NEW: Handle radius change
+    const handleRadiusChange = (newRadius: number) => {
+        setSearchRadius(newRadius);
+        if (userLocation) {
+            loadNearbyRestaurants(newRadius);
+            loadFeaturedRestaurants(newRadius);
+            loadCuisines(newRadius);
+            loadTopRestaurants(activeTopCategory, newRadius);
+        }
+    };
+
+    const renderFeaturedRestaurant = ({item}: { item: RestaurantDetail }) => (
+      <TouchableOpacity
+        style={styles.featuredCard}
+        onPress={() => handleRestaurantPress(item)}
+      >
+          <Image
+            source={{uri: item.coverImageUrl || 'https://via.placeholder.com/400x180'}}
+            style={styles.featuredImage}
+          />
+          <View style={styles.featuredOverlay}>
+              <View style={styles.featuredContent}>
+                  <Text style={styles.featuredName}>{item.name}</Text>
+                  <View style={styles.featuredDetails}>
+                      <Text style={styles.featuredPrice}>{item.priceRange || '$$'}</Text>
+                      <Text style={styles.featuredCuisine}>{item.primaryCuisineType}</Text>
+                      <View style={styles.featuredRating}>
+                          <Text style={styles.star}>★</Text>
+                          <Text style={styles.ratingText}>{item.averageRating.toFixed(1)}</Text>
+                      </View>
+                      {item.latitude && item.longitude && (
+                        <Text style={styles.distance}>
+                            {calculateDistance(
+                              userLocation.latitude,
+                              userLocation.longitude,
+                              item.latitude,
+                              item.longitude
+                            ).toFixed(1)} mi
+                        </Text>
+                      )}
+                  </View>
+                  {/* Placeholder time slots - will integrate with booking API later */}
+                  <View style={styles.timeSlots}>
+                      {['17:00', '18:00', '19:00'].map((time, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.timeSlot}
+                          onPress={() => {
+                              navigation.navigate('BookingScreen', {
+                                  restaurant: item,
+                                  selectedDate: new Date(),
+                                  partySize: partySize
+                              });
+                          }}
+                        >
+                            <Text style={styles.timeSlotText}>{time}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+              </View>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => {
+                    console.log(`Save/unsave ${item.name}`);
+                    // Will implement with favorites API in Phase 4
+                }}
+              >
+                  <Text style={styles.saveIcon}>♡</Text>
+              </TouchableOpacity>
+          </View>
+      </TouchableOpacity>
     );
 
-    const renderCuisineType = ({item}: { item: any }) => (
-        <TouchableOpacity
-            style={styles.cuisineItem}
-            onPress={() => {
-                // Filter restaurants by cuisine type
-                console.log(`Filter by cuisine: ${item.name}`);
-                // You can implement filtering logic here
-                // navigation.navigate('RestaurantList', { filter: item.name });
-            }}
-        >
-            <Image source={{uri: item.image}} style={styles.cuisineImage}/>
-            <Text style={styles.cuisineName}>{item.name}</Text>
-        </TouchableOpacity>
+    const renderCuisineType = ({item}: { item: CuisineStat }) => (
+      <TouchableOpacity
+        style={styles.cuisineItem}
+        onPress={() => handleCuisinePress(item.cuisineType)}
+      >
+          <View style={styles.cuisineImagePlaceholder}>
+              <Text style={styles.cuisineEmoji}>{getCuisineEmoji(item.cuisineType)}</Text>
+          </View>
+          <Text style={styles.cuisineName}>{item.cuisineType}</Text>
+          <Text style={styles.cuisineCount}>{item.count}</Text>
+      </TouchableOpacity>
     );
 
-    const renderTopRestaurant = (restaurant: Restaurant, index: number) => (
-        <TouchableOpacity
-            key={restaurant.id}
-            style={styles.topRestaurantItem}
-            onPress={() => handleRestaurantPress(restaurant)}
-        >
-            <View style={styles.topRestaurantRank}>
-                <Text style={styles.rankNumber}>{index + 1}</Text>
-            </View>
-            <Image source={{uri: restaurant.coverImageUrl}} style={styles.topRestaurantImage}/>
-            <View style={styles.topRestaurantInfo}>
-                <Text style={styles.topRestaurantName}>{restaurant.name}</Text>
-                <View style={styles.topRestaurantRating}>
-                    <Text style={styles.starSmall}>★★★★★</Text>
-                    <Text style={styles.reviewCount}>{restaurant.totalReviews} reviews</Text>
-                </View>
-                <Text style={styles.topRestaurantCuisine}>{restaurant.cuisineType}</Text>
-                <Text style={styles.topRestaurantLocation}>Nicosia</Text>
-            </View>
-            <View style={styles.topRestaurantRight}>
-                <Text style={styles.topRestaurantPrice}>{restaurant.priceRange}</Text>
-                <Text style={styles.topRestaurantDistance}>5.7 mi</Text>
-                <TouchableOpacity
-                    style={styles.topSaveButton}
-                    onPress={() => {
-                        console.log(`Save/unsave ${restaurant.name}`);
-                        // Toggle save state for restaurant
-                    }}
-                >
-                    <Text style={styles.topSaveIcon}>♡</Text>
-                </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
+    const renderTopRestaurant = (restaurant: RestaurantDetail, index: number) => (
+      <TouchableOpacity
+        key={restaurant.id}
+        style={styles.topRestaurantItem}
+        onPress={() => handleRestaurantPress(restaurant)}
+      >
+          <View style={styles.topRestaurantRank}>
+              <Text style={styles.rankNumber}>{index + 1}</Text>
+          </View>
+          <Image
+            source={{uri: restaurant.coverImageUrl || 'https://via.placeholder.com/60'}}
+            style={styles.topRestaurantImage}
+          />
+          <View style={styles.topRestaurantInfo}>
+              <Text style={styles.topRestaurantName}>{restaurant.name}</Text>
+              <View style={styles.topRestaurantRating}>
+                  <Text style={styles.starSmall}>{'★'.repeat(Math.round(restaurant.averageRating))}</Text>
+                  <Text style={styles.reviewCount}>{restaurant.totalReviews} reviews</Text>
+              </View>
+              <Text style={styles.topRestaurantCuisine}>{restaurant.primaryCuisineType}</Text>
+              <Text style={styles.topRestaurantLocation}>{restaurant.address}</Text>
+          </View>
+          <View style={styles.topRestaurantRight}>
+              <Text style={styles.topRestaurantPrice}>{restaurant.priceRange || '$$'}</Text>
+              {restaurant.latitude && restaurant.longitude && (
+                <Text style={styles.topRestaurantDistance}>
+                    {calculateDistance(
+                      userLocation.latitude,
+                      userLocation.longitude,
+                      restaurant.latitude,
+                      restaurant.longitude
+                    ).toFixed(1)} mi
+                </Text>
+              )}
+              <TouchableOpacity
+                style={styles.topSaveButton}
+                onPress={() => {
+                    console.log(`Save/unsave ${restaurant.name}`);
+                    // Will implement with favorites API in Phase 4
+                }}
+              >
+                  <Text style={styles.topSaveIcon}>♡</Text>
+              </TouchableOpacity>
+          </View>
+      </TouchableOpacity>
     );
+
+    // Helper function to calculate distance
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 3959; // Earth radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
+
+    // Helper function to get emoji for cuisine type
+    const getCuisineEmoji = (cuisineType: string): string => {
+        const emojiMap: { [key: string]: string } = {
+            'Italian': '🍝',
+            'Japanese': '🍣',
+            'Chinese': '🥢',
+            'Mexican': '🌮',
+            'Indian': '🍛',
+            'Thai': '🍜',
+            'French': '🥐',
+            'Greek': '🥗',
+            'Mediterranean': '🫒',
+            'American': '🍔',
+            'British': '🍺',
+        };
+        return emojiMap[cuisineType] || '🍽️';
+    };
+
+    if (locationLoading) {
+        return (
+          <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#dc3545"/>
+              <Text style={styles.loadingText}>Getting your location...</Text>
+          </View>
+        );
+    }
+
+    // Show error if no location
+    if (!userLocation) {
+        return (
+          <View style={styles.centerContainer}>
+              <Text style={styles.errorText}>Could not get your location</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={refreshLocation}>
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+          </View>
+        );
+    }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header with greeting and avatar */}
-                <View style={styles.header}>
-                    <Text style={styles.greeting}>Good evening, Maria</Text>
-                </View>
-
-                {/* Party size, time, and location selectors */}
-                <View style={styles.selectors}>
-                    <TouchableOpacity style={styles.selectorButton}>
-                        <Text style={styles.selectorIcon}>👥</Text>
-                        <Text style={styles.selectorText}>{partySize} • {selectedTime}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.selectorButton}>
-                        <Text style={styles.selectorIcon}>📍</Text>
-                        <Text style={styles.selectorText}>{selectedLocation}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Browse by cuisine - at top */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Browse by cuisine</Text>
-                        <TouchableOpacity onPress={() => {
-                            console.log('View all cuisines');
-                            // Navigate to full cuisine list or filter page
-                        }}>
-                            <Text style={styles.viewAll}>View all</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <FlatList
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        data={cuisineTypes}
-                        renderItem={renderCuisineType}
-                        keyExtractor={(item) => item.name}
-                        contentContainerStyle={styles.cuisineList}
-                    />
-                </View>
-
-                {/* Featured restaurants - swipeable cards */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Book for late dinner tonight</Text>
-                        <TouchableOpacity onPress={() => {
-                            console.log('View all featured restaurants');
-                            // Navigate to more featured restaurants
-                        }}>
-                            <Text style={styles.viewAll}>View all</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <FlatList
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        data={featuredRestaurants}
-                        renderItem={renderFeaturedRestaurant}
-                        keyExtractor={(item) => item.id.toString()}
-                        contentContainerStyle={styles.featuredList}
-                    />
-                </View>
-
-                {/* Top restaurants this week */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Top restaurants this week</Text>
-                    </View>
-                    <Text style={styles.sectionSubtitle}>
-                        Explore what's popular with other diners with these lists, updated weekly.
+      <SafeAreaView style={styles.container}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Header with greeting */}
+              <View style={styles.header}>
+                  <Text style={styles.greeting}>Good evening</Text>
+                  {isUsingDefault && (
+                    <Text style={styles.defaultLocationText}>
+                        📍 Using default location (London)
                     </Text>
+                  )}
+              </View>
 
-                    {/* Tab selector */}
-                    <View style={styles.tabContainer}>
+              {/* Party size, time, and location selectors */}
+              <View style={styles.selectors}>
+                  <TouchableOpacity
+                    style={styles.selectorButton}
+                    onPress={() => setShowPickerModal(true)}
+                  >
+                      <Text style={styles.selectorIcon}>👥</Text>
+                      <Text style={styles.selectorText}>{formatPartyDateTime(partySize, selectedDate, selectedTime)}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.selectorInfo}>
+                      <Text style={styles.selectorIcon}>📍</Text>
+                      <Text style={styles.selectorText} numberOfLines={1}>{locationName}</Text>
+                  </View>
+              </View>
+
+              {/* NEW: Radius Selector */}
+              <View style={styles.radiusSection}>
+                  <View style={styles.radiusHeader}>
+                      <Text style={styles.radiusLabel}>Search Radius</Text>
+                      <Text style={styles.radiusValue}>{searchRadius}km</Text>
+                  </View>
+                  <View style={styles.radiusButtons}>
+                      {[5, 10, 20, 50].map((radius) => (
                         <TouchableOpacity
-                            style={[styles.tab, styles.activeTab]}
-                            onPress={() => console.log('Show top booked restaurants')}
+                          key={radius}
+                          style={[
+                              styles.radiusButton,
+                              searchRadius === radius && styles.radiusButtonActive
+                          ]}
+                          onPress={() => handleRadiusChange(radius)}
                         >
-                            <Text style={[styles.tabText, styles.activeTabText]}>Top booked</Text>
+                            <Text style={[
+                                styles.radiusButtonText,
+                                searchRadius === radius && styles.radiusButtonTextActive
+                            ]}>
+                                {radius}km
+                            </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.tab}
-                            onPress={() => console.log('Show top viewed restaurants')}
-                        >
-                            <Text style={styles.tabText}>Top viewed</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.tab}
-                            onPress={() => console.log('Show top saved restaurants')}
-                        >
-                            <Text style={styles.tabText}>Top saved</Text>
-                        </TouchableOpacity>
+                      ))}
+                  </View>
+              </View>
+
+              {/* Nearby Restaurants */}
+              <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Nearby</Text>
+
+                      <TouchableOpacity
+                        onPress={() =>
+                          navigation.navigate('NearbyRestaurants', {
+                              latitude: userLocation.latitude,
+                              longitude: userLocation.longitude,
+                              radius: searchRadius,
+                          })
+                        }
+                      >
+                          <Text style={styles.viewAll}>View more →</Text>
+                      </TouchableOpacity>
+                  </View>
+
+                  {loadingNearby ? (
+                    <ActivityIndicator size="large" color="#dc3545" style={{ marginVertical: 20 }} />
+                  ) : nearbyRestaurants.length === 0 ? (
+                    <View style={styles.emptyNearbyContainer}>
+                        <Text style={styles.emptyNearbyIcon}>📍</Text>
+                        <Text style={styles.emptyNearbyText}>No restaurants found nearby</Text>
+                        <Text style={styles.emptyNearbySubtext}>Try using the search to explore other areas</Text>
                     </View>
+                  ) : (
+                    <FlatList
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      data={nearbyRestaurants}
+                      keyExtractor={(item) => item.id.toString()}
+                      contentContainerStyle={styles.featuredList}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.featuredCard}
+                          onPress={() => handleRestaurantPress(item)}
+                        >
+                            <Image
+                              source={{ uri: item.coverImageUrl || 'https://via.placeholder.com/400x180' }}
+                              style={styles.featuredImage}
+                            />
 
-                    {/* Top restaurants list */}
+                            {/* Same overlay layout as Featured */}
+                            <View style={styles.featuredOverlay}>
+                                <View style={styles.featuredContent}>
+                                    <Text style={styles.featuredName} numberOfLines={1}>
+                                        {item.name}
+                                    </Text>
+
+                                    <View style={styles.featuredDetails}>
+                                        <Text style={styles.featuredPrice}>{item.priceRange || '$$'}</Text>
+
+                                        <Text style={styles.featuredCuisine}>{item.primaryCuisineType}</Text>
+
+                                        <View style={styles.featuredRating}>
+                                            <Text style={styles.star}>★</Text>
+                                            <Text style={styles.ratingText}>{item.averageRating.toFixed(1)}</Text>
+                                        </View>
+
+                                        {item.latitude && item.longitude && (
+                                          <Text style={styles.distance}>
+                                              {calculateDistance(
+                                                userLocation.latitude,
+                                                userLocation.longitude,
+                                                item.latitude,
+                                                item.longitude
+                                              ).toFixed(1)}{' '}
+                                              mi
+                                          </Text>
+                                        )}
+                                    </View>
+
+                                    {/* Simple time slots to match Featured */}
+                                    <View style={styles.timeSlots}>
+                                        {['17:00', '18:00', '19:00'].map((time, i) => (
+                                          <TouchableOpacity
+                                            key={i}
+                                            style={styles.timeSlot}
+                                            onPress={() =>
+                                              navigation.navigate('BookingScreen', {
+                                                  restaurant: item,
+                                                  selectedDate: new Date(),
+                                                  partySize: partySize,
+                                              })
+                                            }
+                                          >
+                                              <Text style={styles.timeSlotText}>{time}</Text>
+                                          </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                {/* Save icon for consistency */}
+                                <TouchableOpacity
+                                  style={styles.saveButton}
+                                  onPress={() => console.log('save/unsave', item.name)}
+                                >
+                                    <Text style={styles.saveIcon}>♡</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  )}
+              </View>
+
+              {/* Browse by cuisine */}
+              <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Browse by cuisine</Text>
+                      <TouchableOpacity onPress={() => navigation.navigate('RestaurantSearch', {})}>
+                          <Text style={styles.viewAll}>View all</Text>
+                      </TouchableOpacity>
+                  </View>
+                  {loadingCuisines ? (
+                    <ActivityIndicator size="large" color="#dc3545" style={{marginVertical: 20}}/>
+                  ) : (
+                    <FlatList
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      data={cuisines}
+                      renderItem={renderCuisineType}
+                      keyExtractor={(item) => item.cuisineType}
+                      contentContainerStyle={styles.cuisineList}
+                    />
+                  )}
+              </View>
+
+              {/* Featured restaurants */}
+              <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Featured restaurants</Text>
+                      <TouchableOpacity onPress={loadFeaturedRestaurants}>
+                          <Text style={styles.viewAll}>Refresh</Text>
+                      </TouchableOpacity>
+                  </View>
+                  {loadingFeatured ? (
+                    <ActivityIndicator size="large" color="#dc3545" style={{marginVertical: 20}}/>
+                  ) : (
+                    <FlatList
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      data={featuredRestaurants}
+                      renderItem={renderFeaturedRestaurant}
+                      keyExtractor={(item) => item.id.toString()}
+                      contentContainerStyle={styles.featuredList}
+                    />
+                  )}
+              </View>
+
+              {/* Top restaurants this week */}
+              <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Top restaurants this week</Text>
+                  </View>
+                  <Text style={styles.sectionSubtitle}>
+                      Explore what's popular with other diners with these lists, updated weekly.
+                  </Text>
+
+                  {/* Tab selector */}
+                  <View style={styles.tabContainer}>
+                      <TouchableOpacity
+                        style={[styles.tab, activeTopCategory === TopCategory.BOOKED && styles.activeTab]}
+                        onPress={() => setActiveTopCategory(TopCategory.BOOKED)}
+                      >
+                          <Text style={[
+                              styles.tabText,
+                              activeTopCategory === TopCategory.BOOKED && styles.activeTabText
+                          ]}>
+                              Top booked
+                          </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.tab, activeTopCategory === TopCategory.VIEWED && styles.activeTab]}
+                        onPress={() => setActiveTopCategory(TopCategory.VIEWED)}
+                      >
+                          <Text style={[
+                              styles.tabText,
+                              activeTopCategory === TopCategory.VIEWED && styles.activeTabText
+                          ]}>
+                              Top viewed
+                          </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.tab, activeTopCategory === TopCategory.SAVED && styles.activeTab]}
+                        onPress={() => setActiveTopCategory(TopCategory.SAVED)}
+                      >
+                          <Text style={[
+                              styles.tabText,
+                              activeTopCategory === TopCategory.SAVED && styles.activeTabText
+                          ]}>
+                              Top saved
+                          </Text>
+                      </TouchableOpacity>
+                  </View>
+
+                  {loadingTop ? (
+                    <ActivityIndicator size="large" color="#dc3545" style={{marginVertical: 20}}/>
+                  ) : (
                     <View style={styles.topRestaurantsList}>
                         {topRestaurants.map((restaurant, index) => renderTopRestaurant(restaurant, index))}
                     </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                  )}
+              </View>
+          </ScrollView>
+
+          {/* Party Size & Time Picker Modal */}
+          <PartyDateTimePicker
+            visible={showPickerModal}
+            onClose={() => setShowPickerModal(false)}
+            partySize={partySize}
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
+            onPartySizeChange={setPartySize}
+            onDateChange={setSelectedDate}
+            onTimeChange={setSelectedTime}
+          />
+      </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#fff',
     },
     header: {
         paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
     },
     greeting: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#333',
-    },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#007AFF',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16,
     },
     selectors: {
         flexDirection: 'row',
         paddingHorizontal: 20,
-        paddingBottom: 20,
-        gap: 10,
+        marginBottom: 24,
+        gap: 12,
     },
     selectorButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#e9ecef',
+        backgroundColor: '#f8f8f8',
+        padding: 12,
+        borderRadius: 8,
+        gap: 8,
     },
     selectorIcon: {
-        fontSize: 14,
-        marginRight: 6,
+        fontSize: 18,
     },
     selectorText: {
         fontSize: 14,
@@ -313,17 +750,16 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
     },
-    viewAll: {
-        fontSize: 16,
-        color: '#dc3545',
-        fontWeight: '500',
-    },
     sectionSubtitle: {
         fontSize: 14,
         color: '#666',
         paddingHorizontal: 20,
         marginBottom: 16,
-        lineHeight: 20,
+    },
+    viewAll: {
+        fontSize: 14,
+        color: '#dc3545',
+        fontWeight: '500',
     },
     cuisineList: {
         paddingHorizontal: 20,
@@ -332,16 +768,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 20,
     },
-    cuisineImage: {
+    cuisineImagePlaceholder: {
         width: 70,
         height: 70,
         borderRadius: 35,
+        backgroundColor: '#f8f8f8',
+        justifyContent: 'center',
+        alignItems: 'center',
         marginBottom: 8,
+    },
+    cuisineEmoji: {
+        fontSize: 32,
     },
     cuisineName: {
         fontSize: 14,
         fontWeight: '500',
         color: '#333',
+        marginBottom: 4,
+    },
+    cuisineCount: {
+        fontSize: 12,
+        color: '#666',
     },
     featuredList: {
         paddingHorizontal: 20,
@@ -547,6 +994,119 @@ const styles = StyleSheet.create({
     topSaveIcon: {
         color: '#dc3545',
         fontSize: 16,
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#666',
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#dc3545',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    retryButton: {
+        backgroundColor: '#dc3545',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    retryButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    defaultLocationText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
+    },
+    // NEW: Radius Selector Styles
+    radiusSection: {
+        marginHorizontal: 20,
+        marginBottom: 20,
+        backgroundColor: '#f8f8f8',
+        borderRadius: 12,
+        padding: 16,
+    },
+    radiusHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    radiusLabel: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#333',
+    },
+    radiusValue: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#dc3545',
+    },
+    radiusButtons: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    radiusButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+    },
+    radiusButtonActive: {
+        backgroundColor: '#dc3545',
+        borderColor: '#dc3545',
+    },
+    radiusButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#666',
+    },
+    radiusButtonTextActive: {
+        color: '#fff',
+    },
+    emptyNearbyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+        paddingHorizontal: 20,
+    },
+    emptyNearbyIcon: {
+        fontSize: 48,
+        marginBottom: 12,
+    },
+    emptyNearbyText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    emptyNearbySubtext: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+    },
+    selectorInfo: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8f8f8',
+        padding: 12,
+        borderRadius: 8,
+        gap: 8,
     },
 });
 

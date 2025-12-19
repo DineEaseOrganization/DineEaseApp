@@ -1,5 +1,104 @@
-// src/types/api.types.ts
+// src/types/api_types.ts
+// Backend API contracts - exact types from API responses/requests
 
+// ============ RESTAURANT API TYPES ============
+
+export interface RestaurantDetail {
+  id: number;
+  name: string;
+  primaryCuisineType: string | null;
+  cuisineTypes: string[] | null;
+  description: string | null;
+  address: string;
+  postCode: string;
+  country: string;
+  latitude: number | null;
+  longitude: number | null;
+  phoneNumber: string;
+  priceRange: string | null;
+  coverImageUrl: string | null;
+  galleryImages: string[] | null;
+  averageRating: number;
+  totalReviews: number;
+  isActive: boolean;
+  acceptsReservations: boolean;
+  amenities: string[] | null;
+}
+
+export interface CuisineStat {
+  cuisineType: string;
+  count: number;
+}
+
+export interface RestaurantListResponse {
+  restaurants: RestaurantDetail[];
+  totalResults: number;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface NearbyRestaurantsResponse {
+  restaurants: RestaurantDetail[];
+  totalResults: number;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface SearchFiltersApplied {
+  location: string | null;
+  cuisines: string[] | null;
+  priceRange: string | null;
+  minRating: number | null;
+  openNow: boolean;
+  amenities: string[] | null;
+  sortBy: string;
+}
+
+export interface RestaurantSearchResponse {
+  restaurants: RestaurantDetail[];
+  totalResults: number;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
+  appliedFilters: SearchFiltersApplied;
+}
+
+export interface TopRestaurantsResponse {
+  category: string;
+  restaurants: RestaurantDetail[];
+  updatedAt: string;
+}
+
+export enum SortOption {
+  DISTANCE = 'DISTANCE',
+  RATING_HIGH = 'RATING_HIGH',
+  RATING_LOW = 'RATING_LOW',
+  PRICE_LOW = 'PRICE_LOW',
+  PRICE_HIGH = 'PRICE_HIGH',
+  POPULARITY = 'POPULARITY',
+  MOST_REVIEWED = 'MOST_REVIEWED',
+  TOP_BOOKED = 'TOP_BOOKED',
+  TOP_VIEWED = 'TOP_VIEWED',
+  TOP_SAVED = 'TOP_SAVED',
+  ALPHABETICAL = 'ALPHABETICAL'
+}
+
+export enum TopCategory {
+  BOOKED = 'BOOKED',
+  VIEWED = 'VIEWED',
+  SAVED = 'SAVED'
+}
+
+export enum TimeRange {
+  TODAY = 'TODAY',
+  THIS_WEEK = 'THIS_WEEK',
+  THIS_MONTH = 'THIS_MONTH',
+  ALL_TIME = 'ALL_TIME'
+}
+
+// ============ DEVICE API TYPES ============
 
 export interface DeviceDTO {
   deviceId: string;
@@ -33,25 +132,25 @@ export interface TrustDeviceRequest {
   trusted: boolean;
 }
 
-// Device Info
 export interface DeviceInfo {
-  deviceUuid: string; // Changed from deviceId
+  deviceUuid: string;
   deviceName?: string;
-  platform?: 'iOS' | 'Android' | 'Web' | 'Desktop'; // Changed from deviceType
-  platformVersion?: string; // Changed from osVersion
+  platform?: 'iOS' | 'Android' | 'Web' | 'Desktop';
+  platformVersion?: string;
   deviceModel?: string;
   appVersion?: string;
   fcmToken?: string;
 }
 
-// Customer Data (from API)
+// ============ CUSTOMER/AUTH API TYPES ============
+
 export interface CustomerData {
-  customerId: string; // Your API returns UUID string, not number
+  customerId: string;
   email: string;
   firstName: string;
   lastName: string;
   phone: string;
-  phoneCountryCode?: string; // Optional since backend combines them
+  phoneCountryCode?: string;
   emailVerified: boolean;
   phoneVerified?: boolean;
   active?: boolean;
@@ -63,13 +162,11 @@ export interface CustomerData {
     tokenType: string;
     expiresIn: number;
   };
-  // For backwards compatibility
   accessToken?: string;
   refreshToken?: string;
   tokenExpiry?: number;
 }
 
-// ============ REGISTER ============
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -85,7 +182,6 @@ export interface RegisterResponse {
   data?: CustomerData;
 }
 
-// ============ LOGIN ============
 export interface LoginRequest {
   email: string;
   password: string;
@@ -98,7 +194,6 @@ export interface LoginResponse {
   data?: CustomerData;
 }
 
-// ============ LOGOUT ============
 export interface LogoutRequest {
   refreshToken: string;
 }
@@ -108,7 +203,6 @@ export interface LogoutResponse {
   message: string;
 }
 
-// ============ TOKEN REFRESH ============
 export interface RefreshTokenRequest {
   refreshToken: string;
 }
@@ -119,7 +213,8 @@ export interface TokenPair {
   tokenExpiry: number;
 }
 
-// ============ EMAIL VERIFICATION ============
+// ============ EMAIL VERIFICATION API TYPES ============
+
 export interface VerifyEmailRequest {
   verificationCode: string;
 }
@@ -148,7 +243,8 @@ export interface CheckVerificationStatusResponse {
   cooldownSeconds?: number;
 }
 
-// ============ PROFILE ============
+// ============ PROFILE API TYPES ============
+
 export interface ProfileResponse {
   customerId: number;
   email: string;
@@ -190,7 +286,8 @@ export interface DeleteAccountResponse {
   message: string;
 }
 
-// ============ PASSWORD ============
+// ============ PASSWORD API TYPES ============
+
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -229,9 +326,35 @@ export interface PasswordStrengthResponse {
   suggestions: string[];
 }
 
+// ============================================
+// AVAILABILITY TYPES
+// ============================================
+
+export interface AvailableSlot {
+  time: string; // "HH:mm" format, e.g., "18:00"
+  duration: number; // in minutes
+  availableCapacity: number;
+  totalCapacity: number;
+  availableTables: string[]; // table numbers like ["T1", "T5"]
+  isAvailable: boolean;
+  requiresAdvanceNotice?: boolean; // NEW: true if slot fails advance notice check
+  advanceNoticeHours?: number; // NEW: how many hours of notice required
+}
+
+export interface AvailabilitySlotsResponse {
+  date: string; // "YYYY-MM-DD" format
+  partySize: number;
+  slots: AvailableSlot[]; // Available slots only (backward compatible)
+  restaurantName?: string;
+  mealPeriods?: string[]; // ["Lunch", "Dinner"] for UI grouping
+  allSlots?: AvailableSlot[]; // NEW: All slots including unavailable ones
+}
+
 // ============ ERROR RESPONSE ============
+
 export interface ApiErrorResponse {
   success: false;
   message: string;
   errors?: Record<string, string[]>;
 }
+
