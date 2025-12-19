@@ -15,12 +15,13 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import {RestaurantListScreenProps} from '../../navigation/AppNavigator';
 import {CuisineStat, RestaurantDetail, TimeRange, TopCategory} from "../../types/api.types";
 import {restaurantService} from "../../services/api";
 import {useLocation} from '../../hooks/useLocation';
-import {mapRestaurantDetailToRestaurant, Restaurant} from "../../types"; // Import the hook
+import {mapRestaurantDetailToRestaurant, Restaurant} from "../../types";
+import PartyDateTimePicker from '../booking/PartyDateTimePicker';
+import { formatPartyDateTime } from '../../utils/Datetimeutils'; // Import the hook
 
 const {width} = Dimensions.get('window');
 
@@ -29,8 +30,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({navigation})
     const [selectedTime, setSelectedTime] = useState('ASAP');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [showPickerModal, setShowPickerModal] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showTimePicker, setShowTimePicker] = useState(false);
     const [locationName, setLocationName] = useState('Loading...'); // NEW: Store location name
     const [searchRadius, setSearchRadius] = useState(10); // Default 10km
 
@@ -215,7 +214,12 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({navigation})
     };
 
     const handleRestaurantPress = (restaurant: RestaurantDetail) => {
-        navigation.navigate('RestaurantDetail', {restaurant});
+        navigation.navigate('RestaurantDetail', {
+            restaurant,
+            partySize,
+            selectedDate,
+            selectedTime
+        });
     };
 
     const handleCuisinePress = (cuisineType: string) => {
@@ -230,23 +234,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({navigation})
     };
 
     // NEW: Format date/time display
-    const getDisplayText = () => {
-        const today = new Date();
-        const isToday = selectedDate.toDateString() === today.toDateString();
-
-        if (isToday && selectedTime === 'ASAP') {
-            return `${partySize} • Now`;
-        } else if (isToday) {
-            return `${partySize} • ${selectedTime}`;
-        } else {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const isTomorrow = selectedDate.toDateString() === tomorrow.toDateString();
-
-            const dateStr = isTomorrow ? 'Tomorrow' : selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            return `${partySize} • ${dateStr} ${selectedTime}`;
-        }
-    };
 
     // NEW: Handle radius change
     const handleRadiusChange = (newRadius: number) => {
@@ -453,7 +440,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({navigation})
                     onPress={() => setShowPickerModal(true)}
                   >
                       <Text style={styles.selectorIcon}>👥</Text>
-                      <Text style={styles.selectorText}>{getDisplayText()}</Text>
+                      <Text style={styles.selectorText}>{formatPartyDateTime(partySize, selectedDate, selectedTime)}</Text>
                   </TouchableOpacity>
                   <View style={styles.selectorInfo}>
                       <Text style={styles.selectorIcon}>📍</Text>
@@ -696,131 +683,16 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({navigation})
           </ScrollView>
 
           {/* Party Size & Time Picker Modal */}
-          <Modal
+          <PartyDateTimePicker
             visible={showPickerModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowPickerModal(false)}
-          >
-              <View style={styles.modalOverlay}>
-                  <View style={styles.modalContent}>
-                      <View style={styles.modalHeader}>
-                          <Text style={styles.modalTitle}>Select Party Size & Time</Text>
-                          <TouchableOpacity onPress={() => setShowPickerModal(false)}>
-                              <Text style={styles.modalClose}>✕</Text>
-                          </TouchableOpacity>
-                      </View>
-
-                      {/* Party Size Selector */}
-                      <View style={styles.modalSection}>
-                          <Text style={styles.modalSectionTitle}>Party Size</Text>
-                          <View style={styles.partySizeGrid}>
-                              {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => (
-                                <TouchableOpacity
-                                  key={size}
-                                  style={[
-                                      styles.partySizeButton,
-                                      partySize === size && styles.partySizeButtonActive
-                                  ]}
-                                  onPress={() => setPartySize(size)}
-                                >
-                                    <Text style={[
-                                        styles.partySizeButtonText,
-                                        partySize === size && styles.partySizeButtonTextActive
-                                    ]}>
-                                        {size}
-                                    </Text>
-                                </TouchableOpacity>
-                              ))}
-                          </View>
-                      </View>
-
-                      {/* Date Selector */}
-                      <View style={styles.modalSection}>
-                          <Text style={styles.modalSectionTitle}>Date</Text>
-                          <TouchableOpacity
-                            style={styles.datePickerButton}
-                            onPress={() => setShowDatePicker(true)}
-                          >
-                              <Text style={styles.datePickerIcon}>📅</Text>
-                              <Text style={styles.datePickerText}>
-                                  {selectedDate.toLocaleDateString('en-US', {
-                                      weekday: 'short',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                  })}
-                              </Text>
-                          </TouchableOpacity>
-
-                          {showDatePicker && (
-                            <DateTimePicker
-                              value={selectedDate}
-                              mode="date"
-                              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                              minimumDate={new Date()}
-                              onChange={(event, date) => {
-                                  setShowDatePicker(Platform.OS === 'ios');
-                                  if (date) setSelectedDate(date);
-                              }}
-                            />
-                          )}
-                      </View>
-
-                      {/* Time Selector */}
-                      <View style={styles.modalSection}>
-                          <Text style={styles.modalSectionTitle}>Time</Text>
-                          <TouchableOpacity
-                            style={styles.timePickerButton}
-                            onPress={() => setShowTimePicker(!showTimePicker)}
-                          >
-                              <Text style={styles.timePickerIcon}>🕐</Text>
-                              <Text style={styles.timePickerText}>{selectedTime}</Text>
-                              <Text style={styles.dropdownArrow}>{showTimePicker ? '▲' : '▼'}</Text>
-                          </TouchableOpacity>
-
-                          {showTimePicker && (
-                            <ScrollView style={styles.timeDropdown} nestedScrollEnabled={true}>
-                                {['ASAP', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-                                    '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-                                    '18:00', '18:30', '19:00', '19:30', '20:00', '20:30',
-                                    '21:00', '21:30', '22:00'].map((time) => (
-                                  <TouchableOpacity
-                                    key={time}
-                                    style={styles.timeDropdownItem}
-                                    onPress={() => {
-                                        setSelectedTime(time);
-                                        setShowTimePicker(false);
-                                    }}
-                                  >
-                                      <Text style={[
-                                          styles.timeDropdownText,
-                                          selectedTime === time && styles.timeDropdownTextActive
-                                      ]}>
-                                          {time}
-                                      </Text>
-                                      {selectedTime === time && (
-                                        <Text style={styles.checkmark}>✓</Text>
-                                      )}
-                                  </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                          )}
-                      </View>
-
-                      {/* Done Button */}
-                      <TouchableOpacity
-                        style={styles.modalDoneButton}
-                        onPress={() => {
-                            setShowPickerModal(false);
-                            setShowTimePicker(false);
-                        }}
-                      >
-                          <Text style={styles.modalDoneButtonText}>Done</Text>
-                      </TouchableOpacity>
-                  </View>
-              </View>
-          </Modal>
+            onClose={() => setShowPickerModal(false)}
+            partySize={partySize}
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
+            onPartySizeChange={setPartySize}
+            onDateChange={setSelectedDate}
+            onTimeChange={setSelectedTime}
+          />
       </SafeAreaView>
     );
 };
@@ -1235,158 +1107,6 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 8,
         gap: 8,
-    },
-    // Modal styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 20,
-        paddingBottom: 40,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    modalClose: {
-        fontSize: 28,
-        color: '#666',
-        fontWeight: '300',
-    },
-    modalSection: {
-        marginBottom: 24,
-    },
-    modalSectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 12,
-    },
-    partySizeGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-    },
-    partySizeButton: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#e0e0e0',
-    },
-    partySizeButtonActive: {
-        backgroundColor: '#dc3545',
-        borderColor: '#dc3545',
-    },
-    partySizeButtonText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#666',
-    },
-    partySizeButtonTextActive: {
-        color: '#fff',
-    },
-    // Date Picker Styles
-    datePickerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f8f8f8',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    },
-    datePickerIcon: {
-        fontSize: 20,
-        marginRight: 12,
-    },
-    datePickerText: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
-    },
-    // Time Picker Styles
-    timePickerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f8f8f8',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    },
-    timePickerIcon: {
-        fontSize: 20,
-        marginRight: 12,
-    },
-    timePickerText: {
-        flex: 1,
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
-    },
-    dropdownArrow: {
-        fontSize: 12,
-        color: '#666',
-    },
-    timeDropdown: {
-        maxHeight: 200,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        marginTop: 8,
-    },
-    timeDropdownItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    timeDropdownText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    timeDropdownTextActive: {
-        color: '#dc3545',
-        fontWeight: '600',
-    },
-    checkmark: {
-        fontSize: 16,
-        color: '#dc3545',
-        fontWeight: 'bold',
-    },
-    timeScrollView: {
-        maxHeight: 200,
-    },
-    modalDoneButton: {
-        backgroundColor: '#dc3545',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    modalDoneButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
     },
 });
 

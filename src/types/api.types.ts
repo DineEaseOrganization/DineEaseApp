@@ -22,6 +22,7 @@ export interface RestaurantDetail {
   totalReviews: number;
   isActive: boolean;
   acceptsReservations: boolean;
+  amenities: string[] | null;
 }
 
 export interface CuisineStat {
@@ -325,6 +326,30 @@ export interface PasswordStrengthResponse {
   suggestions: string[];
 }
 
+// ============================================
+// AVAILABILITY TYPES
+// ============================================
+
+export interface AvailableSlot {
+  time: string; // "HH:mm" format, e.g., "18:00"
+  duration: number; // in minutes
+  availableCapacity: number;
+  totalCapacity: number;
+  availableTables: string[]; // table numbers like ["T1", "T5"]
+  isAvailable: boolean;
+  requiresAdvanceNotice?: boolean; // NEW: true if slot fails advance notice check
+  advanceNoticeHours?: number; // NEW: how many hours of notice required
+}
+
+export interface AvailabilitySlotsResponse {
+  date: string; // "YYYY-MM-DD" format
+  partySize: number;
+  slots: AvailableSlot[]; // Available slots only (backward compatible)
+  restaurantName?: string;
+  mealPeriods?: string[]; // ["Lunch", "Dinner"] for UI grouping
+  allSlots?: AvailableSlot[]; // NEW: All slots including unavailable ones
+}
+
 // ============ ERROR RESPONSE ============
 
 export interface ApiErrorResponse {
@@ -332,3 +357,4 @@ export interface ApiErrorResponse {
   message: string;
   errors?: Record<string, string[]>;
 }
+

@@ -1,6 +1,7 @@
 // src/types/index.ts
 // Frontend domain types - what the UI uses (may extend or combine API types)
 import {RestaurantDetail} from './api.types';
+import { getRestaurantImage, getAmenities } from '../utils/imageUtils';
 
 
 // ============ RESTAURANT DOMAIN TYPES ============
@@ -49,10 +50,10 @@ export const mapRestaurantDetailToRestaurant = (detail: RestaurantDetail): Resta
         averageRating: detail.averageRating,
         totalReviews: detail.totalReviews,
         priceRange: detail.priceRange || '$$',
-        coverImageUrl: detail.coverImageUrl || '',
+        coverImageUrl: getRestaurantImage(detail.coverImageUrl), // Safe image handling
+        amenities: getAmenities(detail.amenities), // Safe amenities handling
         galleryImages: detail.galleryImages || [],
         description: detail.description || '',
-        amenities: [], // TODO: Parse from backend amenities field
         phoneNumber: detail.phoneNumber,
         isActive: detail.isActive,
         acceptsReservations: detail.acceptsReservations,
