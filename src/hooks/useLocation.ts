@@ -2,20 +2,28 @@ import { useState, useEffect } from "react";
 import * as Location from "expo-location";
 
 // Define the location type
-interface LocationData {
+export interface LocationData {
     latitude: number;
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
 }
 
+export interface UseLocationReturn {
+    location: LocationData | null;
+    loading: boolean;
+    refreshLocation: () => Promise<void>;
+    isUsingDefault: boolean;
+}
+
 /**
  * Named export version – matches your previous usage:
  * import { useLocation } from "../../hooks/useLocation";
  */
-export function useLocation() {
+export function useLocation(): UseLocationReturn {
     const [location, setLocation] = useState<LocationData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isUsingDefault, setIsUsingDefault] = useState(false);
 
     // Used ONLY when GPS fails completely
     const fallbackLocation: LocationData = {
@@ -35,6 +43,7 @@ export function useLocation() {
                 if (status !== "granted") {
                     console.warn("Location denied → using fallback");
                     setLocation(fallbackLocation);
+                    setIsUsingDefault(true);
                     setLoading(false);
                     return;
                 }
@@ -60,6 +69,7 @@ export function useLocation() {
             } catch (err) {
                 console.log("Location error → using fallback", err);
                 setLocation(fallbackLocation);
+                setIsUsingDefault(true);
                 setLoading(false);
             }
         })();
@@ -69,5 +79,33 @@ export function useLocation() {
         };
     }, []);
 
-    return { location, loading };
+    const refreshLocation = async () => {
+        setLoading(true);
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === "granted") {
+                const pos = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.High,
+                });
+                setLocation({
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                    latitudeDelta: 0.04,
+                    longitudeDelta: 0.04,
+                });
+                setIsUsingDefault(false);
+            } else {
+                setLocation(fallbackLocation);
+                setIsUsingDefault(true);
+            }
+        } catch (err) {
+            console.log("Refresh location error", err);
+            setLocation(fallbackLocation);
+            setIsUsingDefault(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { location, loading, refreshLocation, isUsingDefault };
 }

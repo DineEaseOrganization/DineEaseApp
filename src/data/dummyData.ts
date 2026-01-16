@@ -2,11 +2,13 @@
 import {Reservation, Restaurant, Review, TimeSlot, User} from '../types';
 
 export const dummyUser: User = {
-id: 1,
+    customerId: 1,
     firstName: "Maria",
     lastName: "Christou",
     email: "maria.christou@email.com",
     phone: "+357 99 789012",
+    phoneCountryCode: "+357",
+    emailVerified: true,
     profileImage: "https://images.unsplash.com/photo-1494790108755-2616b612b647?w=150",
     favoriteRestaurants: [1, 3]
 };
@@ -16,7 +18,9 @@ export const dummyRestaurants: Restaurant[] = [
         id: 1,
         name: "The Mediterranean Terrace",
         cuisineType: "Mediterranean",
-        address: "123 Ledra Street, Nicosia, Cyprus",
+        address: "123 Ledra Street, Nicosia",
+        postCode: "1016",
+        country: "Cyprus",
         latitude: 35.1676,
         longitude: 33.3736,
         averageRating: 4.6,
@@ -35,7 +39,9 @@ export const dummyRestaurants: Restaurant[] = [
         id: 2,
         name: "Taverna Dionysos",
         cuisineType: "Greek",
-        address: "456 Makarios Avenue, Limassol, Cyprus",
+        address: "456 Makarios Avenue, Limassol",
+        postCode: "3040",
+        country: "Cyprus",
         latitude: 34.6777,
         longitude: 33.0376,
         averageRating: 4.3,
@@ -51,7 +57,9 @@ export const dummyRestaurants: Restaurant[] = [
         id: 3,
         name: "Sushi Zen",
         cuisineType: "Japanese",
-        address: "789 Gladstonos Street, Paphos, Cyprus",
+        address: "789 Gladstonos Street, Paphos",
+        postCode: "8046",
+        country: "Cyprus",
         latitude: 34.7767,
         longitude: 32.4114,
         averageRating: 4.8,

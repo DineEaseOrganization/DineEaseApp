@@ -45,6 +45,7 @@ const axiosInstance: AxiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Mobile-App': 'true', // Tells backend to use modern JWT parser
     },
 });
 
@@ -57,6 +58,11 @@ axiosInstance.interceptors.request.use(
         // Add authorization header if token exists
         if (accessToken && config.headers) {
             config.headers.Authorization = `Bearer ${accessToken}`;
+            if (__DEV__) {
+                console.log('🔐 Auth token added to request');
+            }
+        } else if (__DEV__) {
+            console.warn('⚠️ No auth token found in storage for request to:', config.url);
         }
 
         // Log request in development
@@ -65,6 +71,7 @@ axiosInstance.interceptors.request.use(
                 method: config.method?.toUpperCase(),
                 url: config.url,
                 data: config.data,
+                hasAuthHeader: !!config.headers?.Authorization,
             });
         }
 

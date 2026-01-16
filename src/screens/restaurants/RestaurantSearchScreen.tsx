@@ -12,36 +12,44 @@ import {
     Animated,
     Easing,
     Keyboard,
-    Alert
+    Alert,
+    ListRenderItemInfo
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Region, MapPressEvent } from "react-native-maps";
 import { restaurantService } from "../../services/api";
-import { mapRestaurantDetailToRestaurant } from "../../types";
+import { mapRestaurantDetailToRestaurant, Restaurant } from "../../types";
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from "../../hooks/useLocation";
+import { SearchScreenNavigationProp } from "../../navigation/AppNavigator";
 
 const { height } = Dimensions.get("window");
 
+interface SearchResult {
+    lat: string;
+    lon: string;
+    display_name: string;
+}
+
 const RestaurantSearchScreen = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<SearchScreenNavigationProp>();
     const { location, loading: locationLoading } = useLocation();
 
-    const [restaurants, setRestaurants] = useState([]);
-    const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+    const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+    const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [loading, setLoading] = useState(false);
-    const [currentRegion, setCurrentRegion] = useState(null);
-    const [searchPin, setSearchPin] = useState(null);
+    const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
+    const [searchPin, setSearchPin] = useState<{ latitude: number; longitude: number } | null>(null);
     const [searchRadius, setSearchRadius] = useState(10);
 
     // Search state
     const [searchText, setSearchText] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [showResults, setShowResults] = useState(false);
 
-    const mapRef = useRef(null);
+    const mapRef = useRef<MapView | null>(null);
     const slideAnim = useRef(new Animated.Value(0)).current;
-    const searchTimeout = useRef(null);
+    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const showPreview = () => {
         Animated.timing(slideAnim, {
@@ -60,7 +68,7 @@ const RestaurantSearchScreen = () => {
         }).start(() => setSelectedRestaurant(null));
     };
 
-    const searchLocation = async (query) => {
+    const searchLocation = async (query: string) => {
         if (query.length < 3) {
             setSearchResults([]);
             return;
@@ -84,13 +92,10 @@ const RestaurantSearchScreen = () => {
 
             const data = await response.json();
 
-            const formatted = data.map(item => ({
-                name: item.display_name,
-                latitude: parseFloat(item.lat),
-                longitude: parseFloat(item.lon),
-                type: item.type,
-                address: item.address,
-                placeId: item.place_id
+            const formatted: SearchResult[] = data.map((item: any) => ({
+                lat: item.lat,
+                lon: item.lon,
+                display_name: item.display_name
             }));
 
             setSearchResults(formatted);
@@ -103,7 +108,7 @@ const RestaurantSearchScreen = () => {
         }
     };
 
-    const handleSearchChange = (text) => {
+    const handleSearchChange = (text: string) => {
         setSearchText(text);
 
         if (searchTimeout.current) {
@@ -139,45 +144,38 @@ const RestaurantSearchScreen = () => {
         }
     };
 
-    const handleSearchResultSelect = async (result) => {
-        console.log('Selected location:', result);
+    const handleSearchResultSelect = async (result: SearchResult) => {
+        const latitude = parseFloat(result.lat);
+        const longitude = parseFloat(result.lon);
 
-        const newRegion = {
-            latitude: result.latitude,
-            longitude: result.longitude,
+        const newRegion: Region = {
+            latitude,
+            longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
         };
 
-        console.log('Moving map to:', newRegion);
-
-        setSearchPin({
-            latitude: result.latitude,
-            longitude: result.longitude,
-        });
-
+        setSearchPin({ latitude, longitude });
         setCurrentRegion(newRegion);
 
         if (mapRef.current) {
             mapRef.current.animateToRegion(newRegion, 1000);
         }
 
-        const displayName = result.name.split(',').slice(0, 2).join(',');
+        const displayName = result.display_name.split(',').slice(0, 2).join(',');
         setSearchText(displayName);
         setShowResults(false);
         Keyboard.dismiss();
 
-        await loadRestaurants(result.latitude, result.longitude);
+        await loadRestaurants(latitude, longitude);
     };
 
-    const handleMapLongPress = async (event) => {
+    const handleMapLongPress = async (event: any) => {
         const { latitude, longitude } = event.nativeEvent.coordinate;
-
-        console.log('Map long pressed at:', latitude, longitude);
 
         setSearchPin({ latitude, longitude });
 
-        const newRegion = {
+        const newRegion: Region = {
             latitude,
             longitude,
             latitudeDelta: 0.05,
@@ -192,14 +190,11 @@ const RestaurantSearchScreen = () => {
         setSearchText('Custom location');
     };
 
-    const loadRestaurants = async (lat, lng, radius = searchRadius) => {
+    const loadRestaurants = async (lat: number, lng: number, radius: number = searchRadius) => {
         try {
             setLoading(true);
-            console.log('Loading restaurants at:', lat, lng, 'radius:', radius);
 
             const res = await restaurantService.getNearbyRestaurants(lat, lng, radius, 0, 50);
-
-            console.log('Found restaurants:', res.restaurants.length);
 
             setRestaurants([]);
 
@@ -212,13 +207,13 @@ const RestaurantSearchScreen = () => {
                 return;
             }
 
-            const mapped = res.restaurants.map((r) => ({
+            const mapped: Restaurant[] = res.restaurants.map((r) => ({
                 ...mapRestaurantDetailToRestaurant(r),
                 distance: calculateDistance(lat, lng, r.latitude, r.longitude),
                 openNow: r.isActive,
                 mapCoordinate: {
-                    latitude: r.latitude,
-                    longitude: r.longitude,
+                    latitude: r.latitude || 0,
+                    longitude: r.longitude || 0,
                 },
             }));
 
@@ -232,7 +227,8 @@ const RestaurantSearchScreen = () => {
         }
     };
 
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const calculateDistance = (lat1: number, lon1: number, lat2: number | null, lon2: number | null): number => {
+        if (lat2 === null || lon2 === null) return 0;
         const R = 6371; // km
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -267,24 +263,26 @@ const RestaurantSearchScreen = () => {
         );
     }
 
-    const handleMarkerPress = (restaurant) => {
+    const handleMarkerPress = (restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
-        mapRef.current?.animateToRegion(
-            {
-                ...restaurant.mapCoordinate,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-            },
-            300
-        );
+        if (restaurant.mapCoordinate) {
+            mapRef.current?.animateToRegion(
+                {
+                    ...restaurant.mapCoordinate,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                },
+                300
+            );
+        }
         showPreview();
     };
 
-    const handleListItemPress = (restaurant) => {
+    const handleListItemPress = (restaurant: Restaurant) => {
         handleMarkerPress(restaurant);
     };
 
-    const renderRestaurantItem = ({ item }) => (
+    const renderRestaurantItem = ({ item }: ListRenderItemInfo<Restaurant>) => (
         <TouchableOpacity
             style={styles.card}
             onPress={() => handleListItemPress(item)}
@@ -407,7 +405,7 @@ const RestaurantSearchScreen = () => {
                     <View style={styles.searchResultsContainer}>
                         <FlatList
                             data={searchResults}
-                            keyExtractor={(item, index) => `search-${index}-${item.placeId || item.latitude}`}
+                            keyExtractor={(item, index) => `search-${index}-${item.lat}-${item.lon}`}
                             renderItem={({ item }) => (
                                 <TouchableOpacity
                                     style={styles.searchResultItem}
@@ -416,10 +414,10 @@ const RestaurantSearchScreen = () => {
                                     <Text style={styles.searchResultIcon}>📍</Text>
                                     <View style={styles.searchResultTextContainer}>
                                         <Text style={styles.searchResultName}>
-                                            {item.name.split(',')[0]}
+                                            {item.display_name.split(',')[0]}
                                         </Text>
                                         <Text style={styles.searchResultAddress} numberOfLines={2}>
-                                            {item.name}
+                                            {item.display_name}
                                         </Text>
                                     </View>
                                 </TouchableOpacity>
@@ -463,10 +461,10 @@ const RestaurantSearchScreen = () => {
                     )}
 
                     {/* Restaurant markers */}
-                    {restaurants.map((r) => (
+                    {restaurants.filter(r => r.mapCoordinate).map((r) => (
                         <Marker
                             key={r.id}
-                            coordinate={r.mapCoordinate}
+                            coordinate={r.mapCoordinate!}
                             onPress={() => handleMarkerPress(r)}
                         >
                             <View

@@ -29,11 +29,8 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
     const filteredReservations = filterReservations(dummyReservations);
 
     const handleReviewPress = (reservation: Reservation) => {
-        // Navigate to the Discover tab and then to ReviewScreen
-        navigation.navigate('Discover', {
-            screen: 'ReviewScreen',
-            params: {reservation}
-        });
+        // Navigate to ReviewScreen within BookingsStack
+        navigation.navigate('ReviewScreen', { reservation });
     };
 
     const handleCancelReservation = (reservationId: number) => {

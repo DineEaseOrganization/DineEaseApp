@@ -59,7 +59,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
     useEffect(() => {
 
         return authEventEmitter.subscribe(() => {
-            console.log('🔴 Auth event received - logging out user');
             setUser(null);
         });
     }, []);
@@ -130,8 +129,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
 
     const register = async (userData: RegisterData): Promise<{ success: boolean; message: string }> => {
         try {
-            console.log('📤 Registering user:', userData.email);
-
             const response = await authService.register({
                 email: userData.email,
                 password: userData.password,
@@ -140,8 +137,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
                 phone: userData.phone,
                 phoneCountryCode: userData.phoneCountryCode,
             });
-
-            console.log('📥 Registration response:', response);
 
             if (response.success && response.data) {
                 const newUser: User = {

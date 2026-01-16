@@ -1,5 +1,5 @@
 // src/screens/booking/BookingScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Alert,
     SafeAreaView,
@@ -15,19 +15,37 @@ import {
 import { CommonActions } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
-import { processingService } from '../../services/api';
-import { AvailableSlot, AvailabilitySlotsResponse } from '../../types/api.types';
+import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
+import { AvailableSlot } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
+import { processingService } from '../../services/api';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
     const { isAuthenticated, user } = useAuth();
 
-    // Slot loading state
-    const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-    const [slotsLoading, setSlotsLoading] = useState(true);
+    // Format date for the streaming hook
+    const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+
+    // Availability data with automatic polling
+    const {
+        slots: streamedSlots,
+        isLoading: slotsLoading,
+        error: streamError,
+    } = useAvailabilityStream({
+        restaurantId: restaurant.id,
+        date: dateStr,
+        partySize,
+        enabled: isAuthenticated,
+        pollingIntervalMs: 30000,
+    });
+
+    // Derive availability error from stream error
     const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
+
+    // Map streamed slots to local state format
+    const availableSlots = streamedSlots;
 
     // Form state
     const [selectedTime, setSelectedTime] = useState<string>(initialSelectedTime || '');
@@ -36,6 +54,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [customerEmail, setCustomerEmail] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Auto-fill user information from profile when authenticated
     useEffect(() => {
@@ -68,45 +87,22 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         }
     }, [isAuthenticated]);
 
-    // Load available slots
+    // Handle streaming errors and no-slot scenarios
     useEffect(() => {
-        if (isAuthenticated) {
-            void loadAvailableSlots();
-        }
-    }, [selectedDate, partySize, isAuthenticated]);
-
-    const loadAvailableSlots = async () => {
-        try {
-            setSlotsLoading(true);
-            setAvailabilityError(null);
-
-            const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
-            const response = await processingService.getAvailableSlots(
-              restaurant.id,
-              dateStr,
-              partySize
-            );
-
-            setAvailableSlots(response.slots || []);
-
-            // If no slots available
-            if (!response.slots || response.slots.length === 0) {
-                setAvailabilityError({
-                    type: 'no_slots',
-                    title: 'No Availability',
-                    message: 'No tables available for the selected date and party size. Please try a different date or time.',
-                    showContactInfo: true
-                });
-            }
-        } catch (error: any) {
-            console.error('Error loading available slots:', error);
-            const parsedError = parseAvailabilityError(error);
+        if (streamError) {
+            const parsedError = parseAvailabilityError(streamError);
             setAvailabilityError(parsedError);
-            setAvailableSlots([]);
-        } finally {
-            setSlotsLoading(false);
+        } else if (!slotsLoading && availableSlots.length === 0) {
+            setAvailabilityError({
+                type: 'no_slots',
+                title: 'No Availability',
+                message: 'No tables available for the selected date and party size. Please try a different date or time.',
+                showContactInfo: true
+            });
+        } else {
+            setAvailabilityError(null);
         }
-    };
+    }, [streamError, slotsLoading, availableSlots]);
 
     const formatDate = (date: Date) => {
         return date.toLocaleDateString('en-US', {
@@ -150,8 +146,9 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         navigation.goBack();
     };
 
-    const handleConfirmBooking = () => {
+    const handleConfirmBooking = async () => {
         if (!isAuthenticated) {
+            console.log('⚠️ [BookingScreen] User not authenticated, showing auth prompt');
             setShowAuthPrompt(true);
             return;
         }
@@ -161,22 +158,115 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             return;
         }
 
-        // Mock booking confirmation
-        const confirmationCode = 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        try {
+            // Show loading state
+            setIsLoading(true);
 
-        navigation.navigate('BookingConfirmation', {
-            booking: {
-                restaurant,
-                date: selectedDate,
-                time: selectedTime,
+            // Check token in storage
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const token = await AsyncStorage.getItem('@dineease_access_token');
+            console.log('🔑 [BookingScreen] Token in storage:', token ? `${token.substring(0, 20)}...` : 'NULL');
+
+            // Create reservation via API
+            // Parse phone number to extract country code
+            const parsePhoneNumber = (phone: string): { phoneNumber: string; phoneCountryCode: string } => {
+                // Remove all spaces
+                const cleanPhone = phone.replace(/\s+/g, '');
+
+                // Check for common country codes at the start
+                const countryCodePatterns = [
+                    { code: '+357', length: 4 },  // Cyprus
+                    { code: '+30', length: 3 },   // Greece
+                    { code: '+44', length: 3 },   // UK
+                    { code: '+1', length: 2 },    // US/Canada
+                    { code: '+49', length: 3 },   // Germany
+                    { code: '+33', length: 3 },   // France
+                    { code: '+39', length: 3 },   // Italy
+                    { code: '+34', length: 3 },   // Spain
+                ];
+
+                for (const { code, length } of countryCodePatterns) {
+                    if (cleanPhone.startsWith(code)) {
+                        return {
+                            phoneCountryCode: code,
+                            phoneNumber: cleanPhone.substring(length),
+                        };
+                    }
+                }
+
+                // Default to +357 if no country code found
+                return {
+                    phoneCountryCode: '+357',
+                    phoneNumber: cleanPhone,
+                };
+            };
+
+            const { phoneNumber, phoneCountryCode } = parsePhoneNumber(customerPhone);
+
+            const reservation = {
+                reservationDate: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD
+                reservationStartTime: selectedTime, // HH:mm format
+                reservationDuration: 120, // 2 hours default
                 partySize,
-                customerName,
-                customerPhone,
-                customerEmail,
-                specialRequests,
-                confirmationCode,
-            }
-        });
+                noOfAdults: partySize,
+                noOfKids: 0,
+                isSmoking: false,
+                customer: {
+                    name: customerName,
+                    phoneNumber: phoneNumber,
+                    phoneCountryCode: phoneCountryCode,
+                    email: customerEmail || undefined,
+                },
+                restaurantId: restaurant.id,
+                state: 'CONFIRMED',
+                comments: specialRequests || undefined,
+            };
+
+            console.log('📝 [BookingScreen] Calling createReservation with:', {
+                date: reservation.reservationDate,
+                time: reservation.reservationStartTime,
+                restaurantId: reservation.restaurantId,
+                partySize: reservation.partySize,
+            });
+
+            const response = await processingService.createReservation(reservation);
+
+            console.log('✅ [BookingScreen] Reservation created successfully:', response);
+
+            // Generate confirmation code from response or use reservation ID
+            const confirmationCode = response.reservationId
+                ? `RES${response.reservationId}`
+                : 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+            setIsLoading(false);
+
+            navigation.navigate('BookingConfirmation', {
+                booking: {
+                    restaurant,
+                    date: selectedDate,
+                    time: selectedTime,
+                    partySize,
+                    customerName,
+                    customerPhone,
+                    customerEmail,
+                    specialRequests,
+                    confirmationCode,
+                }
+            });
+        } catch (error: any) {
+            setIsLoading(false);
+            console.error('❌ [BookingScreen] Reservation creation failed:', error);
+            console.error('❌ [BookingScreen] Error details:', {
+                message: error.message,
+                statusCode: error.statusCode,
+                response: error.response,
+            });
+            Alert.alert(
+                'Booking Failed',
+                error.message || 'Unable to create reservation. Please try again.',
+                [{ text: 'OK' }]
+            );
+        }
     };
 
     const handleCallRestaurant = () => {
@@ -313,12 +403,13 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                                       >
                                           {slot.time}
                                       </Text>
-                                      {slot.remainingCapacity !== undefined && slot.remainingCapacity <= 3 && (
+                                      {slot.availableCapacity !== undefined && (
                                         <Text style={[
                                             styles.seatsLeftText,
+                                            slot.availableCapacity <= 3 && styles.seatsLeftTextLow,
                                             selectedTime === slot.time && styles.seatsLeftTextSelected
                                         ]}>
-                                            {slot.remainingCapacity} left
+                                            {slot.availableCapacity} avail.
                                         </Text>
                                       )}
                                   </TouchableOpacity>
@@ -460,12 +551,13 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                               >
                                   {slot.time}
                               </Text>
-                              {slot.remainingCapacity !== undefined && slot.remainingCapacity <= 3 && (
+                              {slot.availableCapacity !== undefined && (
                                 <Text style={[
                                     styles.seatsLeftText,
+                                    slot.availableCapacity <= 3 && styles.seatsLeftTextLow,
                                     selectedTime === slot.time && styles.seatsLeftTextSelected
                                 ]}>
-                                    {slot.remainingCapacity} left
+                                    {slot.availableCapacity} avail.
                                 </Text>
                               )}
                           </TouchableOpacity>
@@ -532,12 +624,16 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
               <TouchableOpacity
                 style={[
                     styles.confirmButton,
-                    (!selectedTime || !customerName || !customerPhone) && styles.confirmButtonDisabled
+                    (!selectedTime || !customerName || !customerPhone || isLoading) && styles.confirmButtonDisabled
                 ]}
                 onPress={handleConfirmBooking}
-                disabled={!selectedTime || !customerName || !customerPhone}
+                disabled={!selectedTime || !customerName || !customerPhone || isLoading}
               >
-                  <Text style={styles.confirmButtonText}>Confirm Reservation</Text>
+                  {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                      <Text style={styles.confirmButtonText}>Confirm Reservation</Text>
+                  )}
               </TouchableOpacity>
           </ScrollView>
 
@@ -706,8 +802,12 @@ const styles = StyleSheet.create({
     },
     seatsLeftText: {
         fontSize: 11,
-        color: '#e67e22',
+        color: '#666',
         marginTop: 4,
+    },
+    seatsLeftTextLow: {
+        color: '#e67e22',
+        fontWeight: '600',
     },
     seatsLeftTextSelected: {
         color: '#FFA500',
@@ -896,6 +996,33 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 12,
+    },
+    // Real-time streaming indicator styles
+    sectionTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    liveIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+    },
+    liveDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#10B981',
+    },
+    liveText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#059669',
+        textTransform: 'uppercase',
     },
 });
 

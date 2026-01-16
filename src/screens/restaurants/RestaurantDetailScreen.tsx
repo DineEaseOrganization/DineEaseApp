@@ -1,5 +1,4 @@
-// src/screens/restaurants/RestaurantDetailScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Dimensions,
     Image,
@@ -15,18 +14,18 @@ import {
     Modal,
 } from 'react-native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
-import { processingService, restaurantService } from '../../services/api';
-import { RestaurantDetail, AvailableSlot, AvailabilitySlotsResponse } from '../../types/api.types';
+import { restaurantService } from '../../services/api';
+import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
+import { Restaurant, mapRestaurantDetailToRestaurant } from '../../types';
+import { AvailableSlot } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
 
 const { width } = Dimensions.get('window');
 
-const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
-                                                                           route,
-                                                                           navigation
-                                                                       }) => {
+const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
+                                                                           navigation }) => {
     const {
         restaurant: initialRestaurant,
         partySize: initialPartySize,
@@ -34,7 +33,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
         selectedTime: initialSelectedTime
     } = route.params;
 
-    const [restaurant, setRestaurant] = useState<RestaurantDetail>(initialRestaurant);
+    const [restaurant, setRestaurant] = useState<Restaurant>(initialRestaurant);
     const [selectedDate, setSelectedDate] = useState(initialSelectedDate || new Date());
     const [partySize, setPartySize] = useState(initialPartySize || 2);
     const [selectedTime, setSelectedTime] = useState(initialSelectedTime || 'ASAP');
@@ -42,67 +41,63 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
     // Picker modal state
     const [showPickerModal, setShowPickerModal] = useState(false);
 
-    // Availability state
-    const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-    const [availabilitySlotsResponse, setAvailabilitySlotsResponse] = useState<AvailabilitySlotsResponse | null>(null);
+    // Restaurant details loading state
     const [loading, setLoading] = useState(false);
-    const [slotsLoading, setSlotsLoading] = useState(false);
-    const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
+
+    // Format date for the streaming hook
+    const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+
+    // Availability data with automatic polling
+    const {
+        slots: streamedSlots,
+        allSlots: streamedAllSlots,
+        isLoading: slotsLoading,
+        error: streamError,
+    } = useAvailabilityStream({
+        restaurantId: restaurant.id,
+        date: dateStr,
+        partySize,
+        enabled: true,
+        pollingIntervalMs: 30000,
+    });
+
+    // Map streamed slots
+    const availableSlots = streamedSlots;
+
+    // Derive availability error from stream error or empty slots
+    const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
+
+    useEffect(() => {
+        if (streamError) {
+            const parsedError = parseAvailabilityError(streamError);
+            setAvailabilityError(parsedError);
+        } else if (!slotsLoading && availableSlots.length === 0) {
+            setAvailabilityError({
+                type: 'no_slots',
+                title: 'No Availability',
+                message: 'No tables available for the selected date and party size. Please try a different date or time.',
+                showContactInfo: false
+            });
+        } else {
+            setAvailabilityError(null);
+        }
+    }, [streamError, slotsLoading, availableSlots]);
 
     useEffect(() => {
         void loadRestaurantDetails();
     }, []);
 
-    useEffect(() => {
-        void loadAvailableSlots();
-    }, [selectedDate, partySize]);
-
     const loadRestaurantDetails = async () => {
         try {
             setLoading(true);
             const details = await restaurantService.getRestaurantById(initialRestaurant.id);
-            setRestaurant(details);
+            setRestaurant(mapRestaurantDetailToRestaurant(details));
         } catch (error) {
             console.error('Error loading restaurant details:', error);
             Alert.alert('Error', 'Failed to load restaurant details');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const loadAvailableSlots = async () => {
-        try {
-            setSlotsLoading(true);
-            setAvailabilityError(null);
-
-            const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
-            const response = await processingService.getAvailableSlots(
-              restaurant.id,
-              dateStr,
-              partySize
-            );
-
-            setAvailabilitySlotsResponse(response);
-            setAvailableSlots(response.slots || []);
-
-            // If no slots but no error, show friendly message
-            if (!response.slots || response.slots.length === 0) {
-                setAvailabilityError({
-                    type: 'no_slots',
-                    title: 'No Availability',
-                    message: 'No tables available for the selected date and party size. Please try a different date or time.',
-                    showContactInfo: false
-                });
-            }
-        } catch (error: any) {
-            console.error('Error loading available slots:', error);
-            const parsedError = parseAvailabilityError(error);
-            setAvailabilityError(parsedError);
-            setAvailableSlots([]);
-            setAvailabilitySlotsResponse(null);
-        } finally {
-            setSlotsLoading(false);
         }
     };
 
@@ -243,7 +238,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
     };
 
     const renderAllSlotsModal = () => {
-        const slotsToDisplay = availabilitySlotsResponse?.allSlots || availableSlots;
+        const slotsToDisplay = streamedAllSlots.length > 0 ? streamedAllSlots : availableSlots;
         const available = slotsToDisplay.filter(s => s.isAvailable);
         const requiresNotice = slotsToDisplay.filter(s =>
           !s.isAvailable && s.requiresAdvanceNotice
@@ -288,9 +283,12 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
                                     onPress={() => handleTimeSlotSelect(slot)}
                                   >
                                       <Text style={styles.modalTimeSlotText}>{slot.time}</Text>
-                                      {slot.remainingCapacity !== undefined && slot.remainingCapacity <= 3 && (
-                                        <Text style={styles.modalCapacityText}>
-                                            {slot.remainingCapacity} left
+                                      {slot.availableCapacity !== undefined && (
+                                        <Text style={[
+                                            styles.modalCapacityText,
+                                            slot.availableCapacity <= 3 && styles.modalCapacityTextLow
+                                        ]}>
+                                            {slot.availableCapacity} available
                                         </Text>
                                       )}
                                   </TouchableOpacity>
@@ -344,7 +342,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
               {/* Restaurant Image */}
               <View style={styles.imageContainer}>
                   <Image
-                    source={{ uri: restaurant.imageUrl || 'https://via.placeholder.com/400x250' }}
+                    source={{ uri: restaurant.coverImageUrl || 'https://via.placeholder.com/400x250' }}
                     style={styles.restaurantImage}
                   />
                   <TouchableOpacity
@@ -360,9 +358,9 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
                   <Text style={styles.restaurantName}>{restaurant.name}</Text>
 
                   <View style={styles.infoRow}>
-                      <Text style={styles.stars}>{renderStars(restaurant.rating || 4.5)}</Text>
+                      <Text style={styles.stars}>{renderStars(restaurant.averageRating || 4.5)}</Text>
                       <Text style={styles.ratingText}>
-                          {(restaurant.rating || 4.5).toFixed(1)} ({restaurant.reviewCount || 0} reviews)
+                          {(restaurant.averageRating || 4.5).toFixed(1)} ({restaurant.totalReviews || 0} reviews)
                       </Text>
                   </View>
 
@@ -370,7 +368,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
                       <Text style={styles.infoIcon}>💰</Text>
                       <Text style={styles.infoText}>{restaurant.priceRange}</Text>
                       <Text style={styles.infoIcon}>🍽️</Text>
-                      <Text style={styles.infoText}>{restaurant.cuisine}</Text>
+                      <Text style={styles.infoText}>{restaurant.cuisineType}</Text>
                   </View>
 
                   <View style={styles.locationRow}>
@@ -412,8 +410,8 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
                             <View style={[
                                 styles.errorBadge,
                                 availabilityError.type === 'no_slots' && styles.errorBadgeInfo,
-                                availabilityError.type === 'advance_notice' && styles.errorBadgeWarning,
-                                availabilityError.type === 'error' && styles.errorBadgeError,
+                                availabilityError.type === 'user_friendly' && styles.errorBadgeWarning,
+                                availabilityError.type === 'system_error' && styles.errorBadgeError,
                             ]}>
                                 <Text style={styles.errorTitle}>{availabilityError.title}</Text>
                                 <Text style={styles.errorMessage}>{availabilityError.message}</Text>
@@ -439,9 +437,12 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({
                                           onPress={() => handleTimeSlotSelect(slot)}
                                         >
                                             <Text style={styles.timeSlotText}>{slot.time}</Text>
-                                            {slot.remainingCapacity !== undefined && slot.remainingCapacity <= 3 && (
-                                              <Text style={styles.capacityText}>
-                                                  {slot.remainingCapacity} left
+                                            {slot.availableCapacity !== undefined && (
+                                              <Text style={[
+                                                  styles.capacityText,
+                                                  slot.availableCapacity <= 3 && styles.capacityTextLow
+                                              ]}>
+                                                  {slot.availableCapacity} avail.
                                               </Text>
                                             )}
                                         </TouchableOpacity>
@@ -639,9 +640,13 @@ const styles = StyleSheet.create({
     },
     capacityText: {
         fontSize: 10,
-        color: '#e67e22',
+        color: '#666',
         textAlign: 'center',
         marginTop: 2,
+    },
+    capacityTextLow: {
+        color: '#e67e22',
+        fontWeight: '600',
     },
     moreTimesButton: {
         marginTop: 4,
@@ -786,10 +791,13 @@ const styles = StyleSheet.create({
     },
     modalCapacityText: {
         fontSize: 11,
-        color: '#e67e22',
+        color: '#666',
         textAlign: 'center',
         marginTop: 4,
-        fontWeight: '500',
+    },
+    modalCapacityTextLow: {
+        color: '#e67e22',
+        fontWeight: '600',
     },
     emptyStateContainer: {
         paddingVertical: 40,
@@ -799,6 +807,33 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#999',
         textAlign: 'center',
+    },
+    // Real-time streaming indicator styles
+    sectionTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    liveIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+    },
+    liveDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#10B981',
+    },
+    liveText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#059669',
+        textTransform: 'uppercase',
     },
 });
 

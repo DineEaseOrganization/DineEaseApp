@@ -111,7 +111,7 @@ export interface User {
     phoneCountryCode: string;
     emailVerified: boolean;
     profileImage?: string;
-    favoriteRestaurants?: number[];
+    favoriteRestaurants: number[];
 }
 
 // ============ RE-EXPORT COMMONLY USED API TYPES ============
