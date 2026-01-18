@@ -4,6 +4,7 @@ import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
 import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Text} from 'react-native';
+import {navigationRef} from '../utils/navigationHelper';
 
 import RestaurantListScreen from '../screens/restaurants/RestaurantListScreen';
 import RestaurantDetailScreen from '../screens/restaurants/RestaurantDetailScreen';
@@ -456,7 +457,7 @@ const MainTabNavigator: React.FC = () => {
 // Root Navigator with Auth Screens
 const AppNavigator: React.FC = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <RootStack.Navigator screenOptions={{headerShown: false}}>
         <RootStack.Screen
           name="MainTabs"

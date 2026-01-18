@@ -11,18 +11,17 @@ import {
     ActivityIndicator,
     Alert,
     Linking,
-    Modal,
 } from 'react-native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
 import { restaurantService } from '../../services/api';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
+import { useAuth } from '../../context/AuthContext';
 import { Restaurant, mapRestaurantDetailToRestaurant } from '../../types';
 import { AvailableSlot } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
+import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
-
-const { width } = Dimensions.get('window');
 
 const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
                                                                            navigation }) => {
@@ -33,6 +32,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
         selectedTime: initialSelectedTime
     } = route.params;
 
+    const { isAuthenticated } = useAuth();
     const [restaurant, setRestaurant] = useState<Restaurant>(initialRestaurant);
     const [selectedDate, setSelectedDate] = useState(initialSelectedDate || new Date());
     const [partySize, setPartySize] = useState(initialPartySize || 2);
@@ -48,7 +48,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
     // Format date for the streaming hook
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
-    // Availability data with automatic polling
+    // Availability data with automatic polling (only when authenticated)
     const {
         slots: streamedSlots,
         allSlots: streamedAllSlots,
@@ -59,6 +59,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
         date: dateStr,
         partySize,
         enabled: true,
+        isAuthenticated, // Pass auth state to conditionally enable SSE/polling
         pollingIntervalMs: 30000,
     });
 
@@ -209,129 +210,6 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
         return stars.join('');
     };
 
-    const groupSlotsByMealPeriod = (slots: AvailableSlot[]) => {
-        const groups: { [key: string]: AvailableSlot[] } = {
-            'Morning': [],
-            'Lunch': [],
-            'Afternoon': [],
-            'Dinner': [],
-            'Late Night': []
-        };
-
-        slots.forEach(slot => {
-            const hour = parseInt(slot.time.split(':')[0]);
-            if (hour < 11) {
-                groups['Morning'].push(slot);
-            } else if (hour < 14) {
-                groups['Lunch'].push(slot);
-            } else if (hour < 17) {
-                groups['Afternoon'].push(slot);
-            } else if (hour < 22) {
-                groups['Dinner'].push(slot);
-            } else {
-                groups['Late Night'].push(slot);
-            }
-        });
-
-        // Filter out empty groups
-        return Object.entries(groups).filter(([_, slots]) => slots.length > 0);
-    };
-
-    const renderAllSlotsModal = () => {
-        const slotsToDisplay = streamedAllSlots.length > 0 ? streamedAllSlots : availableSlots;
-        const available = slotsToDisplay.filter(s => s.isAvailable);
-        const requiresNotice = slotsToDisplay.filter(s =>
-          !s.isAvailable && s.requiresAdvanceNotice
-        );
-
-        const groupedAvailable = groupSlotsByMealPeriod(available);
-
-        return (
-          <Modal
-            visible={showAllSlotsModal}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={() => setShowAllSlotsModal(false)}
-          >
-              <SafeAreaView style={styles.modalContainer}>
-                  {/* Modal Header */}
-                  <View style={styles.modalHeader}>
-                      <View>
-                          <Text style={styles.modalTitle}>All Available Times</Text>
-                          <Text style={styles.modalSubtitle}>
-                              {formatDateDisplay(selectedDate)} • Party of {partySize}
-                          </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => setShowAllSlotsModal(false)}
-                        style={styles.closeButton}
-                      >
-                          <Text style={styles.closeButtonText}>✕</Text>
-                      </TouchableOpacity>
-                  </View>
-
-                  <ScrollView style={styles.modalContent}>
-                      {/* Available Slots by Meal Period */}
-                      {groupedAvailable.map(([period, slots]) => (
-                        <View key={period} style={styles.mealPeriodSection}>
-                            <Text style={styles.mealPeriodTitle}>{period}</Text>
-                            <View style={styles.modalTimeSlotsList}>
-                                {slots.map((slot, index) => (
-                                  <TouchableOpacity
-                                    key={index}
-                                    style={styles.modalTimeSlot}
-                                    onPress={() => handleTimeSlotSelect(slot)}
-                                  >
-                                      <Text style={styles.modalTimeSlotText}>{slot.time}</Text>
-                                      {slot.availableCapacity !== undefined && (
-                                        <Text style={[
-                                            styles.modalCapacityText,
-                                            slot.availableCapacity <= 3 && styles.modalCapacityTextLow
-                                        ]}>
-                                            {slot.availableCapacity} available
-                                        </Text>
-                                      )}
-                                  </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                      ))}
-
-                      {/* Slots Requiring Advance Notice */}
-                      {requiresNotice.length > 0 && (
-                        <View style={styles.mealPeriodSection}>
-                            <Text style={styles.mealPeriodTitle}>Requires Advance Notice</Text>
-                            <Text style={styles.advanceNoticeModalSubtext}>
-                                These times require advance booking. Tap for details.
-                            </Text>
-                            <View style={styles.modalTimeSlotsList}>
-                                {requiresNotice.map((slot, index) => (
-                                  <TouchableOpacity
-                                    key={index}
-                                    style={[styles.modalTimeSlot, styles.modalTimeSlotDisabled]}
-                                    onPress={() => handleAdvanceNoticeSlotPress(slot)}
-                                  >
-                                      <Text style={[styles.modalTimeSlotText, styles.modalTimeSlotTextDisabled]}>
-                                          {slot.time}
-                                      </Text>
-                                  </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                      )}
-
-                      {available.length === 0 && requiresNotice.length === 0 && (
-                        <View style={styles.emptyStateContainer}>
-                            <Text style={styles.emptyStateText}>
-                                No time slots available for this date.
-                            </Text>
-                        </View>
-                      )}
-                  </ScrollView>
-              </SafeAreaView>
-          </Modal>
-        );
-    };
 
     // Get the slots to display in preview (closest to selected time)
     const previewSlots = getClosestSlots(availableSlots, selectedTime);
@@ -406,46 +284,22 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
                             <Text style={styles.loadingText}>Finding available times...</Text>
                         </View>
                       ) : availabilityError ? (
-                        <View style={styles.errorContainer}>
-                            <View style={[
-                                styles.errorBadge,
-                                availabilityError.type === 'no_slots' && styles.errorBadgeInfo,
-                                availabilityError.type === 'user_friendly' && styles.errorBadgeWarning,
-                                availabilityError.type === 'system_error' && styles.errorBadgeError,
-                            ]}>
-                                <Text style={styles.errorTitle}>{availabilityError.title}</Text>
-                                <Text style={styles.errorMessage}>{availabilityError.message}</Text>
-                                {availabilityError.showContactInfo && (
-                                  <TouchableOpacity
-                                    style={styles.contactButton}
-                                    onPress={handleCallRestaurant}
-                                  >
-                                      <Text style={styles.contactButtonText}>Contact Restaurant</Text>
-                                  </TouchableOpacity>
-                                )}
-                            </View>
-                        </View>
+                        <AvailabilityErrorDisplay
+                          error={availabilityError}
+                          onContactRestaurant={handleCallRestaurant}
+                        />
                       ) : (
                         <View style={styles.timeSlotsContainer}>
                             {previewSlots.length > 0 ? (
                               <>
                                   <View style={styles.timeSlotsList}>
                                       {previewSlots.map((slot, index) => (
-                                        <TouchableOpacity
+                                        <TimeSlotDisplay
                                           key={index}
-                                          style={styles.timeSlot}
-                                          onPress={() => handleTimeSlotSelect(slot)}
-                                        >
-                                            <Text style={styles.timeSlotText}>{slot.time}</Text>
-                                            {slot.availableCapacity !== undefined && (
-                                              <Text style={[
-                                                  styles.capacityText,
-                                                  slot.availableCapacity <= 3 && styles.capacityTextLow
-                                              ]}>
-                                                  {slot.availableCapacity} avail.
-                                              </Text>
-                                            )}
-                                        </TouchableOpacity>
+                                          slot={slot}
+                                          onPress={handleTimeSlotSelect}
+                                          variant="default"
+                                        />
                                       ))}
                                   </View>
                                   {(availableSlots.filter(s => s.isAvailable).length > 4 ||
@@ -482,7 +336,17 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
           />
 
           {/* All Slots Modal */}
-          {renderAllSlotsModal()}
+          <AllSlotsModal
+            visible={showAllSlotsModal}
+            onClose={() => setShowAllSlotsModal(false)}
+            slots={availableSlots}
+            allSlots={streamedAllSlots}
+            selectedTime={selectedTime}
+            onTimeSelect={(slot) => handleTimeSlotSelect(slot)}
+            onAdvanceNoticeSlotPress={handleAdvanceNoticeSlotPress}
+            headerTitle="All Available Times"
+            headerSubtitle={`${formatDateDisplay(selectedDate)} • Party of ${partySize}`}
+          />
       </SafeAreaView>
     );
 };
@@ -661,152 +525,6 @@ const styles = StyleSheet.create({
         color: '#999',
         fontStyle: 'italic',
         marginTop: 8,
-    },
-    errorContainer: {
-        paddingVertical: 12,
-    },
-    errorBadge: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    errorBadgeInfo: {
-        backgroundColor: '#EFF6FF',
-        borderColor: '#BFDBFE',
-    },
-    errorBadgeWarning: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FCD34D',
-    },
-    errorBadgeError: {
-        backgroundColor: '#FEE2E2',
-        borderColor: '#FECACA',
-    },
-    errorTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
-    },
-    errorMessage: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-    },
-    contactButton: {
-        marginTop: 12,
-        backgroundColor: '#7C3AED',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-    },
-    contactButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    // All Slots Modal Styles
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'white',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    modalTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-    },
-    closeButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    closeButtonText: {
-        fontSize: 20,
-        color: '#666',
-        fontWeight: '500',
-    },
-    modalContent: {
-        flex: 1,
-        padding: 20,
-    },
-    mealPeriodSection: {
-        marginBottom: 32,
-    },
-    mealPeriodTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    advanceNoticeModalSubtext: {
-        fontSize: 13,
-        color: '#999',
-        marginBottom: 12,
-    },
-    modalTimeSlotsList: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 8,
-    },
-    modalTimeSlot: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#e8f5e8',
-        borderRadius: 12,
-        marginRight: 10,
-        marginBottom: 10,
-        minWidth: 80,
-    },
-    modalTimeSlotDisabled: {
-        backgroundColor: '#f5f5f5',
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        opacity: 0.6,
-    },
-    modalTimeSlotText: {
-        fontSize: 16,
-        color: '#27ae60',
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    modalTimeSlotTextDisabled: {
-        color: '#999',
-    },
-    modalCapacityText: {
-        fontSize: 11,
-        color: '#666',
-        textAlign: 'center',
-        marginTop: 4,
-    },
-    modalCapacityTextLow: {
-        color: '#e67e22',
-        fontWeight: '600',
-    },
-    emptyStateContainer: {
-        paddingVertical: 40,
-        alignItems: 'center',
-    },
-    emptyStateText: {
-        fontSize: 16,
-        color: '#999',
-        textAlign: 'center',
     },
     // Real-time streaming indicator styles
     sectionTitleRow: {

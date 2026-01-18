@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
 import { AvailableSlot } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
+import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import { processingService } from '../../services/api';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
@@ -27,7 +28,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     // Format date for the streaming hook
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
-    // Availability data with automatic polling
+    // Availability data with automatic polling (only when authenticated)
     const {
         slots: streamedSlots,
         isLoading: slotsLoading,
@@ -37,6 +38,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         date: dateStr,
         partySize,
         enabled: isAuthenticated,
+        isAuthenticated, // Pass auth state to conditionally enable SSE/polling
         pollingIntervalMs: 30000,
     });
 
@@ -319,109 +321,6 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         return available.slice(adjustedStart, end);
     };
 
-    // Group slots by meal period for better organization
-    const groupSlotsByMealPeriod = (slots: AvailableSlot[]) => {
-        const availableOnly = slots.filter(s => s.isAvailable);
-
-        const groups: { [key: string]: AvailableSlot[] } = {
-            'Morning': [],
-            'Lunch': [],
-            'Afternoon': [],
-            'Dinner': [],
-            'Late Night': []
-        };
-
-        availableOnly.forEach(slot => {
-            const hour = parseInt(slot.time.split(':')[0]);
-            if (hour < 11) {
-                groups['Morning'].push(slot);
-            } else if (hour < 14) {
-                groups['Lunch'].push(slot);
-            } else if (hour < 17) {
-                groups['Afternoon'].push(slot);
-            } else if (hour < 22) {
-                groups['Dinner'].push(slot);
-            } else {
-                groups['Late Night'].push(slot);
-            }
-        });
-
-        // Filter out empty groups and return as array
-        return Object.entries(groups).filter(([_, slots]) => slots.length > 0);
-    };
-
-    // Render View All Slots Modal
-    const renderAllSlotsModal = () => {
-        const groupedSlots = groupSlotsByMealPeriod(availableSlots);
-
-        return (
-          <Modal
-            visible={showAllSlotsModal}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={() => setShowAllSlotsModal(false)}
-          >
-              <SafeAreaView style={styles.modalContainer}>
-                  {/* Modal Header */}
-                  <View style={styles.modalHeader}>
-                      <View>
-                          <Text style={styles.modalTitle}>All Available Times</Text>
-                          <Text style={styles.modalSubtitle}>
-                              {formatDate(selectedDate)} • {partySize} guests
-                          </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => setShowAllSlotsModal(false)}
-                        style={styles.closeButton}
-                      >
-                          <Text style={styles.closeButtonText}>✕</Text>
-                      </TouchableOpacity>
-                  </View>
-
-                  <ScrollView style={styles.modalContent}>
-                      {groupedSlots.map(([period, slots]) => (
-                        <View key={period} style={styles.mealPeriodSection}>
-                            <Text style={styles.mealPeriodTitle}>{period}</Text>
-                            <View style={styles.timeGrid}>
-                                {slots.map((slot, index) => (
-                                  <TouchableOpacity
-                                    key={index}
-                                    style={[
-                                        styles.timeSlot,
-                                        selectedTime === slot.time && styles.timeSlotSelected,
-                                    ]}
-                                    onPress={() => {
-                                        setSelectedTime(slot.time);
-                                        setShowAllSlotsModal(false);
-                                    }}
-                                  >
-                                      <Text
-                                        style={[
-                                            styles.timeSlotText,
-                                            selectedTime === slot.time && styles.timeSlotTextSelected,
-                                        ]}
-                                      >
-                                          {slot.time}
-                                      </Text>
-                                      {slot.availableCapacity !== undefined && (
-                                        <Text style={[
-                                            styles.seatsLeftText,
-                                            slot.availableCapacity <= 3 && styles.seatsLeftTextLow,
-                                            selectedTime === slot.time && styles.seatsLeftTextSelected
-                                        ]}>
-                                            {slot.availableCapacity} avail.
-                                        </Text>
-                                      )}
-                                  </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                      ))}
-                  </ScrollView>
-              </SafeAreaView>
-          </Modal>
-        );
-    };
 
     // Render authentication prompt modal
     const renderAuthPrompt = () => (
@@ -514,20 +413,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                         <Text style={styles.loadingText}>Finding available times...</Text>
                     </View>
                   ) : availabilityError ? (
-                    <View style={styles.errorContainer}>
-                        <View style={styles.errorBadge}>
-                            <Text style={styles.errorTitle}>{availabilityError.title}</Text>
-                            <Text style={styles.errorMessage}>{availabilityError.message}</Text>
-                            {availabilityError.showContactInfo && (
-                              <TouchableOpacity
-                                style={styles.contactButton}
-                                onPress={handleCallRestaurant}
-                              >
-                                  <Text style={styles.contactButtonText}>Contact Restaurant</Text>
-                              </TouchableOpacity>
-                            )}
-                        </View>
-                    </View>
+                    <AvailabilityErrorDisplay
+                      error={availabilityError}
+                      onContactRestaurant={handleCallRestaurant}
+                    />
                   ) : availableSlots.filter(s => s.isAvailable).length > 0 ? (
                     <ScrollView
                       horizontal
@@ -535,32 +424,13 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                       contentContainerStyle={styles.horizontalScrollContent}
                     >
                         {getVisibleSlots().map((slot, index) => (
-                          <TouchableOpacity
+                          <TimeSlotDisplay
                             key={index}
-                            style={[
-                                styles.timeSlotHorizontal,
-                                selectedTime === slot.time && styles.timeSlotSelected,
-                            ]}
+                            slot={slot}
                             onPress={() => setSelectedTime(slot.time)}
-                          >
-                              <Text
-                                style={[
-                                    styles.timeSlotText,
-                                    selectedTime === slot.time && styles.timeSlotTextSelected,
-                                ]}
-                              >
-                                  {slot.time}
-                              </Text>
-                              {slot.availableCapacity !== undefined && (
-                                <Text style={[
-                                    styles.seatsLeftText,
-                                    slot.availableCapacity <= 3 && styles.seatsLeftTextLow,
-                                    selectedTime === slot.time && styles.seatsLeftTextSelected
-                                ]}>
-                                    {slot.availableCapacity} avail.
-                                </Text>
-                              )}
-                          </TouchableOpacity>
+                            variant="horizontal"
+                            isSelected={selectedTime === slot.time}
+                          />
                         ))}
                     </ScrollView>
                   ) : (
@@ -638,7 +508,18 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
           </ScrollView>
 
           {/* View All Slots Modal */}
-          {renderAllSlotsModal()}
+          <AllSlotsModal
+            visible={showAllSlotsModal}
+            onClose={() => setShowAllSlotsModal(false)}
+            slots={availableSlots}
+            selectedTime={selectedTime}
+            onTimeSelect={(slot) => {
+              setSelectedTime(slot.time);
+              setShowAllSlotsModal(false);
+            }}
+            headerTitle="All Available Times"
+            headerSubtitle={`${formatDate(selectedDate)} • ${partySize} guests`}
+          />
 
           {/* Authentication Prompt Modal */}
           {renderAuthPrompt()}
@@ -729,40 +610,6 @@ const styles = StyleSheet.create({
         color: '#999',
         marginTop: 12,
     },
-    errorContainer: {
-        marginVertical: 10,
-    },
-    errorBadge: {
-        backgroundColor: '#FEE2E2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-        padding: 16,
-        borderRadius: 12,
-    },
-    errorTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
-    },
-    errorMessage: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-    },
-    contactButton: {
-        marginTop: 12,
-        backgroundColor: '#7C3AED',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-    },
-    contactButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-    },
     emptyContainer: {
         paddingVertical: 40,
         alignItems: 'center',
@@ -770,47 +617,6 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#999',
-    },
-    timeSlot: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: '#e0e0e0',
-        minWidth: 80,
-        alignItems: 'center',
-    },
-    timeSlotDisabled: {
-        backgroundColor: '#f9f9f9',
-        opacity: 0.5,
-    },
-    timeSlotSelected: {
-        backgroundColor: '#7C3AED',
-        borderColor: '#7C3AED',
-    },
-    timeSlotText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-    },
-    timeSlotTextDisabled: {
-        color: '#999',
-    },
-    timeSlotTextSelected: {
-        color: '#fff',
-    },
-    seatsLeftText: {
-        fontSize: 11,
-        color: '#666',
-        marginTop: 4,
-    },
-    seatsLeftTextLow: {
-        color: '#e67e22',
-        fontWeight: '600',
-    },
-    seatsLeftTextSelected: {
-        color: '#FFA500',
     },
     inputGroup: {
         marginBottom: 20,
@@ -942,60 +748,6 @@ const styles = StyleSheet.create({
     authPromptButtonCancelText: {
         color: '#999',
         fontSize: 16,
-    },
-    // View All Modal Styles
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'white',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    modalTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-    },
-    closeButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    closeButtonText: {
-        fontSize: 20,
-        color: '#666',
-        fontWeight: '500',
-    },
-    modalContent: {
-        flex: 1,
-        padding: 20,
-    },
-    mealPeriodSection: {
-        marginBottom: 32,
-    },
-    mealPeriodTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
-        marginBottom: 12,
-    },
-    timeGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
     },
     // Real-time streaming indicator styles
     sectionTitleContainer: {

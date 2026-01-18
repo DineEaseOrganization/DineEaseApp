@@ -9,7 +9,12 @@ export interface UseAvailabilityStreamOptions {
   date: string; // YYYY-MM-DD format
   partySize: number;
   enabled?: boolean; // Whether to enable the hook (default: true)
+  isAuthenticated?: boolean; // Whether user is authenticated (enables SSE/polling, default: false)
   pollingIntervalMs?: number; // Fallback polling interval in ms (default: 30000)
+  maxRetries?: number; // Maximum number of SSE reconnection attempts (default: 5)
+  retryDelayMs?: number; // Base delay between retries in ms (default: 3000)
+  enableSSE?: boolean; // Enable SSE streaming (default: true if authenticated)
+  enablePolling?: boolean; // Enable fallback polling (default: true if authenticated)
 }
 
 export interface UseAvailabilityStreamResult {
@@ -43,7 +48,12 @@ export function useAvailabilityStream(
     date,
     partySize,
     enabled = true,
+    isAuthenticated = false,
     pollingIntervalMs = 30000,
+    maxRetries = 5,
+    retryDelayMs = 3000,
+    enableSSE = isAuthenticated, // Default: only enable SSE if authenticated
+    enablePolling = isAuthenticated, // Default: only enable polling if authenticated
   } = options;
 
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
@@ -126,6 +136,11 @@ export function useAvailabilityStream(
 
     // Start fallback polling
     const startPolling = () => {
+      if (!enablePolling) {
+        console.log('[useAvailabilityStream] Polling disabled by configuration');
+        return;
+      }
+
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
@@ -164,9 +179,10 @@ export function useAvailabilityStream(
         setIsLoading(false);
       }
 
-      // Then establish SSE connection for real-time updates
-      if (isMountedRef.current && !sseFailedRef.current) {
-        subscriptionRef.current = availabilityStreamService.subscribe(
+      // Then establish SSE connection for real-time updates (only if authenticated)
+      if (isMountedRef.current && !sseFailedRef.current && enableSSE) {
+        console.log('[useAvailabilityStream] Establishing SSE connection (authenticated)');
+        availabilityStreamService.subscribe(
           restaurantId,
           date,
           partySize,
@@ -208,7 +224,29 @@ export function useAvailabilityStream(
               startPolling();
             },
           },
-        );
+          {
+            maxReconnectAttempts: maxRetries,
+            reconnectDelayMs: retryDelayMs,
+          }
+        ).then(subscription => {
+          if (isMountedRef.current) {
+            subscriptionRef.current = subscription;
+          } else {
+            // Component unmounted before subscription completed
+            subscription.unsubscribe();
+          }
+        }).catch(err => {
+          console.error('[useAvailabilityStream] Failed to establish SSE connection:', err);
+          if (isMountedRef.current && enablePolling) {
+            startPolling();
+          }
+        });
+      } else if (!enableSSE && enablePolling) {
+        // If SSE is disabled but polling is enabled, start polling immediately
+        console.log('[useAvailabilityStream] SSE disabled, starting polling');
+        startPolling();
+      } else if (!isAuthenticated) {
+        console.log('[useAvailabilityStream] User not authenticated - only initial fetch performed');
       }
     };
 
