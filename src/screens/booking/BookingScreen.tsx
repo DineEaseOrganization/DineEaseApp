@@ -1,5 +1,5 @@
 // src/screens/booking/BookingScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Alert,
     SafeAreaView,
@@ -15,19 +15,39 @@ import {
 import { CommonActions } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
-import { processingService } from '../../services/api';
-import { AvailableSlot, AvailabilitySlotsResponse } from '../../types/api.types';
+import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
+import { AvailableSlot } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
+import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
+import { processingService } from '../../services/api';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
     const { isAuthenticated, user } = useAuth();
 
-    // Slot loading state
-    const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-    const [slotsLoading, setSlotsLoading] = useState(true);
+    // Format date for the streaming hook
+    const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+
+    // Availability data with automatic polling (only when authenticated)
+    const {
+        slots: streamedSlots,
+        isLoading: slotsLoading,
+        error: streamError,
+    } = useAvailabilityStream({
+        restaurantId: restaurant.id,
+        date: dateStr,
+        partySize,
+        enabled: isAuthenticated,
+        isAuthenticated, // Pass auth state to conditionally enable SSE/polling
+        pollingIntervalMs: 30000,
+    });
+
+    // Derive availability error from stream error
     const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
+
+    // Map streamed slots to local state format
+    const availableSlots = streamedSlots;
 
     // Form state
     const [selectedTime, setSelectedTime] = useState<string>(initialSelectedTime || '');
@@ -36,6 +56,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [customerEmail, setCustomerEmail] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Auto-fill user information from profile when authenticated
     useEffect(() => {
@@ -68,45 +89,22 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         }
     }, [isAuthenticated]);
 
-    // Load available slots
+    // Handle streaming errors and no-slot scenarios
     useEffect(() => {
-        if (isAuthenticated) {
-            void loadAvailableSlots();
-        }
-    }, [selectedDate, partySize, isAuthenticated]);
-
-    const loadAvailableSlots = async () => {
-        try {
-            setSlotsLoading(true);
-            setAvailabilityError(null);
-
-            const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
-            const response = await processingService.getAvailableSlots(
-              restaurant.id,
-              dateStr,
-              partySize
-            );
-
-            setAvailableSlots(response.slots || []);
-
-            // If no slots available
-            if (!response.slots || response.slots.length === 0) {
-                setAvailabilityError({
-                    type: 'no_slots',
-                    title: 'No Availability',
-                    message: 'No tables available for the selected date and party size. Please try a different date or time.',
-                    showContactInfo: true
-                });
-            }
-        } catch (error: any) {
-            console.error('Error loading available slots:', error);
-            const parsedError = parseAvailabilityError(error);
+        if (streamError) {
+            const parsedError = parseAvailabilityError(streamError);
             setAvailabilityError(parsedError);
-            setAvailableSlots([]);
-        } finally {
-            setSlotsLoading(false);
+        } else if (!slotsLoading && availableSlots.length === 0) {
+            setAvailabilityError({
+                type: 'no_slots',
+                title: 'No Availability',
+                message: 'No tables available for the selected date and party size. Please try a different date or time.',
+                showContactInfo: true
+            });
+        } else {
+            setAvailabilityError(null);
         }
-    };
+    }, [streamError, slotsLoading, availableSlots]);
 
     const formatDate = (date: Date) => {
         return date.toLocaleDateString('en-US', {
@@ -150,8 +148,9 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         navigation.goBack();
     };
 
-    const handleConfirmBooking = () => {
+    const handleConfirmBooking = async () => {
         if (!isAuthenticated) {
+            console.log('⚠️ [BookingScreen] User not authenticated, showing auth prompt');
             setShowAuthPrompt(true);
             return;
         }
@@ -161,22 +160,115 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             return;
         }
 
-        // Mock booking confirmation
-        const confirmationCode = 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        try {
+            // Show loading state
+            setIsLoading(true);
 
-        navigation.navigate('BookingConfirmation', {
-            booking: {
-                restaurant,
-                date: selectedDate,
-                time: selectedTime,
+            // Check token in storage
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const token = await AsyncStorage.getItem('@dineease_access_token');
+            console.log('🔑 [BookingScreen] Token in storage:', token ? `${token.substring(0, 20)}...` : 'NULL');
+
+            // Create reservation via API
+            // Parse phone number to extract country code
+            const parsePhoneNumber = (phone: string): { phoneNumber: string; phoneCountryCode: string } => {
+                // Remove all spaces
+                const cleanPhone = phone.replace(/\s+/g, '');
+
+                // Check for common country codes at the start
+                const countryCodePatterns = [
+                    { code: '+357', length: 4 },  // Cyprus
+                    { code: '+30', length: 3 },   // Greece
+                    { code: '+44', length: 3 },   // UK
+                    { code: '+1', length: 2 },    // US/Canada
+                    { code: '+49', length: 3 },   // Germany
+                    { code: '+33', length: 3 },   // France
+                    { code: '+39', length: 3 },   // Italy
+                    { code: '+34', length: 3 },   // Spain
+                ];
+
+                for (const { code, length } of countryCodePatterns) {
+                    if (cleanPhone.startsWith(code)) {
+                        return {
+                            phoneCountryCode: code,
+                            phoneNumber: cleanPhone.substring(length),
+                        };
+                    }
+                }
+
+                // Default to +357 if no country code found
+                return {
+                    phoneCountryCode: '+357',
+                    phoneNumber: cleanPhone,
+                };
+            };
+
+            const { phoneNumber, phoneCountryCode } = parsePhoneNumber(customerPhone);
+
+            const reservation = {
+                reservationDate: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD
+                reservationStartTime: selectedTime, // HH:mm format
+                reservationDuration: 120, // 2 hours default
                 partySize,
-                customerName,
-                customerPhone,
-                customerEmail,
-                specialRequests,
-                confirmationCode,
-            }
-        });
+                noOfAdults: partySize,
+                noOfKids: 0,
+                isSmoking: false,
+                customer: {
+                    name: customerName,
+                    phoneNumber: phoneNumber,
+                    phoneCountryCode: phoneCountryCode,
+                    email: customerEmail || undefined,
+                },
+                restaurantId: restaurant.id,
+                state: 'CONFIRMED',
+                comments: specialRequests || undefined,
+            };
+
+            console.log('📝 [BookingScreen] Calling createReservation with:', {
+                date: reservation.reservationDate,
+                time: reservation.reservationStartTime,
+                restaurantId: reservation.restaurantId,
+                partySize: reservation.partySize,
+            });
+
+            const response = await processingService.createReservation(reservation);
+
+            console.log('✅ [BookingScreen] Reservation created successfully:', response);
+
+            // Generate confirmation code from response or use reservation ID
+            const confirmationCode = response.reservationId
+                ? `RES${response.reservationId}`
+                : 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+            setIsLoading(false);
+
+            navigation.navigate('BookingConfirmation', {
+                booking: {
+                    restaurant,
+                    date: selectedDate,
+                    time: selectedTime,
+                    partySize,
+                    customerName,
+                    customerPhone,
+                    customerEmail,
+                    specialRequests,
+                    confirmationCode,
+                }
+            });
+        } catch (error: any) {
+            setIsLoading(false);
+            console.error('❌ [BookingScreen] Reservation creation failed:', error);
+            console.error('❌ [BookingScreen] Error details:', {
+                message: error.message,
+                statusCode: error.statusCode,
+                response: error.response,
+            });
+            Alert.alert(
+                'Booking Failed',
+                error.message || 'Unable to create reservation. Please try again.',
+                [{ text: 'OK' }]
+            );
+        }
     };
 
     const handleCallRestaurant = () => {
@@ -229,108 +321,6 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         return available.slice(adjustedStart, end);
     };
 
-    // Group slots by meal period for better organization
-    const groupSlotsByMealPeriod = (slots: AvailableSlot[]) => {
-        const availableOnly = slots.filter(s => s.isAvailable);
-
-        const groups: { [key: string]: AvailableSlot[] } = {
-            'Morning': [],
-            'Lunch': [],
-            'Afternoon': [],
-            'Dinner': [],
-            'Late Night': []
-        };
-
-        availableOnly.forEach(slot => {
-            const hour = parseInt(slot.time.split(':')[0]);
-            if (hour < 11) {
-                groups['Morning'].push(slot);
-            } else if (hour < 14) {
-                groups['Lunch'].push(slot);
-            } else if (hour < 17) {
-                groups['Afternoon'].push(slot);
-            } else if (hour < 22) {
-                groups['Dinner'].push(slot);
-            } else {
-                groups['Late Night'].push(slot);
-            }
-        });
-
-        // Filter out empty groups and return as array
-        return Object.entries(groups).filter(([_, slots]) => slots.length > 0);
-    };
-
-    // Render View All Slots Modal
-    const renderAllSlotsModal = () => {
-        const groupedSlots = groupSlotsByMealPeriod(availableSlots);
-
-        return (
-          <Modal
-            visible={showAllSlotsModal}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={() => setShowAllSlotsModal(false)}
-          >
-              <SafeAreaView style={styles.modalContainer}>
-                  {/* Modal Header */}
-                  <View style={styles.modalHeader}>
-                      <View>
-                          <Text style={styles.modalTitle}>All Available Times</Text>
-                          <Text style={styles.modalSubtitle}>
-                              {formatDate(selectedDate)} • {partySize} guests
-                          </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => setShowAllSlotsModal(false)}
-                        style={styles.closeButton}
-                      >
-                          <Text style={styles.closeButtonText}>✕</Text>
-                      </TouchableOpacity>
-                  </View>
-
-                  <ScrollView style={styles.modalContent}>
-                      {groupedSlots.map(([period, slots]) => (
-                        <View key={period} style={styles.mealPeriodSection}>
-                            <Text style={styles.mealPeriodTitle}>{period}</Text>
-                            <View style={styles.timeGrid}>
-                                {slots.map((slot, index) => (
-                                  <TouchableOpacity
-                                    key={index}
-                                    style={[
-                                        styles.timeSlot,
-                                        selectedTime === slot.time && styles.timeSlotSelected,
-                                    ]}
-                                    onPress={() => {
-                                        setSelectedTime(slot.time);
-                                        setShowAllSlotsModal(false);
-                                    }}
-                                  >
-                                      <Text
-                                        style={[
-                                            styles.timeSlotText,
-                                            selectedTime === slot.time && styles.timeSlotTextSelected,
-                                        ]}
-                                      >
-                                          {slot.time}
-                                      </Text>
-                                      {slot.remainingCapacity !== undefined && slot.remainingCapacity <= 3 && (
-                                        <Text style={[
-                                            styles.seatsLeftText,
-                                            selectedTime === slot.time && styles.seatsLeftTextSelected
-                                        ]}>
-                                            {slot.remainingCapacity} left
-                                        </Text>
-                                      )}
-                                  </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                      ))}
-                  </ScrollView>
-              </SafeAreaView>
-          </Modal>
-        );
-    };
 
     // Render authentication prompt modal
     const renderAuthPrompt = () => (
@@ -423,20 +413,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                         <Text style={styles.loadingText}>Finding available times...</Text>
                     </View>
                   ) : availabilityError ? (
-                    <View style={styles.errorContainer}>
-                        <View style={styles.errorBadge}>
-                            <Text style={styles.errorTitle}>{availabilityError.title}</Text>
-                            <Text style={styles.errorMessage}>{availabilityError.message}</Text>
-                            {availabilityError.showContactInfo && (
-                              <TouchableOpacity
-                                style={styles.contactButton}
-                                onPress={handleCallRestaurant}
-                              >
-                                  <Text style={styles.contactButtonText}>Contact Restaurant</Text>
-                              </TouchableOpacity>
-                            )}
-                        </View>
-                    </View>
+                    <AvailabilityErrorDisplay
+                      error={availabilityError}
+                      onContactRestaurant={handleCallRestaurant}
+                    />
                   ) : availableSlots.filter(s => s.isAvailable).length > 0 ? (
                     <ScrollView
                       horizontal
@@ -444,31 +424,13 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                       contentContainerStyle={styles.horizontalScrollContent}
                     >
                         {getVisibleSlots().map((slot, index) => (
-                          <TouchableOpacity
+                          <TimeSlotDisplay
                             key={index}
-                            style={[
-                                styles.timeSlotHorizontal,
-                                selectedTime === slot.time && styles.timeSlotSelected,
-                            ]}
+                            slot={slot}
                             onPress={() => setSelectedTime(slot.time)}
-                          >
-                              <Text
-                                style={[
-                                    styles.timeSlotText,
-                                    selectedTime === slot.time && styles.timeSlotTextSelected,
-                                ]}
-                              >
-                                  {slot.time}
-                              </Text>
-                              {slot.remainingCapacity !== undefined && slot.remainingCapacity <= 3 && (
-                                <Text style={[
-                                    styles.seatsLeftText,
-                                    selectedTime === slot.time && styles.seatsLeftTextSelected
-                                ]}>
-                                    {slot.remainingCapacity} left
-                                </Text>
-                              )}
-                          </TouchableOpacity>
+                            variant="horizontal"
+                            isSelected={selectedTime === slot.time}
+                          />
                         ))}
                     </ScrollView>
                   ) : (
@@ -532,17 +494,32 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
               <TouchableOpacity
                 style={[
                     styles.confirmButton,
-                    (!selectedTime || !customerName || !customerPhone) && styles.confirmButtonDisabled
+                    (!selectedTime || !customerName || !customerPhone || isLoading) && styles.confirmButtonDisabled
                 ]}
                 onPress={handleConfirmBooking}
-                disabled={!selectedTime || !customerName || !customerPhone}
+                disabled={!selectedTime || !customerName || !customerPhone || isLoading}
               >
-                  <Text style={styles.confirmButtonText}>Confirm Reservation</Text>
+                  {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                      <Text style={styles.confirmButtonText}>Confirm Reservation</Text>
+                  )}
               </TouchableOpacity>
           </ScrollView>
 
           {/* View All Slots Modal */}
-          {renderAllSlotsModal()}
+          <AllSlotsModal
+            visible={showAllSlotsModal}
+            onClose={() => setShowAllSlotsModal(false)}
+            slots={availableSlots}
+            selectedTime={selectedTime}
+            onTimeSelect={(slot) => {
+              setSelectedTime(slot.time);
+              setShowAllSlotsModal(false);
+            }}
+            headerTitle="All Available Times"
+            headerSubtitle={`${formatDate(selectedDate)} • ${partySize} guests`}
+          />
 
           {/* Authentication Prompt Modal */}
           {renderAuthPrompt()}
@@ -633,40 +610,6 @@ const styles = StyleSheet.create({
         color: '#999',
         marginTop: 12,
     },
-    errorContainer: {
-        marginVertical: 10,
-    },
-    errorBadge: {
-        backgroundColor: '#FEE2E2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-        padding: 16,
-        borderRadius: 12,
-    },
-    errorTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
-    },
-    errorMessage: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-    },
-    contactButton: {
-        marginTop: 12,
-        backgroundColor: '#7C3AED',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-    },
-    contactButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-    },
     emptyContainer: {
         paddingVertical: 40,
         alignItems: 'center',
@@ -674,43 +617,6 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#999',
-    },
-    timeSlot: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: '#e0e0e0',
-        minWidth: 80,
-        alignItems: 'center',
-    },
-    timeSlotDisabled: {
-        backgroundColor: '#f9f9f9',
-        opacity: 0.5,
-    },
-    timeSlotSelected: {
-        backgroundColor: '#7C3AED',
-        borderColor: '#7C3AED',
-    },
-    timeSlotText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-    },
-    timeSlotTextDisabled: {
-        color: '#999',
-    },
-    timeSlotTextSelected: {
-        color: '#fff',
-    },
-    seatsLeftText: {
-        fontSize: 11,
-        color: '#e67e22',
-        marginTop: 4,
-    },
-    seatsLeftTextSelected: {
-        color: '#FFA500',
     },
     inputGroup: {
         marginBottom: 20,
@@ -843,59 +749,32 @@ const styles = StyleSheet.create({
         color: '#999',
         fontSize: 16,
     },
-    // View All Modal Styles
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'white',
-    },
-    modalHeader: {
+    // Real-time streaming indicator styles
+    sectionTitleContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        gap: 8,
     },
-    modalTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-    },
-    closeButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
+    liveIndicator: {
+        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
     },
-    closeButtonText: {
-        fontSize: 20,
-        color: '#666',
-        fontWeight: '500',
+    liveDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#10B981',
     },
-    modalContent: {
-        flex: 1,
-        padding: 20,
-    },
-    mealPeriodSection: {
-        marginBottom: 32,
-    },
-    mealPeriodTitle: {
-        fontSize: 16,
+    liveText: {
+        fontSize: 11,
         fontWeight: '600',
-        color: '#666',
-        marginBottom: 12,
-    },
-    timeGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
+        color: '#059669',
+        textTransform: 'uppercase',
     },
 });
 

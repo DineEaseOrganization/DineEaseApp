@@ -4,6 +4,7 @@ import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
 import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Text} from 'react-native';
+import {navigationRef} from '../utils/navigationHelper';
 
 import RestaurantListScreen from '../screens/restaurants/RestaurantListScreen';
 import RestaurantDetailScreen from '../screens/restaurants/RestaurantDetailScreen';
@@ -72,8 +73,8 @@ export type DiscoverStackParamList = {
         longitude: number;
         radius?: number;
     };
-    RestaurantDetail: { restaurant: Restaurant };
-  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number };
+    RestaurantDetail: { restaurant: Restaurant; partySize?: number; selectedDate?: Date; selectedTime?: string };
+  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string };
   BookingConfirmation: {
     booking: {
       restaurant: Restaurant;
@@ -92,12 +93,27 @@ export type DiscoverStackParamList = {
 
 export type SearchStackParamList = {
   SearchMap: undefined;
+  RestaurantSearch: undefined;
   RestaurantDetail: { restaurant: Restaurant };
   BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number };
 };
 
 export type BookingsStackParamList = {
   BookingsList: undefined;
+  BookingConfirmation: {
+    booking: {
+      restaurant: Restaurant;
+      date: Date;
+      time: string;
+      partySize: number;
+      customerName: string;
+      customerPhone: string;
+      customerEmail?: string;
+      specialRequests?: string;
+      confirmationCode: string;
+    };
+  };
+  ReviewScreen: { reservation: Reservation };
 };
 
 export type ProfileStackParamList = {
@@ -133,7 +149,7 @@ export type ReviewScreenNavigationProp = StackNavigationProp<DiscoverStackParamL
 
 export type SearchScreenNavigationProp = StackNavigationProp<SearchStackParamList, 'SearchMap'>;
 export type UpdatesScreenNavigationProp = BottomTabNavigationProp<TabParamList>;
-export type BookingsScreenNavigationProp = BottomTabNavigationProp<TabParamList>;
+export type BookingsScreenNavigationProp = StackNavigationProp<BookingsStackParamList, 'BookingsList'>;
 
 export type ProfileScreenNavigationProp = StackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 export type AllReviewsScreenNavigationProp = StackNavigationProp<ProfileStackParamList, 'AllReviews'>;
@@ -441,7 +457,7 @@ const MainTabNavigator: React.FC = () => {
 // Root Navigator with Auth Screens
 const AppNavigator: React.FC = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <RootStack.Navigator screenOptions={{headerShown: false}}>
         <RootStack.Screen
           name="MainTabs"

@@ -2,8 +2,13 @@ import React from 'react';
 import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {useAuth} from '../../context/AuthContext';
+import {ProfileScreenNavigationProp} from '../../navigation/AppNavigator';
 
-const ProfileScreen = ({navigation}) => {
+interface ProfileScreenProps {
+  navigation: ProfileScreenNavigationProp;
+}
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
   const {user, logout} = useAuth();
 
   const stats = {
@@ -45,7 +50,7 @@ const ProfileScreen = ({navigation}) => {
   };
 
   const handleVerifyEmail = () => {
-    navigation.navigate('EmailVerification', {email: user?.email || ''});
+    (navigation as any).navigate('EmailVerification', {email: user?.email || ''});
   };
 
   const handleVerifyPhone = () => {
@@ -159,7 +164,7 @@ const ProfileScreen = ({navigation}) => {
         <View style={styles.statsSection}>
           <TouchableOpacity
             style={styles.statItem}
-            onPress={() => navigation.navigate('Bookings')}
+            onPress={() => (navigation as any).navigate('Bookings')}
             activeOpacity={0.7}
           >
             <Text style={styles.statNumber}>{stats.bookings}</Text>

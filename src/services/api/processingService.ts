@@ -11,6 +11,7 @@ class ProcessingService {
   private getHeaders() {
     return {
       'X-API-Key': this.API_KEY,
+      'X-Mobile-App': 'true', // Tells backend to use modern JWT parser
       'X-Platform': Platform.OS === 'ios' ? 'iOS' : 'Android',
       'X-App-Version': '1.0.0',
     };
@@ -37,6 +38,40 @@ class ProcessingService {
     return await apiClient.get<AvailabilitySlotsResponse>(
       `${this.BASE_URL}/availability/${restaurantId}?${params}`,
       { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Create a new reservation
+   * Endpoint: POST /mobile/reservations/book
+   * Note: This endpoint requires JWT authentication (handled automatically by apiClient)
+   *
+   * @param reservation - Reservation details
+   */
+  async createReservation(reservation: {
+    reservationDate: string; // YYYY-MM-DD
+    reservationStartTime: string; // HH:mm
+    reservationDuration: number; // minutes
+    partySize: number;
+    noOfAdults?: number;
+    noOfKids?: number;
+    isSmoking: boolean;
+    customer: {
+      name: string;
+      phoneNumber: string;
+      email?: string;
+    };
+    restaurantId: number;
+    area?: string;
+    tableNumbers?: string[];
+    state: string; // e.g., "CONFIRMED"
+    comments?: string;
+    reservationTypeId?: number;
+  }): Promise<any> {
+    // Don't pass custom headers - let apiClient handle JWT authentication
+    return await apiClient.post<any>(
+      `${this.BASE_URL}/reservations/book`,
+      reservation
     );
   }
 }

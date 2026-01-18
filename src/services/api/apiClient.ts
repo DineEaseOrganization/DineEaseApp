@@ -2,6 +2,7 @@
 import axios, {AxiosError, AxiosInstance, InternalAxiosRequestConfig} from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {API_CONFIG, STORAGE_KEYS} from '../../config/api.config';
+import {navigateToLogin} from '../../utils/navigationHelper';
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -38,6 +39,24 @@ class AuthEventEmitter {
 // Create singleton instance
 export const authEventEmitter = new AuthEventEmitter();
 
+// Centralized logout handler
+async function handleLogout() {
+    console.log('🚨 Handling logout - clearing auth data');
+
+    // Clear all auth data
+    await AsyncStorage.multiRemove([
+        STORAGE_KEYS.ACCESS_TOKEN,
+        STORAGE_KEYS.REFRESH_TOKEN,
+        STORAGE_KEYS.USER_DATA,
+    ]);
+
+    // Emit auth event to notify AuthContext
+    authEventEmitter.emit();
+
+    // Navigate to login screen
+    navigateToLogin();
+}
+
 // Create axios instance with default config
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: API_CONFIG.BASE_URL,
@@ -45,6 +64,7 @@ const axiosInstance: AxiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Mobile-App': 'true', // Tells backend to use modern JWT parser
     },
 });
 
@@ -57,6 +77,11 @@ axiosInstance.interceptors.request.use(
         // Add authorization header if token exists
         if (accessToken && config.headers) {
             config.headers.Authorization = `Bearer ${accessToken}`;
+            if (__DEV__) {
+                console.log('🔐 Auth token added to request');
+            }
+        } else if (__DEV__) {
+            console.warn('⚠️ No auth token found in storage for request to:', config.url);
         }
 
         // Log request in development
@@ -65,6 +90,7 @@ axiosInstance.interceptors.request.use(
                 method: config.method?.toUpperCase(),
                 url: config.url,
                 data: config.data,
+                hasAuthHeader: !!config.headers?.Authorization,
             });
         }
 
@@ -74,6 +100,25 @@ axiosInstance.interceptors.request.use(
         return Promise.reject(error);
     }
 );
+
+// Track if we're currently refreshing to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let failedQueue: Array<{
+    resolve: (value?: any) => void;
+    reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+
+    failedQueue = [];
+};
 
 // Response interceptor - handles errors and token refresh
 axiosInstance.interceptors.response.use(
@@ -90,11 +135,13 @@ axiosInstance.interceptors.response.use(
         return response;
     },
     async (error: AxiosError) => {
+        const originalRequest: any = error.config;
+
         // Log error in development
         if (__DEV__) {
             console.log('❌ API Error:', {
                 status: error.response?.status,
-                url: error.config?.url,
+                url: originalRequest?.url,
                 message: error.message,
                 data: error.response?.data,
             });
@@ -121,21 +168,79 @@ axiosInstance.interceptors.response.use(
                 apiError.message = detail || 'Bad request. Please check your input.';
             }
 
-            // 401 Unauthorized - Token expired or invalid
-            if (status === 401) {
-                console.log('🚨 401 Unauthorized - Clearing auth data and emitting logout event');
+            // 401 Unauthorized - Try to refresh token first
+            if (status === 401 && !originalRequest._retry) {
+                // Don't try to refresh the refresh token endpoint itself
+                if (originalRequest.url === API_CONFIG.ENDPOINTS.REFRESH_TOKEN) {
+                    console.log('🚨 Refresh token failed - logging out');
+                    await handleLogout();
+                    throw apiError;
+                }
 
-                // Clear all auth data
-                await AsyncStorage.multiRemove([
-                    STORAGE_KEYS.ACCESS_TOKEN,
-                    STORAGE_KEYS.REFRESH_TOKEN,
-                    STORAGE_KEYS.USER_DATA,
-                ]);
+                if (isRefreshing) {
+                    // Wait for the refresh to complete
+                    return new Promise((resolve, reject) => {
+                        failedQueue.push({resolve, reject});
+                    })
+                        .then(token => {
+                            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+                            return axiosInstance(originalRequest);
+                        })
+                        .catch(err => {
+                            return Promise.reject(err);
+                        });
+                }
 
-                // Emit auth event to notify AuthContext
-                authEventEmitter.emit();
+                originalRequest._retry = true;
+                isRefreshing = true;
 
-                apiError.message = message || 'Your session has expired. Please login again.';
+                const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+
+                if (!refreshToken) {
+                    console.log('🚨 No refresh token available - logging out');
+                    isRefreshing = false;
+                    await handleLogout();
+                    throw apiError;
+                }
+
+                try {
+                    console.log('🔄 Attempting to refresh token...');
+                    const response = await axios.post(
+                        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH_TOKEN}`,
+                        {refreshToken},
+                        {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Mobile-App': 'true',
+                            },
+                        }
+                    );
+
+                    const {accessToken, refreshToken: newRefreshToken} = response.data;
+
+                    // Store new tokens
+                    await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+                    await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+
+                    console.log('✅ Token refreshed successfully');
+
+                    // Update the failed request with new token
+                    originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
+
+                    // Process queued requests
+                    processQueue(null, accessToken);
+
+                    isRefreshing = false;
+
+                    // Retry the original request
+                    return axiosInstance(originalRequest);
+                } catch (refreshError: any) {
+                    console.error('❌ Token refresh failed:', refreshError);
+                    processQueue(refreshError, null);
+                    isRefreshing = false;
+                    await handleLogout();
+                    throw apiError;
+                }
             }
 
             // 403 Forbidden
