@@ -350,6 +350,49 @@ export interface AvailabilitySlotsResponse {
   allSlots?: AvailableSlot[]; // NEW: All slots including unavailable ones
 }
 
+// ============ RESERVATION/BOOKING API TYPES ============
+
+export enum ReservationState {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
+  NO_SHOW = 'NO_SHOW',
+}
+
+export interface ReservationCustomerDto {
+  customerId?: number;
+  name: string;
+  phoneNumber: string;
+  phoneCountryCode: string;
+  email?: string;
+  blacklisted?: boolean;
+}
+
+export interface ReservationDto {
+  reservationId?: number;
+  reservationDate: string; // ISO date format (YYYY-MM-DD)
+  reservationStartTime: string; // Time format (HH:mm)
+  reservationDuration: number; // in minutes
+  partySize: number;
+  noOfAdults?: number;
+  noOfKids?: number;
+  isSmoking: boolean;
+  customer: ReservationCustomerDto;
+  restaurantId: number;
+  restaurantName?: string; // Restaurant name fetched from Restaurant service
+  area?: string;
+  tableNumbers?: string[];
+  state: ReservationState;
+  comments?: string;
+  reservationTypeId?: number;
+}
+
+export interface ReservationListResponse {
+  reservations: ReservationDto[];
+  totalCount?: number;
+}
+
 // ============ ERROR RESPONSE ============
 
 export interface ApiErrorResponse {
