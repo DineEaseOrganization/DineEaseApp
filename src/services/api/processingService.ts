@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
-import { AvailabilitySlotsResponse } from '../../types/api.types';
+import { AvailabilitySlotsResponse, ReservationDto } from '../../types/api.types';
 
 class ProcessingService {
   private readonly BASE_URL = `${API_CONFIG.PROCESSING_SERVICE_URL}/mobile`;
@@ -72,6 +72,71 @@ class ProcessingService {
     return await apiClient.post<any>(
       `${this.BASE_URL}/reservations/book`,
       reservation
+    );
+  }
+
+  /**
+   * Get all reservations for the authenticated customer
+   * Endpoint: GET /mobile/reservations/customer
+   * Note: This endpoint requires JWT authentication. Customer ID is extracted from JWT token.
+   *
+   * @returns List of reservations for the authenticated customer
+   */
+  async getCustomerReservations(): Promise<ReservationDto[]> {
+    return await apiClient.get<ReservationDto[]>(
+      `${this.BASE_URL}/reservations/customer`
+    );
+  }
+
+  /**
+   * Get paginated reservations for the authenticated customer with filtering
+   * Endpoint: GET /mobile/reservations/customer/paginated
+   * Note: This endpoint requires JWT authentication. Customer ID is extracted from JWT token.
+   *
+   * @param filter - Filter type: "all", "upcoming", or "past"
+   * @param page - Page number (0-indexed)
+   * @param size - Page size
+   * @param sort - Sort field and direction (e.g., "reservationDate,desc")
+   * @returns Paginated response with reservations
+   */
+  async getCustomerReservationsPaginated(
+    filter: 'all' | 'upcoming' | 'past' = 'all',
+    page: number = 0,
+    size: number = 20,
+    sort: string = 'reservationDate,desc'
+  ): Promise<{
+    content: ReservationDto[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+    first: boolean;
+    last: boolean;
+    empty: boolean;
+  }> {
+    const params = new URLSearchParams({
+      filter,
+      page: page.toString(),
+      size: size.toString(),
+      sort,
+    });
+
+    return await apiClient.get(
+      `${this.BASE_URL}/reservations/customer/paginated?${params}`
+    );
+  }
+
+  /**
+   * Cancel a reservation
+   * Endpoint: DELETE /mobile/reservations/{reservationId}
+   * Note: This endpoint requires JWT authentication.
+   *
+   * @param reservationId - The ID of the reservation to cancel
+   * @returns Success response with message
+   */
+  async cancelReservation(reservationId: number): Promise<{ success: boolean; message: string }> {
+    return await apiClient.delete<{ success: boolean; message: string }>(
+      `${this.BASE_URL}/reservations/${reservationId}`
     );
   }
 }

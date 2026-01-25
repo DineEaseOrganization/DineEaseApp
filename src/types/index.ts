@@ -166,6 +166,12 @@ export type {
     ResendVerificationResponse,
     CheckVerificationStatusResponse,
 
+    // Reservation API types
+    ReservationState,
+    ReservationCustomerDto,
+    ReservationDto,
+    ReservationListResponse,
+
     // Common types
     TokenPair,
     ApiErrorResponse,
