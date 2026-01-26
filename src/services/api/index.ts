@@ -9,6 +9,7 @@ export { restaurantService, RestaurantService } from './restaurantService';
 export { processingService, ProcessingService } from './processingService';
 export { availabilityStreamService, AvailabilityStreamService } from './availabilityStreamService';
 export type { AvailabilityStreamCallbacks, AvailabilitySubscription } from './availabilityStreamService';
+export { favoritesService, FavoritesService } from './favoritesService';
 
 export * from './deviceService';
 

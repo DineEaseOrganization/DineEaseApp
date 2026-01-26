@@ -30,10 +30,15 @@ export const API_CONFIG = {
     UPDATE_PROFILE: '/auth/profile',
     DELETE_ACCOUNT: '/auth/account',
 
-    // Device management endpoints - ADD THESE
+    // Device management endpoints
     LIST_DEVICES: '/auth/devices/trusted',
     REMOVE_DEVICE: '/auth/devices',  // Uses /:deviceId
     UPDATE_DEVICE_TRUST: '/auth/devices', // Uses /:deviceId/trust
+
+    // Favorites endpoints (served by Restaurant Service - /customer/favorites)
+    FAVORITES: '/customer/favorites', // GET list, POST add
+    FAVORITE_BY_ID: '/customer/favorites', // DELETE /:restaurantId
+    CHECK_FAVORITE: '/customer/favorites/check', // GET /:restaurantId
   },
   TIMEOUT: 30000, // 30 seconds
 };

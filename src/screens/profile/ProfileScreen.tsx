@@ -2,6 +2,7 @@ import React from 'react';
 import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {useAuth} from '../../context/AuthContext';
+import {useFavorites} from '../../context/FavoritesContext';
 import {ProfileScreenNavigationProp} from '../../navigation/AppNavigator';
 
 interface ProfileScreenProps {
@@ -10,11 +11,13 @@ interface ProfileScreenProps {
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
   const {user, logout} = useAuth();
+  const {favorites} = useFavorites();
 
+  // Real favorites count from context, others will be added when those features are implemented
   const stats = {
-    bookings: 3,
-    reviews: 2,
-    favorites: 5
+    bookings: 0, // TODO: Get from bookings context/API
+    reviews: 0,  // TODO: Get from reviews context/API
+    favorites: favorites.length
   };
 
   const handleImagePress = () => {

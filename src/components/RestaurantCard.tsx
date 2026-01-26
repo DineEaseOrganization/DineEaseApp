@@ -1,194 +1,301 @@
-import React, {useState} from 'react';
-import {Alert, Image, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
-import {Restaurant} from '../types';
-import {dummyUser} from '../data/dummyData';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Restaurant } from '../types';
+import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 
 interface RestaurantCardProps {
-    restaurant: Restaurant;
-    onPress: (restaurant: Restaurant) => void;
-    showFavoriteButton?: boolean;
+  restaurant: Restaurant;
+  onPress: (restaurant: Restaurant) => void;
+  showFavoriteButton?: boolean;
+  onFavoriteToggle?: (restaurantId: number, isFavorite: boolean) => void;
 }
 
 const RestaurantCard: React.FC<RestaurantCardProps> = ({
-                                                           restaurant,
-                                                           onPress,
-                                                           showFavoriteButton = true
-                                                       }) => {
-    const [isFavorite, setIsFavorite] = useState(
-        dummyUser.favoriteRestaurants.includes(restaurant.id)
-    );
+  restaurant,
+  onPress,
+  showFavoriteButton = true,
+  onFavoriteToggle,
+}) => {
+  const { isAuthenticated } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const [isToggling, setIsToggling] = useState(false);
 
-    const handleFavoritePress = () => {
-        setIsFavorite(!isFavorite);
-        if (!isFavorite) {
-            dummyUser.favoriteRestaurants.push(restaurant.id);
-            Alert.alert('Added to Favorites', `${restaurant.name} has been added to your favorites.`);
-        } else {
-            const index = dummyUser.favoriteRestaurants.indexOf(restaurant.id);
-            if (index > -1) {
-                dummyUser.favoriteRestaurants.splice(index, 1);
-            }
-            Alert.alert('Removed from Favorites', `${restaurant.name} has been removed from your favorites.`);
-        }
-    };
+  const favorite = isFavorite(restaurant.id);
 
-    const renderStars = (rating: number) => {
-        const stars = [];
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 !== 0;
+  const handleFavoritePress = async () => {
+    if (isToggling) return;
 
-        for (let i = 0; i < fullStars; i++) {
-            stars.push('★');
-        }
-        if (hasHalfStar) {
-            stars.push('☆');
-        }
+    if (!isAuthenticated) {
+      // Could trigger login modal here
+      return;
+    }
 
-        return stars.join('');
-    };
+    setIsToggling(true);
+    try {
+      const result = await toggleFavorite(restaurant.id);
+      if (result.success && onFavoriteToggle) {
+        onFavoriteToggle(restaurant.id, !favorite);
+      }
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
-    return (
-        <TouchableOpacity style={styles.card} onPress={() => onPress(restaurant)}>
-            <View style={styles.imageContainer}>
-                <Image source={{uri: restaurant.coverImageUrl}} style={styles.image}/>
-                <View style={styles.overlay}>
-                    <Text style={styles.priceRange}>{restaurant.priceRange}</Text>
-                </View>
+  const renderStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
 
-                {showFavoriteButton && (
-                    <TouchableOpacity
-                        style={styles.favoriteButton}
-                        onPress={handleFavoritePress}
-                    >
-                        <Text style={[styles.favoriteIcon, {color: isFavorite ? '#e74c3c' : '#fff'}]}>
-                            {isFavorite ? '❤️' : '🤍'}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+    for (let i = 0; i < fullStars; i++) {
+      stars.push('★');
+    }
+    if (hasHalfStar && stars.length < 5) {
+      stars.push('☆');
+    }
 
-            <View style={styles.content}>
-                <Text style={styles.name} numberOfLines={1}>{restaurant.name}</Text>
-                <Text style={styles.cuisine}>{restaurant.cuisineType}</Text>
+    return stars.join('');
+  };
 
-                <View style={styles.ratingContainer}>
-                    <Text style={styles.stars}>{renderStars(restaurant.averageRating)}</Text>
-                    <Text style={styles.rating}>
-                        {restaurant.averageRating} ({restaurant.totalReviews} reviews)
-                    </Text>
-                </View>
+  return (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => onPress(restaurant)}
+      activeOpacity={0.95}
+    >
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: restaurant.coverImageUrl }}
+          style={styles.image}
+          resizeMode="cover"
+        />
 
-                <Text style={styles.address} numberOfLines={1}>{restaurant.address}</Text>
+        {/* Gradient overlay for better text visibility */}
+        <View style={styles.imageGradient} />
 
-                <View style={styles.amenitiesContainer}>
-                    {restaurant.amenities.slice(0, 3).map((amenity, index) => (
-                        <View key={index} style={styles.amenityTag}>
-                            <Text style={styles.amenityText}>{amenity}</Text>
-                        </View>
-                    ))}
-                </View>
-            </View>
-        </TouchableOpacity>
-    );
+        {/* Price range badge */}
+        <View style={styles.priceRangeBadge}>
+          <Text style={styles.priceRangeText}>{restaurant.priceRange}</Text>
+        </View>
+
+        {/* Favorite button */}
+        {showFavoriteButton && isAuthenticated && (
+          <TouchableOpacity
+            style={[
+              styles.favoriteButton,
+              favorite && styles.favoriteButtonActive,
+            ]}
+            onPress={handleFavoritePress}
+            disabled={isToggling}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            {isToggling ? (
+              <ActivityIndicator size="small" color={favorite ? '#fff' : '#e74c3c'} />
+            ) : (
+              <Text style={styles.favoriteIcon}>
+                {favorite ? '❤️' : '🤍'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.content}>
+        {/* Restaurant name */}
+        <Text style={styles.name} numberOfLines={1}>
+          {restaurant.name}
+        </Text>
+
+        {/* Cuisine type */}
+        <Text style={styles.cuisine}>{restaurant.cuisineType}</Text>
+
+        {/* Rating section */}
+        <View style={styles.ratingContainer}>
+          <View style={styles.starsContainer}>
+            <Text style={styles.stars}>{renderStars(restaurant.averageRating)}</Text>
+          </View>
+          <Text style={styles.ratingText}>
+            {restaurant.averageRating.toFixed(1)}
+          </Text>
+          <Text style={styles.reviewCount}>
+            ({restaurant.totalReviews} {restaurant.totalReviews === 1 ? 'review' : 'reviews'})
+          </Text>
+        </View>
+
+        {/* Address */}
+        <Text style={styles.address} numberOfLines={1}>
+          {restaurant.address}
+        </Text>
+
+        {/* Amenities */}
+        {restaurant.amenities && restaurant.amenities.length > 0 && (
+          <View style={styles.amenitiesContainer}>
+            {restaurant.amenities.slice(0, 3).map((amenity, index) => (
+              <View key={index} style={styles.amenityTag}>
+                <Text style={styles.amenityText}>{amenity}</Text>
+              </View>
+            ))}
+            {restaurant.amenities.length > 3 && (
+              <View style={styles.amenityTagMore}>
+                <Text style={styles.amenityTextMore}>
+                  +{restaurant.amenities.length - 3}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 };
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        marginHorizontal: 16,
-        marginVertical: 8,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 4},
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-        overflow: 'hidden',
-    },
-    imageContainer: {
-        position: 'relative',
-    },
-    image: {
-        width: '100%',
-        height: 200,
-    },
-    overlay: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    priceRange: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
-    favoriteButton: {
-        position: 'absolute',
-        top: 12,
-        left: 12,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    favoriteIcon: {
-        fontSize: 20,
-    },
-    content: {
-        padding: 16,
-    },
-    name: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    cuisine: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-    },
-    ratingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    stars: {
-        fontSize: 16,
-        color: '#FFD700',
-        marginRight: 6,
-    },
-    rating: {
-        fontSize: 14,
-        color: '#666',
-    },
-    address: {
-        fontSize: 12,
-        color: '#999',
-        marginBottom: 12,
-    },
-    amenitiesContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    amenityTag: {
-        backgroundColor: '#f0f0f0',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginRight: 6,
-        marginBottom: 4,
-    },
-    amenityText: {
-        fontSize: 11,
-        color: '#666',
-    },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  imageContainer: {
+    position: 'relative',
+    height: 200,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imageGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    backgroundColor: 'transparent',
+  },
+  priceRangeBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  priceRangeText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  favoriteButtonActive: {
+    backgroundColor: '#ffe5e5',
+  },
+  favoriteIcon: {
+    fontSize: 20,
+  },
+  content: {
+    padding: 16,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  cuisine: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+    fontWeight: '500',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  starsContainer: {
+    marginRight: 6,
+  },
+  stars: {
+    fontSize: 14,
+    color: '#FFB800',
+    letterSpacing: 1,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginRight: 4,
+  },
+  reviewCount: {
+    fontSize: 13,
+    color: '#888',
+  },
+  address: {
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 12,
+  },
+  amenitiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  amenityTag: {
+    backgroundColor: '#f0f4f8',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  amenityText: {
+    fontSize: 11,
+    color: '#4a5568',
+    fontWeight: '500',
+  },
+  amenityTagMore: {
+    backgroundColor: '#e8eef4',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  amenityTextMore: {
+    fontSize: 11,
+    color: '#718096',
+    fontWeight: '600',
+  },
 });
 
 export default RestaurantCard;
