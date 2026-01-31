@@ -89,6 +89,17 @@ class ProcessingService {
   }
 
   /**
+   * Get the total reservation count for the authenticated customer.
+   * Lightweight alternative to getCustomerReservations() for profile stats.
+   * Endpoint: GET /mobile/reservations/customer/count
+   */
+  async getCustomerReservationCount(): Promise<{ count: number }> {
+    return await apiClient.get<{ count: number }>(
+      `${this.BASE_URL}/reservations/customer/count`
+    );
+  }
+
+  /**
    * Get paginated reservations for the authenticated customer with filtering
    * Endpoint: GET /mobile/reservations/customer/paginated
    * Note: This endpoint requires JWT authentication. Customer ID is extracted from JWT token.

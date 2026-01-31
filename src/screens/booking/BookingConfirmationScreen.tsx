@@ -1,6 +1,7 @@
 // src/screens/booking/BookingConfirmationScreen.tsx
 import React from 'react';
 import {SafeAreaView, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import {BookingConfirmationScreenProps} from '../../navigation/AppNavigator';
 
 const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
@@ -37,8 +38,13 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
     };
 
     const handleDone = () => {
-        // Navigate back to restaurant list
-        navigation.navigate('RestaurantList');
+        // Reset stack to restaurant list, removing BookingScreen and RestaurantDetail from memory
+        navigation.dispatch(
+            CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'RestaurantList' }],
+            })
+        );
     };
 
     return (
