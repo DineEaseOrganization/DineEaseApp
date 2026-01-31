@@ -393,6 +393,52 @@ export interface ReservationListResponse {
   totalCount?: number;
 }
 
+// ============ FAVORITES API TYPES ============
+
+export interface FavoriteRestaurant {
+  favoriteId: number;
+  restaurantId: number;
+  restaurantName: string;
+  cuisineType: string;
+  coverImageUrl: string | null;
+  averageRating: number;
+  totalReviews: number;
+  priceRange: string | null;
+  address: string;
+  addedAt: string; // ISO date string
+}
+
+// Response from GET /customer/favorites
+// Backend returns: { restaurants: [...], totalCount, page, totalPages, hasMore }
+export interface FavoritesListResponse {
+  restaurants?: RestaurantDetail[];
+  favorites?: FavoriteRestaurant[]; // Alternative format
+  content?: FavoriteRestaurant[]; // Spring Page format
+  totalCount?: number;
+  page?: number;
+  totalPages?: number;
+  hasMore?: boolean;
+  totalElements?: number; // Spring Page format
+  success?: boolean;
+}
+
+// Response for add/remove favorite actions
+// Backend returns: FavoriteActionResponse(restaurantId, isFavorite, message)
+export interface FavoriteActionResponse {
+  restaurantId: number;
+  isFavorite: boolean;
+  message: string;
+}
+
+// Aliases for clarity
+export type AddFavoriteResponse = FavoriteActionResponse;
+export type RemoveFavoriteResponse = FavoriteActionResponse;
+
+export interface CheckFavoriteResponse {
+  isFavorite: boolean;
+  favoriteId?: number;
+}
+
 // ============ ERROR RESPONSE ============
 
 export interface ApiErrorResponse {

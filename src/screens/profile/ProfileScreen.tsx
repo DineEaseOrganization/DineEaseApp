@@ -1,7 +1,10 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {useFocusEffect} from '@react-navigation/native';
 import {useAuth} from '../../context/AuthContext';
+import {useFavorites} from '../../context/FavoritesContext';
+import {processingService} from '../../services/api/processingService';
 import {ProfileScreenNavigationProp} from '../../navigation/AppNavigator';
 
 interface ProfileScreenProps {
@@ -10,11 +13,21 @@ interface ProfileScreenProps {
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
   const {user, logout} = useAuth();
+  const {favorites} = useFavorites();
+  const [bookingsCount, setBookingsCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      processingService.getCustomerReservationCount()
+        .then(({count}) => setBookingsCount(count))
+        .catch(() => setBookingsCount(0));
+    }, [])
+  );
 
   const stats = {
-    bookings: 3,
-    reviews: 2,
-    favorites: 5
+    bookings: bookingsCount,
+    reviews: 0,  // TODO: Get from reviews context/API
+    favorites: favorites.length
   };
 
   const handleImagePress = () => {

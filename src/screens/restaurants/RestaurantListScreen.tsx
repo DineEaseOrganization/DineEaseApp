@@ -18,7 +18,8 @@ import { restaurantService } from '../../services/api';
 import { useLocation } from '../../hooks/useLocation';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
-import { formatPartyDateTime } from '../../utils/Datetimeutils'; // Import the hook
+import { formatPartyDateTime } from '../../utils/Datetimeutils';
+import FavoriteButton from '../../components/FavoriteButton';
 
 const { width } = Dimensions.get('window');
 
@@ -288,15 +289,11 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
             ))}
           </View>
         </View>
-        <TouchableOpacity
+        <FavoriteButton
+          restaurantId={item.id}
+          size="medium"
           style={styles.saveButton}
-          onPress={() => {
-            console.log(`Save/unsave ${item.name}`);
-            // Will implement with favorites API in Phase 4
-          }}
-        >
-          <Text style={styles.saveIcon}>♡</Text>
-        </TouchableOpacity>
+        />
       </View>
     </TouchableOpacity>
   );
@@ -348,15 +345,11 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
             ).toFixed(1)} mi
           </Text>
         )}
-        <TouchableOpacity
+        <FavoriteButton
+          restaurantId={restaurant.id}
+          size="small"
           style={styles.topSaveButton}
-          onPress={() => {
-            console.log(`Save/unsave ${restaurant.name}`);
-            // Will implement with favorites API in Phase 4
-          }}
-        >
-          <Text style={styles.topSaveIcon}>♡</Text>
-        </TouchableOpacity>
+        />
       </View>
     </TouchableOpacity>
   );
@@ -567,12 +560,11 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
                     </View>
 
                     {/* Save icon for consistency */}
-                    <TouchableOpacity
+                    <FavoriteButton
+                      restaurantId={item.id}
+                      size="medium"
                       style={styles.saveButton}
-                      onPress={() => console.log('save/unsave', item.name)}
-                    >
-                      <Text style={styles.saveIcon}>♡</Text>
-                    </TouchableOpacity>
+                    />
                   </View>
                 </TouchableOpacity>
               )}

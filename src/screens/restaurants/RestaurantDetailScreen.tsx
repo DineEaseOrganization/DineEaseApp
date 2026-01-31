@@ -12,6 +12,7 @@ import {
     Alert,
     Linking,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
 import { restaurantService } from '../../services/api';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
@@ -33,6 +34,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
     } = route.params;
 
     const { isAuthenticated } = useAuth();
+    const isFocused = useIsFocused();
     const [restaurant, setRestaurant] = useState<Restaurant>(initialRestaurant);
     const [selectedDate, setSelectedDate] = useState(initialSelectedDate || new Date());
     const [partySize, setPartySize] = useState(initialPartySize || 2);
@@ -59,7 +61,8 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
         date: dateStr,
         partySize,
         enabled: true,
-        isAuthenticated, // Pass auth state to conditionally enable SSE/polling
+        isFocused,
+        isAuthenticated,
         pollingIntervalMs: 30000,
     });
 

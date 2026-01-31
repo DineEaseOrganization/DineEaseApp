@@ -9,6 +9,7 @@ export interface UseAvailabilityStreamOptions {
   date: string; // YYYY-MM-DD format
   partySize: number;
   enabled?: boolean; // Whether to enable the hook (default: true)
+  isFocused?: boolean; // Whether the screen is focused - pauses SSE/polling when false (default: true)
   isAuthenticated?: boolean; // Whether user is authenticated (enables SSE/polling, default: false)
   pollingIntervalMs?: number; // Fallback polling interval in ms (default: 30000)
   maxRetries?: number; // Maximum number of SSE reconnection attempts (default: 5)
@@ -48,6 +49,7 @@ export function useAvailabilityStream(
     date,
     partySize,
     enabled = true,
+    isFocused = true,
     isAuthenticated = false,
     pollingIntervalMs = 30000,
     maxRetries = 5,
@@ -114,12 +116,22 @@ export function useAvailabilityStream(
   }, [restaurantId, date, partySize, handleAvailabilityData]);
 
   // Effect: Initial data fetch and SSE connection
-  // This effect runs when restaurantId, date, or partySize changes
+  // This effect runs when restaurantId, date, partySize, or focus state changes.
+  // When isFocused becomes false, cleanup runs (tears down SSE/polling).
+  // When isFocused becomes true again, connection re-establishes with a fresh REST fetch.
   useEffect(() => {
     // Reset state for new subscription
     isMountedRef.current = true;
     hasInitialDataRef.current = false;
     sseFailedRef.current = false;
+
+    if (!isFocused) {
+      // Screen lost focus — tear down SSE/polling but preserve existing slot data
+      cleanup();
+      setIsConnected(false);
+      setIsStreaming(false);
+      return;
+    }
 
     // Reset UI state
     setSlots([]);
@@ -257,7 +269,7 @@ export function useAvailabilityStream(
       isMountedRef.current = false;
       cleanup();
     };
-  }, [enabled, restaurantId, date, partySize, pollingIntervalMs, handleAvailabilityData]);
+  }, [enabled, isFocused, restaurantId, date, partySize, pollingIntervalMs, handleAvailabilityData, cleanup]);
 
   return {
     slots,

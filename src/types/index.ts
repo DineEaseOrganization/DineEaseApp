@@ -175,4 +175,12 @@ export type {
     // Common types
     TokenPair,
     ApiErrorResponse,
+
+    // Favorites API types
+    FavoriteRestaurant,
+    FavoritesListResponse,
+    FavoriteActionResponse,
+    AddFavoriteResponse,
+    RemoveFavoriteResponse,
+    CheckFavoriteResponse,
 } from './api.types'

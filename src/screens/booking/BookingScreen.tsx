@@ -12,7 +12,7 @@ import {
     Modal,
     ActivityIndicator,
 } from 'react-native';
-import { CommonActions } from '@react-navigation/native';
+import { CommonActions, useIsFocused } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
@@ -24,6 +24,7 @@ import { processingService } from '../../services/api';
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
     const { isAuthenticated, user } = useAuth();
+    const isFocused = useIsFocused();
 
     // Format date for the streaming hook
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
@@ -38,7 +39,8 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         date: dateStr,
         partySize,
         enabled: isAuthenticated,
-        isAuthenticated, // Pass auth state to conditionally enable SSE/polling
+        isFocused,
+        isAuthenticated,
         pollingIntervalMs: 30000,
     });
 
