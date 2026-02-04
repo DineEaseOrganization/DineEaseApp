@@ -10,7 +10,8 @@ import { Reservation, Restaurant } from '../types';
  */
 export function mapReservationDtoToReservation(
   dto: ReservationDto,
-  restaurantData?: Partial<Restaurant>
+  restaurantData?: Partial<Restaurant>,
+  reviewedReservationIds?: Set<number>
 ): Reservation {
   // Map backend state to frontend status
   const statusMap: Record<ReservationState, Reservation['status']> = {
@@ -18,7 +19,7 @@ export function mapReservationDtoToReservation(
     [ReservationState.PENDING]: 'pending',
     [ReservationState.CANCELLED]: 'cancelled',
     [ReservationState.COMPLETED]: 'completed',
-    [ReservationState.NO_SHOW]: 'cancelled', // Treat NO_SHOW as cancelled in UI
+    [ReservationState.NO_SHOW]: 'no_show',
   };
 
   // Create a minimal restaurant object (can be enhanced with full data if available)
@@ -55,7 +56,8 @@ export function mapReservationDtoToReservation(
     status: statusMap[dto.state] || 'pending',
     confirmationCode: `RES${dto.reservationId || '000000'}`, // Generate confirmation code from ID
     specialRequests: dto.comments,
-    canReview: dto.state === ReservationState.COMPLETED, // Only completed reservations can be reviewed
+    canReview: dto.state === ReservationState.COMPLETED
+      && !(reviewedReservationIds?.has(dto.reservationId ?? 0) ?? false),
   };
 }
 
@@ -64,10 +66,11 @@ export function mapReservationDtoToReservation(
  */
 export function mapReservationDtosToReservations(
   dtos: ReservationDto[],
-  restaurantDataMap?: Map<number, Partial<Restaurant>>
+  restaurantDataMap?: Map<number, Partial<Restaurant>>,
+  reviewedReservationIds?: Set<number>
 ): Reservation[] {
   return dtos.map(dto => {
     const restaurantData = restaurantDataMap?.get(dto.restaurantId);
-    return mapReservationDtoToReservation(dto, restaurantData);
+    return mapReservationDtoToReservation(dto, restaurantData, reviewedReservationIds);
   });
 }

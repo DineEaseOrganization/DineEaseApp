@@ -1,13 +1,23 @@
 // src/screens/booking/BookingsScreen.tsx
-import React, {useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, SafeAreaView, FlatList, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator} from 'react-native';
 import {Reservation} from '../../types';
 import {BookingsScreenProps} from '../../navigation/AppNavigator';
 import {useReservations} from '../../hooks/useReservations';
 import {mapReservationDtosToReservations} from '../../utils/reservationMapper';
+import {processingService} from '../../services/api/processingService';
+import {useFocusEffect} from '@react-navigation/native';
+
+const isReservationPast = (date: string, time: string): boolean => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const reservationDateTime = new Date(date);
+    reservationDateTime.setHours(hours, minutes, 0, 0);
+    return reservationDateTime < new Date();
+};
 
 const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
     const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+    const [reviewedReservationIds, setReviewedReservationIds] = useState<Set<number>>(new Set());
     const {
         reservations: reservationDtos,
         isLoading,
@@ -23,8 +33,22 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
         pageSize: 20
     });
 
+    // Fetch reviewed reservation IDs on focus (so it refreshes after submitting a review)
+    useFocusEffect(
+        useCallback(() => {
+            processingService.getCustomerReviews()
+                .then(reviews => {
+                    const ids = new Set(reviews.map(r => r.reservationId));
+                    setReviewedReservationIds(ids);
+                })
+                .catch(() => {
+                    // If fetch fails, don't block — just allow reviews
+                });
+        }, [])
+    );
+
     // Map backend DTOs to UI Reservation type
-    const reservations = mapReservationDtosToReservations(reservationDtos);
+    const reservations = mapReservationDtosToReservations(reservationDtos, undefined, reviewedReservationIds);
 
     const handleReviewPress = (reservation: Reservation) => {
         // Navigate to ReviewScreen within BookingsStack
@@ -54,8 +78,14 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
         );
     };
 
-    const renderBookingCard = (reservation: Reservation) => (
-        <View key={reservation.id} style={styles.bookingCard}>
+    const renderBookingCard = (reservation: Reservation) => {
+        const isPast = isReservationPast(reservation.date, reservation.time);
+        const isNoShow = reservation.status === 'no_show';
+        const canCancel = (reservation.status === 'confirmed' || reservation.status === 'pending') && !isPast;
+        const canReview = reservation.canReview && reservation.status === 'completed';
+
+        return (
+        <View key={reservation.id} style={[styles.bookingCard, isNoShow && styles.bookingCardNoShow]}>
             {/* Status Badge - Top Right Corner */}
             <View style={[
                 styles.statusBadge,
@@ -63,6 +93,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
                 reservation.status === 'pending' && styles.statusPending,
                 reservation.status === 'completed' && styles.statusCompleted,
                 reservation.status === 'cancelled' && styles.statusCancelled,
+                isNoShow && styles.statusNoShow,
             ]}>
                 <Text style={[
                     styles.statusText,
@@ -70,8 +101,9 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
                     reservation.status === 'pending' && styles.statusTextPending,
                     reservation.status === 'completed' && styles.statusTextCompleted,
                     reservation.status === 'cancelled' && styles.statusTextCancelled,
+                    isNoShow && styles.statusTextNoShow,
                 ]}>
-                    {reservation.status.toUpperCase()}
+                    {isNoShow ? 'NO SHOW' : reservation.status.toUpperCase()}
                 </Text>
             </View>
 
@@ -115,9 +147,9 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
             )}
 
             {/* Action Buttons */}
-            {(reservation.status === 'confirmed' || (reservation.canReview && reservation.status === 'completed')) && (
+            {(canCancel || canReview) && (
                 <View style={styles.actionButtons}>
-                    {reservation.status === 'confirmed' && (
+                    {canCancel && (
                         <TouchableOpacity
                             style={styles.cancelButton}
                             onPress={() => handleCancelReservation(reservation.id)}
@@ -126,18 +158,19 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
                         </TouchableOpacity>
                     )}
 
-                    {reservation.canReview && reservation.status === 'completed' && (
+                    {canReview && (
                         <TouchableOpacity
                             style={styles.reviewButton}
                             onPress={() => handleReviewPress(reservation)}
                         >
-                            <Text style={styles.reviewButtonText}>✍️ Review</Text>
+                            <Text style={styles.reviewButtonText}>Leave a Review</Text>
                         </TouchableOpacity>
                     )}
                 </View>
             )}
         </View>
-    );
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -296,6 +329,10 @@ const styles = StyleSheet.create({
         borderColor: '#F0F3F6',
         position: 'relative',
     },
+    bookingCardNoShow: {
+        backgroundColor: '#FFF7ED',
+        borderColor: '#FED7AA',
+    },
     restaurantName: {
         fontSize: 17,
         fontWeight: '700',
@@ -336,6 +373,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#FECACA',
     },
+    statusNoShow: {
+        backgroundColor: '#FFF7ED',
+        borderWidth: 1,
+        borderColor: '#FED7AA',
+    },
     statusText: {
         fontSize: 11,
         fontWeight: '700',
@@ -352,6 +394,9 @@ const styles = StyleSheet.create({
     },
     statusTextCancelled: {
         color: '#DC2626',
+    },
+    statusTextNoShow: {
+        color: '#EA580C',
     },
     infoRow: {
         flexDirection: 'row',

@@ -1,56 +1,75 @@
 // src/screens/reviews/ReviewScreen.tsx
-import React, {useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
-import {Review} from '../../types';
-import {dummyReviews} from '../../data/dummyData';
 import {ReviewScreenProps} from '../../navigation/AppNavigator';
+import {processingService, RatingCategory} from '../../services/api/processingService';
 
 const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
     const {reservation} = route.params;
 
     const [overallRating, setOverallRating] = useState(5);
-    const [foodRating, setFoodRating] = useState(5);
-    const [serviceRating, setServiceRating] = useState(5);
-    const [ambianceRating, setAmbianceRating] = useState(5);
+    const [categoryRatings, setCategoryRatings] = useState<Record<number, number>>({});
+    const [categories, setCategories] = useState<RatingCategory[]>([]);
     const [reviewText, setReviewText] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmitReview = () => {
+    useEffect(() => {
+        processingService.getRatingCategories(reservation.restaurant.id)
+            .then((cats) => {
+                setCategories(cats);
+                // Initialize all category ratings to 5
+                const initial: Record<number, number> = {};
+                cats.forEach(c => { initial[c.categoryId] = 5; });
+                setCategoryRatings(initial);
+            })
+            .catch(() => {
+                // Fallback: no dynamic categories, submit without them
+                setCategories([]);
+            });
+    }, [reservation.restaurant.id]);
+
+    const handleSubmitReview = async () => {
         if (reviewText.trim().length < 10) {
             Alert.alert('Review Too Short', 'Please write at least 10 characters for your review.');
             return;
         }
 
-        const newReview: Review = {
-            id: dummyReviews.length + 1,
-            restaurantId: reservation.restaurant.id,
-            restaurantName: reservation.restaurant.name,
-            customerName: reservation.customerName.split(' ')[0] + ' ' + reservation.customerName.split(' ')[1]?.charAt(0) + '.',
-            rating: overallRating,
-            reviewText,
-            foodRating,
-            serviceRating,
-            ambianceRating,
-            date: new Date().toISOString().split('T')[0],
-            reservationId: reservation.id,
-            isVerified: true
-        };
+        setIsSubmitting(true);
+        try {
+            await processingService.submitReview({
+                reservationId: reservation.id,
+                restaurantId: reservation.restaurant.id,
+                overallRating,
+                reviewText: reviewText.trim(),
+                categoryRatings: categories.map(c => ({
+                    categoryId: c.categoryId,
+                    score: categoryRatings[c.categoryId] || 5,
+                })),
+            });
 
-        dummyReviews.push(newReview);
-
-        Alert.alert(
-            'Review Submitted!',
-            'Thank you for your feedback. Your review has been posted.',
-            [
-                {
-                    text: 'OK',
-                    onPress: () => {
-                        // Mark reservation as reviewed
-                        reservation.canReview = false;
-                        navigation.goBack();
+            Alert.alert(
+                'Review Submitted!',
+                'Thank you for your feedback. Your review has been posted.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            reservation.canReview = false;
+                            navigation.goBack();
+                        }
                     }
-                }
-            ]
-        );
+                ]
+            );
+        } catch (error: any) {
+            const message = error?.message || 'Failed to submit review. Please try again.';
+            Alert.alert('Error', message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const setCategoryRating = (categoryId: number, score: number) => {
+        setCategoryRatings(prev => ({...prev, [categoryId]: score}));
     };
 
     const renderStarRating = (rating: number, setRating: (rating: number) => void, label: string) => (
@@ -76,6 +95,15 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
         </View>
     );
 
+    const getCategoryDisplayName = (name: string): string => {
+        switch (name) {
+            case 'FOOD': return 'Food Quality';
+            case 'SERVICE': return 'Service';
+            case 'AMBIANCE': return 'Ambiance';
+            default: return name.charAt(0) + name.slice(1).toLowerCase();
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -97,10 +125,16 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
                 {/* Overall Rating */}
                 {renderStarRating(overallRating, setOverallRating, 'Overall Experience')}
 
-                {/* Detailed Ratings */}
-                {renderStarRating(foodRating, setFoodRating, 'Food Quality')}
-                {renderStarRating(serviceRating, setServiceRating, 'Service')}
-                {renderStarRating(ambianceRating, setAmbianceRating, 'Ambiance')}
+                {/* Dynamic Category Ratings */}
+                {categories.map(category => (
+                    <View key={category.categoryId}>
+                        {renderStarRating(
+                            categoryRatings[category.categoryId] || 5,
+                            (score) => setCategoryRating(category.categoryId, score),
+                            getCategoryDisplayName(category.name)
+                        )}
+                    </View>
+                ))}
 
                 {/* Review Text */}
                 <View style={styles.reviewSection}>
@@ -120,7 +154,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
 
                 {/* Tips */}
                 <View style={styles.tipsSection}>
-                    <Text style={styles.tipsTitle}>💡 Review Tips</Text>
+                    <Text style={styles.tipsTitle}>Review Tips</Text>
                     <Text style={styles.tipsText}>
                         • Mention specific dishes you tried{'\n'}
                         • Comment on the service quality{'\n'}
@@ -135,12 +169,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
                 <TouchableOpacity
                     style={[
                         styles.submitButton,
-                        reviewText.length < 10 && styles.submitButtonDisabled
+                        (reviewText.length < 10 || isSubmitting) && styles.submitButtonDisabled
                     ]}
                     onPress={handleSubmitReview}
-                    disabled={reviewText.length < 10}
+                    disabled={reviewText.length < 10 || isSubmitting}
                 >
-                    <Text style={styles.submitButtonText}>Submit Review</Text>
+                    <Text style={styles.submitButtonText}>
+                        {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
