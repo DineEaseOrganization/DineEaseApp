@@ -3,6 +3,34 @@ import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
 import { AvailabilitySlotsResponse, ReservationDto } from '../../types/api.types';
+import { Review } from '../../types';
+
+export interface SubmitReviewRequest {
+  reservationId: number;
+  restaurantId: number;
+  overallRating: number;
+  reviewText?: string;
+  categoryRatings: { categoryId: number; score: number }[];
+}
+
+export interface ReviewResponse {
+  reviewId: number;
+  reservationId: number;
+  restaurantId: number;
+  restaurantName: string | null;
+  customerName: string;
+  overallRating: number;
+  reviewText: string | null;
+  categoryRatings: { categoryId: number; categoryName: string; score: number }[];
+  createdAt: string;
+  isVerified: boolean;
+}
+
+export interface RatingCategory {
+  categoryId: number;
+  name: string;
+  displayOrder: number;
+}
 
 class ProcessingService {
   private readonly BASE_URL = `${API_CONFIG.PROCESSING_SERVICE_URL}/mobile`;
@@ -148,6 +176,48 @@ class ProcessingService {
   async cancelReservation(reservationId: number): Promise<{ success: boolean; message: string }> {
     return await apiClient.delete<{ success: boolean; message: string }>(
       `${this.BASE_URL}/reservations/${reservationId}`
+    );
+  }
+
+  // ============ REVIEW ENDPOINTS ============
+
+  async submitReview(request: SubmitReviewRequest): Promise<ReviewResponse> {
+    return await apiClient.post<ReviewResponse>(
+      `${this.BASE_URL}/reviews`,
+      request
+    );
+  }
+
+  async getCustomerReviews(): Promise<ReviewResponse[]> {
+    return await apiClient.get<ReviewResponse[]>(
+      `${this.BASE_URL}/reviews/customer`
+    );
+  }
+
+  async getCustomerReviewCount(): Promise<{ count: number }> {
+    return await apiClient.get<{ count: number }>(
+      `${this.BASE_URL}/reviews/customer/count`
+    );
+  }
+
+  async getRestaurantReviews(restaurantId: number): Promise<ReviewResponse[]> {
+    return await apiClient.get<ReviewResponse[]>(
+      `${this.BASE_URL}/reviews/restaurant/${restaurantId}`
+    );
+  }
+
+  async deleteReview(reviewId: number): Promise<{ success: boolean; message: string }> {
+    return await apiClient.delete<{ success: boolean; message: string }>(
+      `${this.BASE_URL}/reviews/${reviewId}`
+    );
+  }
+
+  // ============ RATING CATEGORY ENDPOINTS ============
+
+  async getRatingCategories(restaurantId: number): Promise<RatingCategory[]> {
+    return await apiClient.get<RatingCategory[]>(
+      `${API_CONFIG.RESTAURANT_SERVICE_URL}/customer/restaurants/${restaurantId}/rating-categories`,
+      { headers: this.getHeaders() }
     );
   }
 }

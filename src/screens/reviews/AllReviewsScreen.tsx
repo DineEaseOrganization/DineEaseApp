@@ -1,12 +1,45 @@
 // src/screens/reviews/AllReviewsScreen.tsx
-import React from 'react';
-import {SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
-import {dummyReviews} from '../../data/dummyData';
-import {Review} from '../../types';
+import React, {useCallback, useState} from 'react';
+import {ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import {AllReviewsScreenProps} from '../../navigation/AppNavigator';
+import {processingService, ReviewResponse} from '../../services/api/processingService';
 
 const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({navigation}) => {
-    const userReviews = dummyReviews; // In real app, filter by current user
+    const [reviews, setReviews] = useState<ReviewResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchReviews = useCallback(() => {
+        setIsLoading(true);
+        processingService.getCustomerReviews()
+            .then(setReviews)
+            .catch(() => setReviews([]))
+            .finally(() => setIsLoading(false));
+    }, []);
+
+    useFocusEffect(fetchReviews);
+
+    const handleDeleteReview = (reviewId: number) => {
+        Alert.alert(
+            'Delete Review',
+            'Are you sure you want to delete this review? This cannot be undone.',
+            [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await processingService.deleteReview(reviewId);
+                            setReviews(prev => prev.filter(r => r.reviewId !== reviewId));
+                        } catch {
+                            Alert.alert('Error', 'Failed to delete review. Please try again.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     const renderStars = (rating: number) => {
         const stars = [];
@@ -20,38 +53,65 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({navigation}) => {
         return stars;
     };
 
-    const renderReviewCard = (review: Review) => (
-        <View key={review.id} style={styles.reviewCard}>
+    const getCategoryDisplayName = (name: string): string => {
+        switch (name) {
+            case 'FOOD': return 'Food';
+            case 'SERVICE': return 'Service';
+            case 'AMBIANCE': return 'Ambiance';
+            default: return name.charAt(0) + name.slice(1).toLowerCase();
+        }
+    };
+
+    const formatDate = (dateStr: string): string => {
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'});
+        } catch {
+            return dateStr;
+        }
+    };
+
+    const renderReviewCard = (review: ReviewResponse) => (
+        <View key={review.reviewId} style={styles.reviewCard}>
             <View style={styles.reviewHeader}>
-                <Text style={styles.restaurantName}>{review.restaurantName}</Text>
-                <Text style={styles.reviewDate}>{review.date}</Text>
+                <Text style={styles.restaurantName}>{review.restaurantName || 'Restaurant'}</Text>
+                <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
             </View>
 
             <View style={styles.ratingContainer}>
                 <View style={styles.starsContainer}>
-                    {renderStars(review.rating)}
+                    {renderStars(review.overallRating)}
                 </View>
-                <Text style={styles.ratingText}>Overall: {review.rating}/5</Text>
+                <Text style={styles.ratingText}>Overall: {review.overallRating}/5</Text>
                 {review.isVerified && (
                     <Text style={styles.verifiedBadge}>✓ Verified</Text>
                 )}
             </View>
 
-            <Text style={styles.reviewText}>{review.reviewText}</Text>
+            {review.reviewText && (
+                <Text style={styles.reviewText}>{review.reviewText}</Text>
+            )}
 
-            <View style={styles.detailedRatings}>
-                <View style={styles.ratingDetail}>
-                    <Text style={styles.ratingDetailLabel}>Food:</Text>
-                    <Text style={styles.ratingDetailValue}>{review.foodRating}/5</Text>
+            {review.categoryRatings.length > 0 && (
+                <View style={styles.detailedRatings}>
+                    {review.categoryRatings.map(cr => (
+                        <View key={cr.categoryId} style={styles.ratingDetail}>
+                            <Text style={styles.ratingDetailLabel}>
+                                {getCategoryDisplayName(cr.categoryName)}:
+                            </Text>
+                            <Text style={styles.ratingDetailValue}>{cr.score}/5</Text>
+                        </View>
+                    ))}
                 </View>
-                <View style={styles.ratingDetail}>
-                    <Text style={styles.ratingDetailLabel}>Service:</Text>
-                    <Text style={styles.ratingDetailValue}>{review.serviceRating}/5</Text>
-                </View>
-                <View style={styles.ratingDetail}>
-                    <Text style={styles.ratingDetailLabel}>Ambiance:</Text>
-                    <Text style={styles.ratingDetailValue}>{review.ambianceRating}/5</Text>
-                </View>
+            )}
+
+            <View style={styles.cardActions}>
+                <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteReview(review.reviewId)}
+                >
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -65,18 +125,24 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({navigation}) => {
                 <Text style={styles.title}>My Reviews</Text>
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {userReviews.length > 0 ? (
-                    userReviews.map(renderReviewCard)
-                ) : (
-                    <View style={styles.emptyState}>
-                        <Text style={styles.emptyStateText}>No Reviews Yet</Text>
-                        <Text style={styles.emptyStateSubtext}>
-                            Your reviews will appear here after you dine at restaurants and share your experience.
-                        </Text>
-                    </View>
-                )}
-            </ScrollView>
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                </View>
+            ) : (
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    {reviews.length > 0 ? (
+                        reviews.map(renderReviewCard)
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyStateText}>No Reviews Yet</Text>
+                            <Text style={styles.emptyStateSubtext}>
+                                Your reviews will appear here after you dine at restaurants and share your experience.
+                            </Text>
+                        </View>
+                    )}
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 };
@@ -103,6 +169,11 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#333',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     content: {
         flex: 1,
@@ -188,6 +259,27 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#333',
+    },
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    deleteButton: {
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 8,
+        backgroundColor: '#FEE2E2',
+        borderWidth: 1,
+        borderColor: '#FCA5A5',
+    },
+    deleteButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#DC2626',
     },
     emptyState: {
         alignItems: 'center',

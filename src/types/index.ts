@@ -88,7 +88,7 @@ export interface Reservation {
     customerName: string;
     customerPhone: string;
     customerEmail?: string;
-    status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+    status: 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'no_show';
     confirmationCode: string;
     specialRequests?: string;
     canReview?: boolean;

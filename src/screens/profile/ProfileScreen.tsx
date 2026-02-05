@@ -15,18 +15,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
   const {user, logout} = useAuth();
   const {favorites} = useFavorites();
   const [bookingsCount, setBookingsCount] = useState(0);
+  const [reviewsCount, setReviewsCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       processingService.getCustomerReservationCount()
         .then(({count}) => setBookingsCount(count))
         .catch(() => setBookingsCount(0));
+      processingService.getCustomerReviewCount()
+        .then(({count}) => setReviewsCount(count))
+        .catch(() => setReviewsCount(0));
     }, [])
   );
 
   const stats = {
     bookings: bookingsCount,
-    reviews: 0,  // TODO: Get from reviews context/API
+    reviews: reviewsCount,
     favorites: favorites.length
   };
 

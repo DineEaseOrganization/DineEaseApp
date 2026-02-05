@@ -321,6 +321,11 @@ const ProtectedBookingsStackNavigator: React.FC = () => {
           component={BookingsScreen}
           options={{headerShown: false}}
         />
+        <BookingsStack.Screen
+          name="ReviewScreen"
+          component={ReviewScreen}
+          options={{headerShown: false}}
+        />
       </BookingsStack.Navigator>
     </ProtectedScreenWithNavigation>
   );
