@@ -58,6 +58,7 @@ export function mapReservationDtoToReservation(
     specialRequests: dto.comments,
     canReview: dto.state === ReservationState.COMPLETED
       && !(reviewedReservationIds?.has(dto.reservationId ?? 0) ?? false),
+    tags: dto.tags,
   };
 }
 

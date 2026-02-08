@@ -1,6 +1,6 @@
 // src/types/index.ts
 // Frontend domain types - what the UI uses (may extend or combine API types)
-import {RestaurantDetail} from './api.types';
+import {RestaurantDetail, ReservationTagMapping} from './api.types';
 import { getRestaurantImage, getAmenities } from '../utils/imageUtils';
 
 
@@ -92,6 +92,7 @@ export interface Reservation {
     confirmationCode: string;
     specialRequests?: string;
     canReview?: boolean;
+    tags?: ReservationTagMapping[];
 }
 
 export interface TimeSlot {
@@ -171,6 +172,7 @@ export type {
     ReservationCustomerDto,
     ReservationDto,
     ReservationListResponse,
+    ReservationTagMapping,
 
     // Common types
     TokenPair,

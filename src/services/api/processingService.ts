@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
-import { AvailabilitySlotsResponse, ReservationDto } from '../../types/api.types';
+import { AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest } from '../../types/api.types';
 import { Review } from '../../types';
 
 export interface SubmitReviewRequest {
@@ -87,6 +87,7 @@ class ProcessingService {
     customer: {
       name: string;
       phoneNumber: string;
+      phoneCountryCode?: string;
       email?: string;
     };
     restaurantId: number;
@@ -95,6 +96,7 @@ class ProcessingService {
     state: string; // e.g., "CONFIRMED"
     comments?: string;
     reservationTypeId?: number;
+    tagRequests?: ReservationTagRequest[]; // Optional tags for the reservation
   }): Promise<any> {
     // Don't pass custom headers - let apiClient handle JWT authentication
     return await apiClient.post<any>(

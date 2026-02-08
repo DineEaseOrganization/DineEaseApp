@@ -78,6 +78,14 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
         );
     };
 
+    const handleTagPress = (tagName: string, note?: string | null) => {
+        const trimmedNote = note?.trim();
+        Alert.alert(
+            tagName,
+            trimmedNote ? trimmedNote : 'No note provided.'
+        );
+    };
+
     const renderBookingCard = (reservation: Reservation) => {
         const isPast = isReservationPast(reservation.date, reservation.time);
         const isNoShow = reservation.status === 'no_show';
@@ -135,6 +143,28 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
                     <Text style={styles.confirmationCode}>{reservation.confirmationCode}</Text>
                 </View>
             </View>
+
+            {/* Reservation Tags */}
+            {reservation.tags && reservation.tags.length > 0 && (
+                <View style={styles.tagsSection}>
+                    <Text style={styles.tagsLabel}>Tags</Text>
+                    <View style={styles.tagsRow}>
+                        {reservation.tags.map((tag) => (
+                            <TouchableOpacity
+                                key={tag.tagId}
+                                style={styles.tagPill}
+                                onPress={() => handleTagPress(tag.tagName, tag.note)}
+                                activeOpacity={0.85}
+                            >
+                                {tag.icon ? <Text style={styles.tagIcon}>{tag.icon}</Text> : null}
+                                <Text style={styles.tagText} numberOfLines={1}>
+                                    {tag.tagName}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            )}
 
             {/* Special Requests */}
             {reservation.specialRequests && (
@@ -439,6 +469,42 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#0284C7',
         fontFamily: 'monospace',
+    },
+    tagsSection: {
+        marginTop: 4,
+        marginBottom: 8,
+    },
+    tagsLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#6B7280',
+        letterSpacing: 0.4,
+        marginBottom: 6,
+        textTransform: 'uppercase',
+    },
+    tagsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    tagPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 14,
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    tagIcon: {
+        fontSize: 13,
+        marginRight: 6,
+    },
+    tagText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#334155',
     },
     specialRequestsContainer: {
         flexDirection: 'row',

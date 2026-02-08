@@ -78,6 +78,9 @@ export function useReservations(options?: {
           pageSize,
           'reservationDate,desc'
         );
+        if (__DEV__) {
+          console.log('[useReservations] Paginated reservations response:', response);
+        }
 
         if (append) {
           setReservations(prev => [...prev, ...response.content]);
@@ -92,6 +95,9 @@ export function useReservations(options?: {
         setIsLastPage(response.last);
       } else {
         const data = await processingService.getCustomerReservations();
+        if (__DEV__) {
+          console.log('[useReservations] Reservations response:', data);
+        }
         setReservations(data);
       }
     } catch (err) {

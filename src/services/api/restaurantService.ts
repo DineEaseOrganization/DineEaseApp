@@ -6,6 +6,7 @@ import {
   AvailabilitySlotsResponse,
   CuisineStat,
   NearbyRestaurantsResponse,
+  ReservationTag,
   RestaurantDetail,
   RestaurantListResponse,
   RestaurantSearchResponse,
@@ -186,6 +187,27 @@ class RestaurantService {
       `${this.BASE_URL}/${id}`,
       { headers: this.getHeaders() }
     );
+  }
+
+  /**
+   * Get reservation tags for a restaurant
+   * Endpoint: GET /reservation-tags/{restaurantId}
+   * Returns only active tags for customer use
+   * Returns empty array if feature not available
+   */
+  async getReservationTags(restaurantId: number): Promise<ReservationTag[]> {
+    try {
+      const allTags = await apiClient.get<ReservationTag[]>(
+        `${API_CONFIG.RESTAURANT_SERVICE_URL}/reservation-tags/${restaurantId}`,
+        { headers: this.getHeaders() }
+      );
+      // Filter to only active tags for customer-facing app
+      return (allTags || []).filter(tag => tag.active);
+    } catch (error) {
+      // Tags feature may not be deployed yet - return empty array
+      console.log('Reservation tags not available');
+      return [];
+    }
   }
 
 }
