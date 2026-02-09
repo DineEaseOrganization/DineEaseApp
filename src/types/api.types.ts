@@ -386,11 +386,34 @@ export interface ReservationDto {
   state: ReservationState;
   comments?: string;
   reservationTypeId?: number;
+  tags?: ReservationTagMapping[];
 }
 
 export interface ReservationListResponse {
   reservations: ReservationDto[];
   totalCount?: number;
+}
+
+// ============ RESERVATION TAG TYPES ============
+
+export interface ReservationTag {
+  tagId: number;
+  tagName: string;
+  icon: string | null;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface ReservationTagRequest {
+  tagId: number;
+  note?: string;
+}
+
+export interface ReservationTagMapping {
+  tagId: number;
+  tagName: string;
+  icon: string | null;
+  note: string | null;
 }
 
 // ============ FAVORITES API TYPES ============

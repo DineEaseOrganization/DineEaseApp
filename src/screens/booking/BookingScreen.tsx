@@ -16,10 +16,10 @@ import { CommonActions, useIsFocused } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
-import { AvailableSlot } from '../../types/api.types';
+import { AvailableSlot, ReservationTag, ReservationTagRequest } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
-import { processingService } from '../../services/api';
+import { processingService, restaurantService } from '../../services/api';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
@@ -60,6 +60,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Reservation tags state
+    const [availableTags, setAvailableTags] = useState<ReservationTag[]>([]);
+    const [selectedTags, setSelectedTags] = useState<ReservationTagRequest[]>([]);
+
     // Auto-fill user information from profile when authenticated
     useEffect(() => {
         if (user) {
@@ -90,6 +94,38 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             setShowAuthPrompt(true);
         }
     }, [isAuthenticated]);
+
+    // Fetch available reservation tags for the restaurant
+    useEffect(() => {
+        const fetchTags = async () => {
+            try {
+                const tags = await restaurantService.getReservationTags(restaurant.id);
+                setAvailableTags(tags);
+            } catch (error) {
+                console.log('Failed to fetch reservation tags:', error);
+                // Non-critical - tags are optional
+            }
+        };
+        fetchTags();
+    }, [restaurant.id]);
+
+    // Handle tag toggle
+    const handleTagToggle = (tagId: number) => {
+        setSelectedTags(prev => {
+            const exists = prev.find(t => t.tagId === tagId);
+            if (exists) {
+                return prev.filter(t => t.tagId !== tagId);
+            }
+            return [...prev, { tagId, note: undefined }];
+        });
+    };
+
+    // Handle tag note change
+    const handleTagNoteChange = (tagId: number, note: string) => {
+        setSelectedTags(prev =>
+            prev.map(t => t.tagId === tagId ? { ...t, note: note || undefined } : t)
+        );
+    };
 
     // Handle streaming errors and no-slot scenarios
     useEffect(() => {
@@ -224,6 +260,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 restaurantId: restaurant.id,
                 state: 'CONFIRMED',
                 comments: specialRequests || undefined,
+                tagRequests: selectedTags.length > 0 ? selectedTags : undefined,
             };
 
             console.log('📝 [BookingScreen] Calling createReservation with:', {
@@ -492,6 +529,59 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                   </View>
               </View>
 
+              {/* Reservation Tags Section */}
+              {availableTags.length > 0 && (
+                  <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Special Occasion (Optional)</Text>
+                      <Text style={styles.tagSubtitle}>Let us know if you're celebrating something special</Text>
+                      <View style={styles.tagsContainer}>
+                          {availableTags.map((tag) => {
+                              const isSelected = selectedTags.some(t => t.tagId === tag.tagId);
+                              return (
+                                  <TouchableOpacity
+                                      key={tag.tagId}
+                                      style={[
+                                          styles.tagButton,
+                                          isSelected && styles.tagButtonSelected
+                                      ]}
+                                      onPress={() => handleTagToggle(tag.tagId)}
+                                  >
+                                      {tag.icon && <Text style={styles.tagIcon}>{tag.icon}</Text>}
+                                      <Text style={[
+                                          styles.tagText,
+                                          isSelected && styles.tagTextSelected
+                                      ]}>
+                                          {tag.tagName}
+                                      </Text>
+                                  </TouchableOpacity>
+                              );
+                          })}
+                      </View>
+                      {/* Note inputs for selected tags */}
+                      {selectedTags.length > 0 && (
+                          <View style={styles.tagNotesContainer}>
+                              {selectedTags.map((selectedTag) => {
+                                  const tag = availableTags.find(t => t.tagId === selectedTag.tagId);
+                                  if (!tag) return null;
+                                  return (
+                                      <View key={selectedTag.tagId} style={styles.tagNoteInput}>
+                                          <Text style={styles.tagNoteLabel}>
+                                              {tag.icon} {tag.tagName} note:
+                                          </Text>
+                                          <TextInput
+                                              style={styles.input}
+                                              placeholder="Add details (e.g., 'Turning 30!')"
+                                              value={selectedTag.note || ''}
+                                              onChangeText={(text) => handleTagNoteChange(selectedTag.tagId, text)}
+                                          />
+                                      </View>
+                                  );
+                              })}
+                          </View>
+                      )}
+                  </View>
+              )}
+
               {/* Confirm Button */}
               <TouchableOpacity
                 style={[
@@ -641,6 +731,56 @@ const styles = StyleSheet.create({
     textArea: {
         height: 100,
         textAlignVertical: 'top',
+    },
+    // Tag selection styles
+    tagSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 4,
+        marginBottom: 12,
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    tagButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        backgroundColor: '#fff',
+    },
+    tagButtonSelected: {
+        backgroundColor: '#7C3AED',
+        borderColor: '#7C3AED',
+    },
+    tagIcon: {
+        fontSize: 16,
+        marginRight: 6,
+    },
+    tagText: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '500',
+    },
+    tagTextSelected: {
+        color: '#fff',
+    },
+    tagNotesContainer: {
+        marginTop: 16,
+    },
+    tagNoteInput: {
+        marginBottom: 12,
+    },
+    tagNoteLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 6,
     },
     confirmButton: {
         margin: 20,
