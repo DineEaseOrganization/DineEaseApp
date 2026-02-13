@@ -1,4 +1,4 @@
-import React, {JSX, useEffect, useState} from 'react';
+import React, {JSX, useCallback, useEffect, useState} from 'react';
 import {
     Alert,
     Dimensions,
@@ -15,29 +15,19 @@ import {
     TouchableOpacity,
     View,
     ViewStyle,
+    ActivityIndicator,
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {updatesService, MobileUpdate, processingService} from '../../services/api';
+import {useAuth} from '../../context/AuthContext';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {useFocusEffect} from '@react-navigation/native';
+import {UpdatesStackParamList} from '../../navigation/AppNavigator';
+import {mapReservationDtoToReservation} from '../../utils/reservationMapper';
 
 const {width} = Dimensions.get('window');
 
 // TypeScript interfaces
-interface NotificationItem {
-    id: string;
-    type: 'reservation' | 'update' | 'review' | 'restaurant_news';
-    title: string;
-    message: string;
-    timestamp: Date;
-    isRead: boolean;
-    actionButton?: {
-        label: string;
-        action: () => void;
-    };
-    restaurantName?: string;
-    restaurantImage?: string;
-    icon?: string;
-    priority: 'high' | 'medium' | 'low';
-}
-
 interface FilterOption {
     key: string;
     label: string;
@@ -45,93 +35,40 @@ interface FilterOption {
 }
 
 interface UpdatesScreenProps {
-    navigation: {
-        navigate: (screen: string, params?: any) => void;
-    };
+    navigation: StackNavigationProp<UpdatesStackParamList, 'UpdatesList'>;
 }
 
+// Map backend category to frontend filter key
+const mapCategoryToFilterKey = (category: string): string => {
+    const mapping: Record<string, string> = {
+        'RESERVATION': 'reservation',
+        'REVIEW': 'review',
+        'RESTAURANT_NEWS': 'restaurant_news',
+        'APP_UPDATE': 'update',
+        'SYSTEM': 'update',
+    };
+    return mapping[category] || category.toLowerCase();
+};
+
+// Map frontend filter key to backend category
+const mapFilterKeyToCategory = (filterKey: string): string | undefined => {
+    const mapping: Record<string, string> = {
+        'reservation': 'RESERVATION',
+        'review': 'REVIEW',
+        'restaurant_news': 'RESTAURANT_NEWS',
+        'update': 'APP_UPDATE',
+    };
+    return mapping[filterKey];
+};
+
 const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
-    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const {user} = useAuth();
+    const [updates, setUpdates] = useState<MobileUpdate[]>([]);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [refreshing, setRefreshing] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
     const [unreadCount, setUnreadCount] = useState<number>(0);
-
-    // Mock notification data
-    const mockNotifications: NotificationItem[] = [
-        {
-            id: '1',
-            type: 'reservation',
-            title: 'Reservation Confirmed',
-            message: 'Your table for 4 at The Mediterranean Terrace tomorrow at 7:30 PM has been confirmed.',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-            isRead: false,
-            priority: 'high',
-            restaurantName: 'The Mediterranean Terrace',
-            restaurantImage: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=100',
-            actionButton: {
-                label: 'View Details',
-                action: () => navigation.navigate('Bookings')
-            }
-        },
-        {
-            id: '2',
-            type: 'update',
-            title: 'App Update Available',
-            message: 'Version 2.1.0 is now available with improved map search and faster booking.',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-            isRead: false,
-            priority: 'medium',
-            icon: '📱',
-            actionButton: {
-                label: 'Update Now',
-                action: () => Alert.alert('Update', 'Redirecting to app store...')
-            }
-        },
-        {
-            id: '3',
-            type: 'review',
-            title: 'Rate Your Experience',
-            message: 'How was your dinner at Sushi Zen? Share your experience and help other diners.',
-            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-            isRead: true,
-            priority: 'medium',
-            restaurantName: 'Sushi Zen',
-            restaurantImage: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=100',
-            actionButton: {
-                label: 'Write Review',
-                action: () => Alert.alert('Review', 'Opening review form...')
-            }
-        },
-        {
-            id: '4',
-            type: 'restaurant_news',
-            title: 'New Restaurant Added',
-            message: 'Discover "Aphrodite\'s Kitchen" - Authentic Cypriot cuisine now available for booking.',
-            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-            isRead: true,
-            priority: 'low',
-            restaurantImage: 'https://images.unsplash.com/photo-1562788869-4ed32648eb72?w=100',
-            actionButton: {
-                label: 'Explore',
-                action: () => navigation.navigate('Discover')
-            }
-        },
-        {
-            id: '5',
-            type: 'review',
-            title: 'Review Reminder',
-            message: 'Don\'t forget to rate your recent dining experience at The Mediterranean Terrace.',
-            timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-            isRead: true,
-            priority: 'low',
-            restaurantName: 'The Mediterranean Terrace',
-            restaurantImage: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=100',
-            actionButton: {
-                label: 'Write Review',
-                action: () => Alert.alert('Review', 'Opening review form...')
-            }
-        }
-    ];
+    const [error, setError] = useState<string | null>(null);
 
     const filterOptions: FilterOption[] = [
         {key: 'all', label: 'All', icon: 'notifications-outline'},
@@ -140,50 +77,102 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
         {key: 'review', label: 'Reviews', icon: 'star-outline'},
     ];
 
-    useEffect(() => {
-        setNotifications(mockNotifications);
-        const unread = mockNotifications.filter(n => !n.isRead).length;
-        setUnreadCount(unread);
-    }, []);
+    // Fetch updates from API
+    const fetchUpdates = useCallback(async () => {
+        if (!user) {
+            console.log('No user logged in');
+            return;
+        }
+
+        try {
+            setError(null);
+            const category = activeFilter === 'all' ? undefined : mapFilterKeyToCategory(activeFilter);
+            const response = await updatesService.getUpdates(category);
+
+            setUpdates(response.content);
+            setUnreadCount(response.unreadCount);
+        } catch (err: any) {
+            console.error('Error fetching updates:', err);
+            setError(err.message || 'Failed to load updates');
+        } finally {
+            setLoading(false);
+        }
+    }, [user, activeFilter]);
+
+    // Load updates on mount, filter change, and when screen regains focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchUpdates();
+        }, [fetchUpdates])
+    );
 
     const onRefresh = async (): Promise<void> => {
         setRefreshing(true);
-        // Simulate API call
-        setTimeout(() => {
-            setRefreshing(false);
-        }, 1000);
+        await fetchUpdates();
+        setRefreshing(false);
     };
 
-    const markAsRead = (id: string): void => {
-        setNotifications(prev =>
-            prev.map(notification =>
-                notification.id === id
-                    ? {...notification, isRead: true}
-                    : notification
-            )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+    const markAsRead = async (updateId: number): Promise<void> => {
+        if (!user) return;
+
+        try {
+            await updatesService.markAsRead(updateId);
+
+            // Update local state optimistically
+            setUpdates(prev =>
+                prev.map(update =>
+                    update.updateId === updateId
+                        ? {...update, isRead: true, readAt: new Date().toISOString()}
+                        : update
+                )
+            );
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err: any) {
+            console.error('Error marking update as read:', err);
+            Alert.alert('Error', 'Failed to mark update as read');
+        }
     };
 
-    const markAllAsRead = (): void => {
-        setNotifications(prev =>
-            prev.map(notification => ({...notification, isRead: true}))
-        );
-        setUnreadCount(0);
+    const markAllAsRead = async (): Promise<void> => {
+        if (!user) return;
+
+        try {
+            await updatesService.markAllAsRead();
+
+            // Update local state
+            setUpdates(prev =>
+                prev.map(update => ({
+                    ...update,
+                    isRead: true,
+                    readAt: new Date().toISOString()
+                }))
+            );
+            setUnreadCount(0);
+        } catch (err: any) {
+            console.error('Error marking all as read:', err);
+            Alert.alert('Error', 'Failed to mark all as read');
+        }
     };
 
-    const deleteNotification = (id: string): void => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+    const deleteNotification = async (updateId: number): Promise<void> => {
+        if (!user) return;
+
+        try {
+            await updatesService.deleteUpdate(updateId);
+
+            // Update local state
+            setUpdates(prev => prev.filter(u => u.updateId !== updateId));
+        } catch (err: any) {
+            console.error('Error deleting update:', err);
+            Alert.alert('Error', 'Failed to delete update');
+        }
     };
 
-    const filteredNotifications = notifications.filter(notification =>
-        activeFilter === 'all' || notification.type === activeFilter
-    );
+    const getNotificationIcon = (update: MobileUpdate): string => {
+        if (update.icon) return update.icon;
 
-    const getNotificationIcon = (notification: NotificationItem): string => {
-        if (notification.icon) return notification.icon;
-
-        switch (notification.type) {
+        const filterKey = mapCategoryToFilterKey(update.updateCategory);
+        switch (filterKey) {
             case 'reservation':
                 return '📅';
             case 'update':
@@ -194,6 +183,43 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
                 return '🍽️';
             default:
                 return '📢';
+        }
+    };
+
+    const handleActionButton = async (update: MobileUpdate): Promise<void> => {
+        if (!update.actionButton?.data) return;
+
+        const {screen, ...params} = update.actionButton.data;
+
+        if (!screen) return;
+
+        try {
+            // Handle ReviewScreen navigation (support both "Review" and "ReviewScreen" from backend)
+            if ((screen === 'ReviewScreen' || screen === 'Review') && params.reservationId) {
+                // Fetch the full reservation data needed by ReviewScreen
+                const reservationDtos = await processingService.getCustomerReservations();
+                const dto = reservationDtos.find(r => r.reservationId === params.reservationId);
+
+                if (!dto) {
+                    Alert.alert('Error', 'Reservation not found. It may have been cancelled or deleted.');
+                    return;
+                }
+
+                // Map DTO to Reservation type expected by ReviewScreen
+                const reservation = mapReservationDtoToReservation(dto);
+
+                navigation.navigate('ReviewScreen', {
+                    reservation: reservation,
+                    restaurantId: params.restaurantId,
+                    reservationId: params.reservationId,
+                    updateId: update.updateId ?? undefined,
+                });
+            } else {
+                console.warn('Unknown screen:', screen);
+            }
+        } catch (error) {
+            console.error('Failed to handle action button:', error);
+            Alert.alert('Error', 'Failed to load reservation details. Please try again.');
         }
     };
 
@@ -210,7 +236,8 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
         }
     };
 
-    const formatTimestamp = (timestamp: Date): string => {
+    const formatTimestamp = (isoString: string): string => {
+        const timestamp = new Date(isoString);
         const now = new Date();
         const diffInHours = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60 * 60));
 
@@ -225,19 +252,19 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
         }
     };
 
-    const renderNotificationItem: ListRenderItem<NotificationItem> = ({item}) => (
+    const renderNotificationItem: ListRenderItem<MobileUpdate> = ({item}) => (
         <TouchableOpacity
             style={[
                 styles.notificationItem,
                 !item.isRead && styles.unreadNotification
             ]}
-            onPress={() => markAsRead(item.id)}
+            onPress={() => !item.isRead && item.updateId && markAsRead(item.updateId)}
         >
             <View style={styles.notificationContent}>
                 <View style={styles.notificationHeader}>
                     <View style={styles.iconContainer}>
-                        {item.restaurantImage ? (
-                            <Image source={{uri: item.restaurantImage}} style={styles.restaurantIcon}/>
+                        {item.restaurantImageUrl ? (
+                            <Image source={{uri: item.restaurantImageUrl}} style={styles.restaurantIcon}/>
                         ) : (
                             <Text style={styles.notificationIcon}>{getNotificationIcon(item)}</Text>
                         )}
@@ -251,7 +278,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
                             <Text style={[styles.notificationTitle, !item.isRead && styles.unreadTitle]}>
                                 {item.title}
                             </Text>
-                            <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+                            <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
                         </View>
 
                         {item.restaurantName && (
@@ -265,7 +292,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
                         {item.actionButton && (
                             <TouchableOpacity
                                 style={styles.actionButton}
-                                onPress={item.actionButton.action}
+                                onPress={() => handleActionButton(item)}
                             >
                                 <Text style={styles.actionButtonText}>{item.actionButton.label}</Text>
                                 <Ionicons name="arrow-forward" size={14} color="#007AFF"/>
@@ -277,7 +304,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
 
             <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => deleteNotification(item.id)}
+                onPress={() => item.updateId && deleteNotification(item.updateId)}
             >
                 <Ionicons name="trash-outline" size={20} color="#999"/>
             </TouchableOpacity>
@@ -306,6 +333,40 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
             </Text>
         </TouchableOpacity>
     );
+
+    // Show loading state
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Updates</Text>
+                </View>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                    <Text style={styles.loadingText}>Loading updates...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Updates</Text>
+                </View>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorIcon}>⚠️</Text>
+                    <Text style={styles.errorTitle}>Failed to Load</Text>
+                    <Text style={styles.errorMessage}>{error}</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={fetchUpdates}>
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -339,9 +400,9 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({navigation}) => {
 
             {/* Notifications List */}
             <FlatList
-                data={filteredNotifications}
+                data={updates}
                 renderItem={renderNotificationItem}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => item.updateId?.toString() || Math.random().toString()}
                 style={styles.notificationsList}
                 contentContainerStyle={styles.notificationsContent}
                 refreshControl={
@@ -595,6 +656,49 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center',
         lineHeight: 24,
+    } as TextStyle,
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    } as ViewStyle,
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#666',
+    } as TextStyle,
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+    } as ViewStyle,
+    errorIcon: {
+        fontSize: 64,
+        marginBottom: 16,
+    } as TextStyle,
+    errorTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    } as TextStyle,
+    errorMessage: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 24,
+    } as TextStyle,
+    retryButton: {
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    } as ViewStyle,
+    retryButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     } as TextStyle,
 });
 

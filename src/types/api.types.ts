@@ -145,7 +145,7 @@ export interface DeviceInfo {
 // ============ CUSTOMER/AUTH API TYPES ============
 
 export interface CustomerData {
-  customerId: string;
+  customerId: string; // UUID (external_ref) - Note: mobileCustomerId (BIGINT) is in JWT token
   email: string;
   firstName: string;
   lastName: string;

@@ -3,7 +3,7 @@ import {ApiError, authService} from '../services/api';
 import {authEventEmitter} from '../services/api/apiClient';
 
 interface User {
-    customerId: string; // Changed from number to string (UUID)
+    customerId: string; // UUID (external_ref) - also in JWT as customerId claim (BIGINT mobile_customer_id)
     firstName: string;
     lastName: string;
     email: string;
