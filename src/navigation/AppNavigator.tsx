@@ -88,7 +88,7 @@ export type DiscoverStackParamList = {
       confirmationCode: string;
     };
   };
-  ReviewScreen: { reservation: Reservation };
+  ReviewScreen: { reservation: Reservation; updateId?: number };
 };
 
 export type SearchStackParamList = {
@@ -130,6 +130,7 @@ export type ProfileStackParamList = {
 
 export type UpdatesStackParamList = {
   UpdatesList: undefined;
+  ReviewScreen: { reservation: Reservation; restaurantId: number; reservationId: number; updateId?: number };
 };
 
 export type TabParamList = {
@@ -300,6 +301,11 @@ const ProtectedUpdatesStackNavigator: React.FC = () => {
         <UpdatesStack.Screen
           name="UpdatesList"
           component={UpdatesScreen}
+          options={{headerShown: false}}
+        />
+        <UpdatesStack.Screen
+          name="ReviewScreen"
+          component={ReviewScreen}
           options={{headerShown: false}}
         />
       </UpdatesStack.Navigator>

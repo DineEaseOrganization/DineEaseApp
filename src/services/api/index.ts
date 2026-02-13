@@ -10,6 +10,8 @@ export { processingService, ProcessingService } from './processingService';
 export { availabilityStreamService, AvailabilityStreamService } from './availabilityStreamService';
 export type { AvailabilityStreamCallbacks, AvailabilitySubscription } from './availabilityStreamService';
 export { favoritesService, FavoritesService } from './favoritesService';
+export { updatesService } from './updatesService';
+export type { MobileUpdate, UpdatesPage, ActionButton, CreateUpdate } from './updatesService';
 
 export * from './deviceService';
 

@@ -3,9 +3,10 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import {ReviewScreenProps} from '../../navigation/AppNavigator';
 import {processingService, RatingCategory} from '../../services/api/processingService';
+import {updatesService} from '../../services/api';
 
 const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
-    const {reservation} = route.params;
+    const {reservation, updateId} = route.params;
 
     const [overallRating, setOverallRating] = useState(5);
     const [categoryRatings, setCategoryRatings] = useState<Record<number, number>>({});
@@ -29,23 +30,25 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
     }, [reservation.restaurant.id]);
 
     const handleSubmitReview = async () => {
-        if (reviewText.trim().length < 10) {
-            Alert.alert('Review Too Short', 'Please write at least 10 characters for your review.');
-            return;
-        }
-
         setIsSubmitting(true);
         try {
             await processingService.submitReview({
                 reservationId: reservation.id,
                 restaurantId: reservation.restaurant.id,
                 overallRating,
-                reviewText: reviewText.trim(),
+                reviewText: reviewText.trim() || undefined,
                 categoryRatings: categories.map(c => ({
                     categoryId: c.categoryId,
                     score: categoryRatings[c.categoryId] || 5,
                 })),
             });
+
+            // Delete the review notification if navigated from Updates screen
+            if (updateId) {
+                updatesService.deleteUpdate(updateId).catch(() => {
+                    // Non-critical: notification cleanup failed, but review was submitted
+                });
+            }
 
             Alert.alert(
                 'Review Submitted!',
@@ -169,10 +172,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
                 <TouchableOpacity
                     style={[
                         styles.submitButton,
-                        (reviewText.length < 10 || isSubmitting) && styles.submitButtonDisabled
+                        isSubmitting && styles.submitButtonDisabled
                     ]}
                     onPress={handleSubmitReview}
-                    disabled={reviewText.length < 10 || isSubmitting}
+                    disabled={isSubmitting}
                 >
                     <Text style={styles.submitButtonText}>
                         {isSubmitting ? 'Submitting...' : 'Submit Review'}

@@ -93,7 +93,28 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         },
       );
 
+      // Check if response is OK and content-type is JSON
+      if (!response.ok) {
+        console.warn('Nominatim API returned non-OK status:', response.status);
+        setLocationName('Current Location');
+        return;
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Nominatim API returned non-JSON response');
+        setLocationName('Current Location');
+        return;
+      }
+
       const data = await response.json();
+
+      // Check if data has address field
+      if (!data.address) {
+        console.warn('Nominatim API response missing address field');
+        setLocationName('Current Location');
+        return;
+      }
 
       // Extract city/town/suburb name
       const address = data.address;
@@ -106,7 +127,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
 
       setLocationName(locationName);
     } catch (error) {
-      console.error('Error getting location name:', error);
+      // Silently fall back to default location name
       setLocationName('Current Location');
     }
   };
