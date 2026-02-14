@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
 import { Restaurant } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
+import { CachedImage } from './CachedImage';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -71,10 +71,11 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({
       activeOpacity={0.95}
     >
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: restaurant.coverImageUrl }}
+        {/* Cached image - works seamlessly with signed URLs from GCS */}
+        <CachedImage
+          uri={restaurant.coverImageUrl}
           style={styles.image}
-          resizeMode="cover"
+          fallbackColor="#e8eef4"
         />
 
         {/* Gradient overlay for better text visibility */}
