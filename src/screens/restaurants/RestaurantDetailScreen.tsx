@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Dimensions,
     Image,
@@ -11,7 +11,9 @@ import {
     ActivityIndicator,
     Alert,
     Linking,
+    FlatList,
 } from 'react-native';
+import { CachedImage } from '../../components/CachedImage';
 import { useIsFocused } from '@react-navigation/native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
 import { restaurantService } from '../../services/api';
@@ -39,6 +41,10 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
     const [selectedDate, setSelectedDate] = useState(initialSelectedDate || new Date());
     const [partySize, setPartySize] = useState(initialPartySize || 2);
     const [selectedTime, setSelectedTime] = useState(initialSelectedTime || 'ASAP');
+
+    // Image carousel state
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const flatListRef = useRef<FlatList>(null);
 
     // Picker modal state
     const [showPickerModal, setShowPickerModal] = useState(false);
@@ -217,15 +223,61 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
     // Get the slots to display in preview (closest to selected time)
     const previewSlots = getClosestSlots(availableSlots, selectedTime);
 
+    // Prepare gallery images (cover image + gallery images)
+    const galleryImages = [
+        restaurant.coverImageUrl,
+        ...(restaurant.galleryImages || [])
+    ].filter(Boolean); // Remove any null/undefined values
+
+    const handleScroll = (event: any) => {
+        const slideSize = event.nativeEvent.layoutMeasurement.width;
+        const offset = event.nativeEvent.contentOffset.x;
+        const index = Math.round(offset / slideSize);
+        setCurrentImageIndex(index);
+    };
+
+    const renderImageItem = ({ item }: { item: string }) => (
+        <View style={styles.carouselImageContainer}>
+            <CachedImage
+                uri={item}
+                style={styles.restaurantImage}
+                fallbackColor="#e8eef4"
+            />
+        </View>
+    );
+
     return (
       <SafeAreaView style={styles.container}>
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-              {/* Restaurant Image */}
+              {/* Restaurant Image Carousel */}
               <View style={styles.imageContainer}>
-                  <Image
-                    source={{ uri: restaurant.coverImageUrl || 'https://via.placeholder.com/400x250' }}
-                    style={styles.restaurantImage}
+                  <FlatList
+                      ref={flatListRef}
+                      data={galleryImages}
+                      renderItem={renderImageItem}
+                      keyExtractor={(item, index) => `image-${index}`}
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
                   />
+
+                  {/* Image pagination dots */}
+                  {galleryImages.length > 1 && (
+                      <View style={styles.paginationContainer}>
+                          {galleryImages.map((_, index) => (
+                              <View
+                                  key={index}
+                                  style={[
+                                      styles.paginationDot,
+                                      index === currentImageIndex && styles.paginationDotActive
+                                  ]}
+                              />
+                          ))}
+                      </View>
+                  )}
+
                   <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
@@ -367,9 +419,36 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 250,
     },
+    carouselImageContainer: {
+        width: Dimensions.get('window').width,
+        height: 250,
+    },
     restaurantImage: {
         width: '100%',
         height: '100%',
+    },
+    paginationContainer: {
+        position: 'absolute',
+        bottom: 16,
+        flexDirection: 'row',
+        alignSelf: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    paginationDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        marginHorizontal: 3,
+    },
+    paginationDotActive: {
+        backgroundColor: '#ffffff',
+        width: 8,
+        height: 8,
+        borderRadius: 4,
     },
     backButton: {
         position: 'absolute',
