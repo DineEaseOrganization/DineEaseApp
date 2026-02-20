@@ -27,7 +27,7 @@ export const formatPartyDateTime = (
 
     const dateStr = isTomorrow
       ? 'Tomorrow'
-      : selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      : selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     return `${partySize} • ${dateStr} ${selectedTime}`;
   }
 };
@@ -49,10 +49,10 @@ export const formatDateDisplay = (date: Date): string => {
   } else if (date.toDateString() === tomorrow.toDateString()) {
     return 'Tomorrow';
   } else {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-GB', {
       weekday: 'short',
-      month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      month: 'short'
     });
   }
 };

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Dimensions,
-    Image,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -16,8 +15,8 @@ import {
 import { CachedImage } from '../../components/CachedImage';
 import { useIsFocused } from '@react-navigation/native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
-import { restaurantService } from '../../services/api';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
+import { useRestaurantDetail } from '../../hooks/useRestaurantQueries';
 import { useAuth } from '../../context/AuthContext';
 import { Restaurant, mapRestaurantDetailToRestaurant } from '../../types';
 import { AvailableSlot } from '../../types/api.types';
@@ -49,9 +48,17 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
     // Picker modal state
     const [showPickerModal, setShowPickerModal] = useState(false);
 
-    // Restaurant details loading state
-    const [loading, setLoading] = useState(false);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
+
+    // Fetch full restaurant details from cache (24h stale time — instant on back-navigation)
+    const { data: restaurantDetails, isLoading: loading } = useRestaurantDetail(initialRestaurant.id);
+
+    // Update local restaurant state when detail data arrives from the query
+    useEffect(() => {
+        if (restaurantDetails) {
+            setRestaurant(mapRestaurantDetailToRestaurant(restaurantDetails));
+        }
+    }, [restaurantDetails]);
 
     // Format date for the streaming hook
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
@@ -93,23 +100,6 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
             setAvailabilityError(null);
         }
     }, [streamError, slotsLoading, availableSlots]);
-
-    useEffect(() => {
-        void loadRestaurantDetails();
-    }, []);
-
-    const loadRestaurantDetails = async () => {
-        try {
-            setLoading(true);
-            const details = await restaurantService.getRestaurantById(initialRestaurant.id);
-            setRestaurant(mapRestaurantDetailToRestaurant(details));
-        } catch (error) {
-            console.error('Error loading restaurant details:', error);
-            Alert.alert('Error', 'Failed to load restaurant details');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     /**
      * Convert time string (HH:MM or ASAP) to minutes since midnight

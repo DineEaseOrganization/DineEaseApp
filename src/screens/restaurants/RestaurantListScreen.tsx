@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
-  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -13,13 +11,20 @@ import {
   View,
 } from 'react-native';
 import { RestaurantListScreenProps } from '../../navigation/AppNavigator';
-import { CuisineStat, RestaurantDetail, TimeRange, TopCategory } from '../../types/api.types';
-import { restaurantService } from '../../services/api';
+import { CuisineStat, TopCategory } from '../../types/api.types';
 import { useLocation } from '../../hooks/useLocation';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatPartyDateTime } from '../../utils/Datetimeutils';
 import FavoriteButton from '../../components/FavoriteButton';
+import { CachedImage } from '../../components/CachedImage';
+import {
+  useNearbyRestaurants,
+  useFeaturedRestaurants,
+  useTopRestaurants,
+  useAvailableCuisines,
+} from '../../hooks/useRestaurantQueries';
+import { CACHE_CONFIG } from '../../config/cache.config';
 
 const { width } = Dimensions.get('window');
 
@@ -28,57 +33,53 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
   const [selectedTime, setSelectedTime] = useState('ASAP');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showPickerModal, setShowPickerModal] = useState(false);
-  const [locationName, setLocationName] = useState('Loading...'); // NEW: Store location name
-  const [searchRadius, setSearchRadius] = useState(10); // Default 10km
-
-  // Data state
-  const [featuredRestaurants, setFeaturedRestaurants] = useState<Restaurant[]>([]);
-  const [topRestaurants, setTopRestaurants] = useState<Restaurant[]>([]);
-  const [cuisines, setCuisines] = useState<CuisineStat[]>([]);
+  const [locationName, setLocationName] = useState('Loading...');
+  const [searchRadius, setSearchRadius] = useState(10);
   const [activeTopCategory, setActiveTopCategory] = useState<TopCategory>(TopCategory.BOOKED);
-  const [nearbyRestaurants, setNearbyRestaurants] = useState<Restaurant[]>([]);
 
-  // Loading states
-  const [loadingFeatured, setLoadingFeatured] = useState(true);
-  const [loadingTop, setLoadingTop] = useState(true);
-  const [loadingCuisines, setLoadingCuisines] = useState(true);
-  const [loadingNearby, setLoadingNearby] = useState(true);
+  // Ref to throttle Nominatim reverse-geocoding: only re-call if moved >~500m
+  const lastGeocodeCoords = useRef<{ lat: number; lng: number } | null>(null);
 
-
-  // Use the location hook
   const { location: userLocation, loading: locationLoading, refreshLocation, isUsingDefault } = useLocation();
 
+  // ── Cached query hooks ──────────────────────────────────────────────────────
+  const { data: nearbyData, isLoading: loadingNearby } = useNearbyRestaurants(userLocation, searchRadius);
+  const { data: featuredData, isLoading: loadingFeatured, refetch: refetchFeatured } = useFeaturedRestaurants(userLocation, searchRadius);
+  const { data: topData, isLoading: loadingTop } = useTopRestaurants(activeTopCategory, userLocation, searchRadius);
+  const { data: cuisinesData, isLoading: loadingCuisines } = useAvailableCuisines(userLocation, searchRadius);
+
+  const nearbyRestaurants: Restaurant[] = nearbyData?.restaurants.map(mapRestaurantDetailToRestaurant) ?? [];
+  const featuredRestaurants: Restaurant[] = featuredData?.map(mapRestaurantDetailToRestaurant) ?? [];
+  const topRestaurants: Restaurant[] = topData?.restaurants.map(mapRestaurantDetailToRestaurant) ?? [];
+  const cuisines: CuisineStat[] = cuisinesData?.slice(0, 10) ?? [];
+  // ────────────────────────────────────────────────────────────────────────────
+
+  // Fetch readable location name when coordinates change meaningfully
   useEffect(() => {
-    // Only load data when we have location
     if (userLocation) {
-      loadData();
-      getLocationName(); // NEW: Get readable location name
+      void getLocationName();
     }
   }, [userLocation]);
 
-  useEffect(() => {
-    if (userLocation) {
-      loadTopRestaurants(activeTopCategory);
-    }
-  }, [activeTopCategory, userLocation]);
-
-  const loadData = async () => {
-    if (!userLocation) return;
-
-    await Promise.all([
-      loadFeaturedRestaurants(),
-      loadTopRestaurants(activeTopCategory),
-      loadCuisines(),
-      loadNearbyRestaurants(),
-    ]);
-  };
-
-  // NEW: Get readable location name from coordinates
+  /**
+   * Reverse-geocode the current location via Nominatim.
+   * Throttled via ref: skips the call if the user hasn't moved more than ~500m
+   * (0.005 degrees ≈ 550m) since the last successful fetch.
+   */
   const getLocationName = async () => {
     if (!userLocation) return;
 
+    const prev = lastGeocodeCoords.current;
+    if (
+      prev &&
+      Math.abs(prev.lat - userLocation.latitude) < CACHE_CONFIG.GEOCODE_THRESHOLD_DEGREES &&
+      Math.abs(prev.lng - userLocation.longitude) < CACHE_CONFIG.GEOCODE_THRESHOLD_DEGREES
+    ) {
+      return; // Moved less than ~500m — reuse existing name
+    }
+    lastGeocodeCoords.current = { lat: userLocation.latitude, lng: userLocation.longitude };
+
     try {
-      // Use Nominatim reverse geocoding (free, no API key needed)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?` +
         `format=json&` +
@@ -93,167 +94,56 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         },
       );
 
-      // Check if response is OK and content-type is JSON
       if (!response.ok) {
-        console.warn('Nominatim API returned non-OK status:', response.status);
         setLocationName('Current Location');
         return;
       }
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.warn('Nominatim API returned non-JSON response');
         setLocationName('Current Location');
         return;
       }
 
       const data = await response.json();
 
-      // Check if data has address field
       if (!data.address) {
-        console.warn('Nominatim API response missing address field');
         setLocationName('Current Location');
         return;
       }
 
-      // Extract city/town/suburb name
       const address = data.address;
-      const locationName = address.city ||
+      const name =
+        address.city ||
         address.town ||
         address.suburb ||
         address.village ||
         address.county ||
         'Current Location';
 
-      setLocationName(locationName);
-    } catch (error) {
-      // Silently fall back to default location name
+      setLocationName(name);
+    } catch {
       setLocationName('Current Location');
-    }
-  };
-
-  const loadNearbyRestaurants = async (radius = searchRadius) => {
-    if (!userLocation) return;
-
-    try {
-      setLoadingNearby(true);
-      const response = await restaurantService.getNearbyRestaurants(
-        userLocation.latitude,
-        userLocation.longitude,
-        radius,
-        0,
-        20,
-      );
-
-      // Backend returns: { restaurants: [...], hasMore: true }
-      setNearbyRestaurants(response.restaurants.map(mapRestaurantDetailToRestaurant));
-
-    } catch (err) {
-      console.error('Error loading nearby restaurants:', err);
-    } finally {
-      setLoadingNearby(false);
-    }
-  };
-
-  const loadFeaturedRestaurants = async (radius = searchRadius) => {
-    if (!userLocation) return;
-
-    try {
-      setLoadingFeatured(true);
-      const data = await restaurantService.getFeaturedRestaurants(
-        10,
-        userLocation.latitude,
-        userLocation.longitude,
-        radius,
-      );
-      setFeaturedRestaurants(data.map(mapRestaurantDetailToRestaurant));
-    } catch (error) {
-      console.error('Error loading featured restaurants:', error);
-      Alert.alert('Error', 'Failed to load featured restaurants');
-    } finally {
-      setLoadingFeatured(false);
-    }
-  };
-
-  const loadTopRestaurants = async (category: TopCategory, radius = searchRadius) => {
-    if (!userLocation) return;
-
-    try {
-      setLoadingTop(true);
-
-      // Try THIS_WEEK first
-      let data = await restaurantService.getTopRestaurants(
-        category,
-        TimeRange.THIS_WEEK,
-        userLocation.latitude,
-        userLocation.longitude,
-        radius,
-        10,
-      );
-
-      // If no results, fallback to ALL_TIME
-      if (data.restaurants.length === 0) {
-        console.log('No results for THIS_WEEK, trying ALL_TIME');
-        data = await restaurantService.getTopRestaurants(
-          category,
-          TimeRange.ALL_TIME,
-          userLocation.latitude,
-          userLocation.longitude,
-          radius,
-          10,
-        );
-      }
-
-      setTopRestaurants(data.restaurants.map(mapRestaurantDetailToRestaurant));
-    } catch (error) {
-      console.error('Error loading top restaurants:', error);
-      Alert.alert('Error', 'Failed to load top restaurants');
-    } finally {
-      setLoadingTop(false);
-    }
-  };
-
-  const loadCuisines = async (radius = searchRadius) => {
-    if (!userLocation) return;
-
-    try {
-      setLoadingCuisines(true);
-      const data = await restaurantService.getAvailableCuisines(
-        userLocation.latitude,
-        userLocation.longitude,
-        radius,
-      );
-      setCuisines(data.slice(0, 10)); // Top 10 cuisines
-    } catch (error) {
-      console.error('Error loading cuisines:', error);
-      Alert.alert('Error', 'Failed to load cuisines');
-    } finally {
-      setLoadingCuisines(false);
     }
   };
 
   const handleCuisinePress = (cuisineType: string) => {
     if (!userLocation) return;
-
     navigation.navigate('CuisineRestaurants', {
-      cuisineType: cuisineType,
+      cuisineType,
       latitude: userLocation.latitude,
       longitude: userLocation.longitude,
       radius: searchRadius,
     });
   };
 
-  // NEW: Format date/time display
-
-  // NEW: Handle radius change
+  /**
+   * Radius change: just update state.
+   * TanStack Query detects the new key and fires the queries automatically.
+   * Switching back to a previous radius returns data instantly from cache.
+   */
   const handleRadiusChange = (newRadius: number) => {
     setSearchRadius(newRadius);
-    if (userLocation) {
-      loadNearbyRestaurants(newRadius);
-      loadFeaturedRestaurants(newRadius);
-      loadCuisines(newRadius);
-      loadTopRestaurants(activeTopCategory, newRadius);
-    }
   };
 
   const renderFeaturedRestaurant = ({ item }: { item: Restaurant }) => (
@@ -266,9 +156,10 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         selectedTime,
       })}
     >
-      <Image
-        source={{ uri: item.coverImageUrl || 'https://via.placeholder.com/400x180' }}
+      <CachedImage
+        uri={item.coverImageUrl || null}
         style={styles.featuredImage}
+        fallbackColor="#e0e0e0"
       />
       <View style={styles.featuredOverlay}>
         <View style={styles.featuredContent}>
@@ -291,7 +182,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
               </Text>
             )}
           </View>
-          {/* Placeholder time slots - will integrate with booking API later */}
           <View style={styles.timeSlots}>
             {['17:00', '18:00', '19:00'].map((time, index) => (
               <TouchableOpacity
@@ -341,9 +231,10 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
       <View style={styles.topRestaurantRank}>
         <Text style={styles.rankNumber}>{index + 1}</Text>
       </View>
-      <Image
-        source={{ uri: restaurant.coverImageUrl || 'https://via.placeholder.com/60' }}
+      <CachedImage
+        uri={restaurant.coverImageUrl || null}
         style={styles.topRestaurantImage}
+        fallbackColor="#e0e0e0"
       />
       <View style={styles.topRestaurantInfo}>
         <Text style={styles.topRestaurantName}>{restaurant.name}</Text>
@@ -375,9 +266,8 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
     </TouchableOpacity>
   );
 
-  // Helper function to calculate distance
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 3959; // Earth radius in miles
+    const R = 3959;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -388,7 +278,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
     return R * c;
   };
 
-  // Helper function to get emoji for cuisine type
   const getCuisineEmoji = (cuisineType: string): string => {
     const emojiMap: { [key: string]: string } = {
       'Italian': '🍝',
@@ -415,7 +304,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
     );
   }
 
-  // Show error if no location
   if (!userLocation) {
     return (
       <View style={styles.centerContainer}>
@@ -430,7 +318,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header with greeting */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>Good evening</Text>
           {isUsingDefault && (
@@ -455,7 +343,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
           </View>
         </View>
 
-        {/* NEW: Radius Selector */}
+        {/* Radius Selector */}
         <View style={styles.radiusSection}>
           <View style={styles.radiusHeader}>
             <Text style={styles.radiusLabel}>Search Radius</Text>
@@ -486,7 +374,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Nearby</Text>
-
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate('NearbyRestaurants', {
@@ -525,28 +412,23 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
                     selectedTime,
                   })}
                 >
-                  <Image
-                    source={{ uri: item.coverImageUrl || 'https://via.placeholder.com/400x180' }}
+                  <CachedImage
+                    uri={item.coverImageUrl || null}
                     style={styles.featuredImage}
+                    fallbackColor="#e0e0e0"
                   />
-
-                  {/* Same overlay layout as Featured */}
                   <View style={styles.featuredOverlay}>
                     <View style={styles.featuredContent}>
                       <Text style={styles.featuredName} numberOfLines={1}>
                         {item.name}
                       </Text>
-
                       <View style={styles.featuredDetails}>
                         <Text style={styles.featuredPrice}>{item.priceRange || '$$'}</Text>
-
                         <Text style={styles.featuredCuisine}>{item.primaryCuisineType}</Text>
-
                         <View style={styles.featuredRating}>
                           <Text style={styles.star}>★</Text>
                           <Text style={styles.ratingText}>{item.averageRating.toFixed(1)}</Text>
                         </View>
-
                         {item.latitude && item.longitude && (
                           <Text style={styles.distance}>
                             {calculateDistance(
@@ -559,8 +441,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
                           </Text>
                         )}
                       </View>
-
-                      {/* Simple time slots to match Featured */}
                       <View style={styles.timeSlots}>
                         {['17:00', '18:00', '19:00'].map((time, i) => (
                           <TouchableOpacity
@@ -579,8 +459,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
                         ))}
                       </View>
                     </View>
-
-                    {/* Save icon for consistency */}
                     <FavoriteButton
                       restaurantId={item.id}
                       size="medium"
@@ -597,10 +475,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Browse by cuisine</Text>
-            <TouchableOpacity onPress={() => {
-              // Navigate to search screen - switch to Search tab
-              console.log('Navigate to search screen');
-            }}>
+            <TouchableOpacity onPress={() => console.log('Navigate to search screen')}>
               <Text style={styles.viewAll}>View all</Text>
             </TouchableOpacity>
           </View>
@@ -622,7 +497,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Featured restaurants</Text>
-            <TouchableOpacity onPress={() => void loadFeaturedRestaurants()}>
+            <TouchableOpacity onPress={() => void refetchFeatured()}>
               <Text style={styles.viewAll}>Refresh</Text>
             </TouchableOpacity>
           </View>
@@ -649,16 +524,12 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
             Explore what's popular with other diners with these lists, updated weekly.
           </Text>
 
-          {/* Tab selector */}
           <View style={styles.tabContainer}>
             <TouchableOpacity
               style={[styles.tab, activeTopCategory === TopCategory.BOOKED && styles.activeTab]}
               onPress={() => setActiveTopCategory(TopCategory.BOOKED)}
             >
-              <Text style={[
-                styles.tabText,
-                activeTopCategory === TopCategory.BOOKED && styles.activeTabText,
-              ]}>
+              <Text style={[styles.tabText, activeTopCategory === TopCategory.BOOKED && styles.activeTabText]}>
                 Top booked
               </Text>
             </TouchableOpacity>
@@ -666,10 +537,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
               style={[styles.tab, activeTopCategory === TopCategory.VIEWED && styles.activeTab]}
               onPress={() => setActiveTopCategory(TopCategory.VIEWED)}
             >
-              <Text style={[
-                styles.tabText,
-                activeTopCategory === TopCategory.VIEWED && styles.activeTabText,
-              ]}>
+              <Text style={[styles.tabText, activeTopCategory === TopCategory.VIEWED && styles.activeTabText]}>
                 Top viewed
               </Text>
             </TouchableOpacity>
@@ -677,10 +545,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
               style={[styles.tab, activeTopCategory === TopCategory.SAVED && styles.activeTab]}
               onPress={() => setActiveTopCategory(TopCategory.SAVED)}
             >
-              <Text style={[
-                styles.tabText,
-                activeTopCategory === TopCategory.SAVED && styles.activeTabText,
-              ]}>
+              <Text style={[styles.tabText, activeTopCategory === TopCategory.SAVED && styles.activeTabText]}>
                 Top saved
               </Text>
             </TouchableOpacity>
@@ -696,7 +561,6 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
         </View>
       </ScrollView>
 
-      {/* Party Size & Time Picker Modal */}
       <PartyDateTimePicker
         visible={showPickerModal}
         onClose={() => setShowPickerModal(false)}
@@ -899,10 +763,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  saveIcon: {
-    color: 'white',
-    fontSize: 18,
-  },
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -1005,10 +865,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  topSaveIcon: {
-    color: '#dc3545',
-    fontSize: 16,
-  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1042,7 +898,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
-  // NEW: Radius Selector Styles
   radiusSection: {
     marginHorizontal: 20,
     marginBottom: 20,

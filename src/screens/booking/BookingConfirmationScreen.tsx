@@ -11,11 +11,11 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
     const {booking} = route.params;
 
     const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString('en-GB', {
             weekday: 'long',
-            year: 'numeric',
+            day: 'numeric',
             month: 'long',
-            day: 'numeric'
+            year: 'numeric'
         });
     };
 
