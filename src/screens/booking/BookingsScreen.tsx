@@ -1,5 +1,5 @@
 // src/screens/booking/BookingsScreen.tsx
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Alert, SafeAreaView, FlatList, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator} from 'react-native';
 import {Reservation} from '../../types';
 import {BookingsScreenProps} from '../../navigation/AppNavigator';
@@ -7,6 +7,11 @@ import {useReservations} from '../../hooks/useReservations';
 import {mapReservationDtosToReservations} from '../../utils/reservationMapper';
 import {processingService} from '../../services/api/processingService';
 import {useFocusEffect} from '@react-navigation/native';
+
+const formatReservationDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 const isReservationPast = (date: string, time: string): boolean => {
     const [hours, minutes] = time.split(':').map(Number);
@@ -124,7 +129,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
             <View style={styles.infoRow}>
                 <View style={styles.leftInfoItem}>
                     <Text style={styles.icon}>📅</Text>
-                    <Text style={styles.infoText}>{reservation.date}</Text>
+                    <Text style={styles.infoText}>{formatReservationDate(reservation.date)}</Text>
                 </View>
                 <View style={styles.rightInfoItem}>
                     <Text style={styles.icon}>🕐</Text>

@@ -65,7 +65,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({navigation}) => {
     const formatDate = (dateStr: string): string => {
         try {
             const date = new Date(dateStr);
-            return date.toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'});
+            return date.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
         } catch {
             return dateStr;
         }

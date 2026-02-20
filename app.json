@@ -1,52 +1,67 @@
 {
   "expo": {
-    "name": "DineEaseApp",
-    "slug": "DineEaseApp",
-    "version": "1.0.0",
-    "packagerOpts": {
-      "port": 8090
-    },
+    "name": "DineEase",
+    "slug": "dineease",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dineease.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "DineEase needs your location to show nearby restaurants."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.DineEaseApp"
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.dineease.app",
+      "versionCode": 2,
+      "jsEngine": "jsc",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDse7alp224CMWmHvcDg--OxBuhGkdKi5I"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
-  },
-  "plugins": [
-    [
-      "expo-location",
-      {
-        "locationAlwaysAndWhenInUsePermission": "Allow DineEase to use your location to find nearby restaurants."
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow DineEase to use your location to find nearby restaurants."
+        }
+      ],
+      "expo-build-properties",
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "91b42d6e-f26a-420a-9336-fe34e484179f"
       }
-    ]
-  ],
-  "ios": {
-    "infoPlist": {
-      "NSLocationWhenInUseUsageDescription": "DineEase needs your location to show nearby restaurants."
     }
-  },
-  "android": {
-    "permissions": [
-      "ACCESS_COARSE_LOCATION",
-      "ACCESS_FINE_LOCATION"
-    ]
   }
 }

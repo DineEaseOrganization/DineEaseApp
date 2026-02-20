@@ -32,6 +32,20 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+.env.example
 
 # typescript
 *.tsbuildinfo
+
+# Play Store / App Store
+google-play-service-account.json
+*.aab
+*.apk
+*.ipa
+
+# EAS
+.eas/
+
+# Local dev-only scripts (personal scratch files, not for other developers)
+local/

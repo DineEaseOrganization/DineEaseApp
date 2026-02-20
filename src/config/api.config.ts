@@ -1,8 +1,36 @@
 // API Configuration
+// Use environment variables if available, otherwise fallback to production URLs
+
+// Check if we're in development mode
+const isDevelopment = typeof __DEV__ !== 'undefined' && __DEV__;
+
+const getBaseUrl = () => {
+  // In development, use env variable if available
+  if (isDevelopment && process.env.CUSTOMER_AUTH_URL) {
+    return process.env.CUSTOMER_AUTH_URL;
+  }
+  // Production URL (same as DineEaseManager)
+  return 'https://api.dineeasemanager.com/customer-authentication';
+};
+
+const getRestaurantServiceUrl = () => {
+  if (isDevelopment && process.env.RESTAURANT_SERVICE_URL) {
+    return process.env.RESTAURANT_SERVICE_URL;
+  }
+  return 'https://api.dineeasemanager.com/restaurant';
+};
+
+const getProcessingServiceUrl = () => {
+  if (isDevelopment && process.env.PROCESSING_SERVICE_URL) {
+    return process.env.PROCESSING_SERVICE_URL;
+  }
+  return 'https://api.dineeasemanager.com/processing';
+};
+
 export const API_CONFIG = {
-  BASE_URL: 'http://192.168.0.25:8086/customer-authentication',
-  RESTAURANT_SERVICE_URL: 'http://192.168.0.25:8081/restaurant',
-  PROCESSING_SERVICE_URL: 'http://192.168.0.25:8083/processing',
+  BASE_URL: getBaseUrl(),
+  RESTAURANT_SERVICE_URL: getRestaurantServiceUrl(),
+  PROCESSING_SERVICE_URL: getProcessingServiceUrl(),
   ENDPOINTS: {
     // Auth endpoints
     REGISTER: '/auth/register',
@@ -49,4 +77,15 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: '@dineease_refresh_token',
   USER_DATA: '@dineease_user',
   DEVICE_ID: '@dineease_device_id',
+};
+
+// Export a function to log config when needed (don't run on import)
+export const logAPIConfig = () => {
+  if (isDevelopment) {
+    console.log('🔧 API Configuration:');
+    console.log('  Base URL:', API_CONFIG.BASE_URL);
+    console.log('  Restaurant Service:', API_CONFIG.RESTAURANT_SERVICE_URL);
+    console.log('  Processing Service:', API_CONFIG.PROCESSING_SERVICE_URL);
+    console.log('  Mode:', isDevelopment ? 'Development' : 'Production');
+  }
 };

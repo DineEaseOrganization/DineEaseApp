@@ -77,15 +77,15 @@ axiosInstance.interceptors.request.use(
         // Add authorization header if token exists
         if (accessToken && config.headers) {
             config.headers.Authorization = `Bearer ${accessToken}`;
-            if (__DEV__) {
+            if (typeof __DEV__ !== 'undefined' && __DEV__) {
                 console.log('🔐 Auth token added to request');
             }
-        } else if (__DEV__) {
+        } else if (typeof __DEV__ !== 'undefined' && __DEV__) {
             console.warn('⚠️ No auth token found in storage for request to:', config.url);
         }
 
         // Log request in development
-        if (__DEV__) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
             console.log('📤 API Request:', {
                 method: config.method?.toUpperCase(),
                 url: config.url,
@@ -124,7 +124,7 @@ const processQueue = (error: any, token: string | null = null) => {
 axiosInstance.interceptors.response.use(
     (response) => {
         // Log response in development
-        if (__DEV__) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
             console.log('📥 API Response:', {
                 status: response.status,
                 url: response.config.url,
@@ -138,7 +138,7 @@ axiosInstance.interceptors.response.use(
         const originalRequest: any = error.config;
 
         // Log error in development
-        if (__DEV__) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
             console.log('❌ API Error:', {
                 status: error.response?.status,
                 url: originalRequest?.url,
