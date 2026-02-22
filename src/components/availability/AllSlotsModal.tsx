@@ -2,7 +2,7 @@
 import React from 'react';
 import { Modal, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AvailableSlot } from '../../types/api.types';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
 import AppText from '../ui/AppText';
 import { TimeSlotDisplay } from './TimeSlotDisplay';
 
@@ -52,8 +52,26 @@ export const AllSlotsModal: React.FC<AllSlotsModalProps> = ({
 
   const slotsToDisplay = allSlots && allSlots.length > 0 ? allSlots : slots;
   const available = slotsToDisplay.filter(s => s.isAvailable);
+
+  // Slots that are unavailable strictly because of advance notice (restaurant is open
+  // but the booking window hasn't opened yet for this time).
   const requiresNotice = slotsToDisplay.filter(s => !s.isAvailable && s.requiresAdvanceNotice);
+
+  // Slots that are unavailable because no table can seat this party size at this time.
+  // These are distinct from advance-notice slots and need a different message.
+  const noTableFit = slotsToDisplay.filter(
+    s => !s.isAvailable && !s.requiresAdvanceNotice && (s.availableTableCount ?? s.availableTables?.length ?? 0) === 0
+  );
+
   const groupedAvailable = groupSlotsByMealPeriod(available);
+
+  // True when every slot across the whole day has no fitting table — likely the party
+  // is too large for the restaurant's table inventory entirely.
+  const allSlotsHaveNoFit =
+    available.length === 0 &&
+    requiresNotice.length === 0 &&
+    noTableFit.length > 0 &&
+    noTableFit.length === slotsToDisplay.length;
 
   const periodEmoji: Record<string, string> = {
     'Morning': '🌅',
@@ -157,12 +175,24 @@ export const AllSlotsModal: React.FC<AllSlotsModalProps> = ({
             </View>
           )}
 
-          {/* ── Empty state ── */}
-          {available.length === 0 && requiresNotice.length === 0 && (
+          {/* ── Empty state: party too large for any table ── */}
+          {allSlotsHaveNoFit && (
+            <View style={styles.emptyState}>
+              <AppText style={styles.emptyIcon}>🪑</AppText>
+              <AppText variant="bodyMedium" color={Colors.textOnLight}>No tables for your party size</AppText>
+              <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.emptySubtext}>
+                This restaurant doesn't have a table large enough for your group on this date.
+                Try a smaller party size or call the restaurant directly.
+              </AppText>
+            </View>
+          )}
+
+          {/* ── Empty state: fully unavailable (no notice slots, no fit slots) ── */}
+          {available.length === 0 && requiresNotice.length === 0 && noTableFit.length === 0 && (
             <View style={styles.emptyState}>
               <AppText style={styles.emptyIcon}>🍽️</AppText>
               <AppText variant="bodyMedium" color={Colors.textOnLight}>No times available</AppText>
-              <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: 4, textAlign: 'center' }}>
+              <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.emptySubtext}>
                 Try a different date or party size
               </AppText>
             </View>
@@ -304,6 +334,12 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 38,
     marginBottom: Spacing['3'],
+  },
+  emptySubtext: {
+    marginTop: 4,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: Spacing['4'],
   },
 });
 

@@ -1,10 +1,10 @@
 // src/components/booking/BookingCard.tsx
-import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { processingService } from '../../services/api';
 import { AvailableSlot } from '../../types/api.types';
-import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
-import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { AvailabilityError, parseAvailabilityError } from '../../utils/errorHandlers';
+import { Colors, Radius, Spacing } from '../../theme';
 import AppText from '../../components/ui/AppText';
 
 interface BookingCardProps {
@@ -170,7 +170,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                             <View style={styles.slotsRow}>
                                 {slots.map((slot, i) => {
                                     const active = selectedTime === slot.time;
-                                    const limited = slot.availableCapacity !== undefined && slot.availableCapacity < 5;
+                                    // Use availableTableCount (best-fit table count) for urgency signal.
+                                    // Fall back to availableTables.length for older API responses.
+                                    const tableCount = slot.availableTableCount ?? slot.availableTables?.length ?? 0;
+                                    const limited = tableCount <= 1;
+                                    const tableLabel = tableCount === 1 ? 'table' : 'tables';
                                     return (
                                         <TouchableOpacity
                                             key={i}
@@ -183,7 +187,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                                             </AppText>
                                             {limited && (
                                                 <AppText variant="caption" color={active ? 'rgba(255,255,255,0.75)' : Colors.capacityLow}>
-                                                    {slot.availableCapacity} left
+                                                    {tableCount} {tableLabel} left
                                                 </AppText>
                                             )}
                                         </TouchableOpacity>
