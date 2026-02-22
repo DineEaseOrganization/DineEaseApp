@@ -1,16 +1,14 @@
 // src/utils/imageUtils.ts
 
-// Default placeholder image URL
-const DEFAULT_RESTAURANT_IMAGE = 'https://via.placeholder.com/400x300/cccccc/666666?text=Restaurant';
-
 /**
- * Get a valid image URL or return a placeholder
- * @param imageUrl - The image URL from API (may be null/undefined)
- * @returns Valid image URL or placeholder
+ * Get a valid image URL or return null.
+ * CachedImage handles null gracefully by showing the fallbackColor placeholder.
+ * We do NOT return a remote placeholder URL — they are unreliable in emulators
+ * and cause CachedImage to show its grey error state instead of a clean fallback.
  */
-export const getRestaurantImage = (imageUrl?: string | null): string => {
+export const getRestaurantImage = (imageUrl?: string | null): string | null => {
   if (!imageUrl || imageUrl.trim() === '') {
-    return DEFAULT_RESTAURANT_IMAGE;
+    return null;
   }
   return imageUrl;
 };

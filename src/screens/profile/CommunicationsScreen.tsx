@@ -1,287 +1,217 @@
-// src/screens/settings/CommunicationsScreen.tsx
-import React, {useState} from 'react';
-import {Alert, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View,} from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
+// src/screens/profile/CommunicationsScreen.tsx
+import React, { useState } from 'react';
+import {
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+
+const NAVY = Colors.primary;
 
 interface CommunicationsScreenProps {
-  navigation: any;
+    navigation: any;
 }
 
-const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({navigation}) => {
-  // Push Notifications State
-  const [pushNotifications, setPushNotifications] = useState(false);
+const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation }) => {
+    const [reservationEmail, setReservationEmail] = useState(true);
+    const [reservationPush, setReservationPush] = useState(false);
+    const [waitlistEmail, setWaitlistEmail] = useState(false);
+    const [waitlistPush, setWaitlistPush] = useState(false);
+    const [marketingEmail, setMarketingEmail] = useState(false);
 
-  // Reservation Updates State
-  const [reservationEmail, setReservationEmail] = useState(true);
-  const [reservationPush, setReservationPush] = useState(false);
+    const showComingSoon = () =>
+        Alert.alert('Coming Soon', 'This preference will be available in an upcoming release.', [{ text: 'OK' }]);
 
-  // Waitlist Updates State
-  const [waitlistEmail, setWaitlistEmail] = useState(false);
-  const [waitlistPush, setWaitlistPush] = useState(false);
+    const sections = [
+        {
+            emoji: '🔔',
+            title: 'Reservation Updates',
+            description: 'Confirmations, reminders, and cancellation notices.',
+            items: [
+                { icon: 'mail-outline' as const, label: 'Email', value: reservationEmail, onChange: () => showComingSoon() },
+                { icon: 'notifications-outline' as const, label: 'Push notifications', value: reservationPush, onChange: () => showComingSoon() },
+            ],
+        },
+        {
+            emoji: '⏳',
+            title: 'Waitlist Updates',
+            description: 'Get notified when a spot opens up for you.',
+            items: [
+                { icon: 'mail-outline' as const, label: 'Email', value: waitlistEmail, onChange: () => showComingSoon() },
+                { icon: 'notifications-outline' as const, label: 'Push notifications', value: waitlistPush, onChange: () => showComingSoon() },
+            ],
+        },
+        {
+            emoji: '✨',
+            title: 'Marketing',
+            description: 'Trending restaurants, top picks & must-try spots.',
+            items: [
+                { icon: 'mail-outline' as const, label: 'Email', value: marketingEmail, onChange: () => showComingSoon() },
+            ],
+        },
+    ];
 
-  // Marketing State
-  const [marketingEmail, setMarketingEmail] = useState(false);
+    return (
+        <SafeAreaView style={styles.container}>
 
-  const showComingSoonAlert = () => {
-    Alert.alert(
-        'Feature Coming Soon',
-        'This communication preference will be available in an upcoming release.',
-        [{text: 'OK'}]
+            {/* ── Navy header ── */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                </TouchableOpacity>
+                <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>
+                    Communications
+                </AppText>
+                <View style={{ width: 36 }} />
+            </View>
+
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Info banner */}
+                <View style={styles.infoBanner}>
+                    <Ionicons name="information-circle-outline" size={18} color={NAVY} />
+                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>
+                        Push notification support is coming soon. Email preferences are active.
+                    </AppText>
+                </View>
+
+                {sections.map((section, si) => (
+                    <View key={section.title} style={{ marginBottom: Spacing['3'] }}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                                {section.emoji}  {section.title.toUpperCase()}
+                            </AppText>
+                        </View>
+                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={styles.sectionDesc}>
+                            {section.description}
+                        </AppText>
+                        <View style={styles.card}>
+                            {section.items.map((item, i) => (
+                                <View key={item.label}>
+                                    {i > 0 && <View style={styles.divider} />}
+                                    <View style={styles.prefRow}>
+                                        <View style={styles.prefLeft}>
+                                            <View style={styles.iconWrap}>
+                                                <Ionicons name={item.icon} size={17} color={NAVY} />
+                                            </View>
+                                            <AppText variant="bodyMedium" color={Colors.textOnLight}>{item.label}</AppText>
+                                        </View>
+                                        <Switch
+                                            value={item.value}
+                                            onValueChange={item.onChange}
+                                            trackColor={{ false: Colors.cardBorder, true: Colors.success }}
+                                            thumbColor={Colors.white}
+                                            ios_backgroundColor={Colors.cardBorder}
+                                        />
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                ))}
+
+                <View style={{ height: Spacing['8'] }} />
+            </ScrollView>
+        </SafeAreaView>
     );
-  };
-
-  const handlePushNotificationsToggle = () => {
-    showComingSoonAlert();
-  };
-
-  const handleReservationEmailToggle = () => {
-    // Only show alert when trying to disable (since it's enabled by default)
-    if (reservationEmail) {
-      showComingSoonAlert();
-    }
-  };
-
-  const handleReservationPushToggle = () => {
-    showComingSoonAlert();
-  };
-
-  const handleWaitlistEmailToggle = () => {
-    showComingSoonAlert();
-  };
-
-  const handleWaitlistPushToggle = () => {
-    showComingSoonAlert();
-  };
-
-  const handleMarketingEmailToggle = () => {
-    showComingSoonAlert();
-  };
-
-  return (
-      <SafeAreaView style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.backText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>Communications</Text>
-          </View>
-
-          <View style={styles.content}>
-            {/* Push Notifications Banner */}
-            {!pushNotifications && (
-                <View style={styles.banner}>
-                  <Ionicons name="notifications-off-outline" size={48} color="#666" style={styles.bannerIcon}/>
-                  <Text style={styles.bannerTitle}>Looks like all your notifications are off</Text>
-                  <Text style={styles.bannerDescription}>
-                    Allow notifications from DineEase to stay in the know about your upcoming bookings, new features and
-                    more.
-                  </Text>
-                  <TouchableOpacity
-                      style={styles.bannerButton}
-                      onPress={handlePushNotificationsToggle}
-                  >
-                    <Text style={styles.bannerButtonText}>Yes, notify me</Text>
-                  </TouchableOpacity>
-                </View>
-            )}
-
-            {/* Reservation Updates */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Reservation updates</Text>
-              <Text style={styles.sectionDescription}>
-                Get updates about your reservations including confirmations, reminders, and cancellations.
-              </Text>
-
-              <View style={styles.preferenceItem}>
-                <View style={styles.preferenceLeft}>
-                  <Ionicons name="mail-outline" size={20} color="#666"/>
-                  <Text style={styles.preferenceText}>Email</Text>
-                </View>
-                <Switch
-                    value={reservationEmail}
-                    onValueChange={handleReservationEmailToggle}
-                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                    thumbColor="#fff"
-                />
-              </View>
-
-              <View style={styles.preferenceItem}>
-                <View style={styles.preferenceLeft}>
-                  <Ionicons name="notifications-outline" size={20} color="#666"/>
-                  <Text style={styles.preferenceText}>Push notifications</Text>
-                </View>
-                <Switch
-                    value={reservationPush}
-                    onValueChange={handleReservationPushToggle}
-                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                    thumbColor="#fff"
-                    disabled={!pushNotifications}
-                />
-              </View>
-            </View>
-
-            {/* Waitlist Updates */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Waitlist updates</Text>
-              <Text style={styles.sectionDescription}>
-                Standard text messaging rates may apply. You can opt out at any time.
-              </Text>
-
-              <View style={styles.preferenceItem}>
-                <View style={styles.preferenceLeft}>
-                  <Ionicons name="mail-outline" size={20} color="#666"/>
-                  <Text style={styles.preferenceText}>Email</Text>
-                </View>
-                <Switch
-                    value={waitlistEmail}
-                    onValueChange={handleWaitlistEmailToggle}
-                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                    thumbColor="#fff"
-                />
-              </View>
-
-              <View style={styles.preferenceItem}>
-                <View style={styles.preferenceLeft}>
-                  <Ionicons name="notifications-outline" size={20} color="#666"/>
-                  <Text style={styles.preferenceText}>Push notifications</Text>
-                </View>
-                <Switch
-                    value={waitlistPush}
-                    onValueChange={handleWaitlistPushToggle}
-                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                    thumbColor="#fff"
-                    disabled={!pushNotifications}
-                />
-              </View>
-            </View>
-
-            {/* Marketing */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Marketing</Text>
-              <Text style={styles.sectionDescription}>
-                Stay current on trending restaurants, top picks & must-try spots.
-              </Text>
-
-              <View style={styles.preferenceItem}>
-                <View style={styles.preferenceLeft}>
-                  <Ionicons name="mail-outline" size={20} color="#666"/>
-                  <Text style={styles.preferenceText}>Email</Text>
-                </View>
-                <Switch
-                    value={marketingEmail}
-                    onValueChange={handleMarketingEmailToggle}
-                    trackColor={{false: '#e0e0e0', true: '#34C759'}}
-                    thumbColor="#fff"
-                />
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-  );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  content: {
-    paddingBottom: 40,
-  },
-  banner: {
-    backgroundColor: '#fff',
-    padding: 24,
-    margin: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  bannerIcon: {
-    marginBottom: 16,
-  },
-  bannerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  bannerDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  bannerButton: {
-    backgroundColor: '#dc3545',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-  },
-  bannerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    backgroundColor: '#fff',
-    padding: 20,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  sectionDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  preferenceItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  preferenceLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  preferenceText: {
-    fontSize: 16,
-    color: '#333',
-  },
+    container: { flex: 1, backgroundColor: Colors.appBackground },
+
+    header: {
+        backgroundColor: NAVY,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
+    },
+    backBtn: {
+        width: 36, height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: { fontSize: FontSize.lg },
+
+    scroll: { flex: 1 },
+    scrollContent: { padding: Spacing['4'] },
+
+    infoBanner: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: Spacing['2'],
+        backgroundColor: 'rgba(15,51,70,0.05)',
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(15,51,70,0.10)',
+        padding: Spacing['3'],
+        marginBottom: Spacing['4'],
+    },
+
+    sectionLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: 4,
+    },
+    sectionTick: {
+        width: 3, height: 14,
+        backgroundColor: NAVY,
+        borderRadius: 2,
+    },
+    sectionLabel: { letterSpacing: 0.8 },
+    sectionDesc: {
+        marginBottom: Spacing['2'],
+        paddingLeft: Spacing['2'] + 3,
+    },
+
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['4'],
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    divider: { height: 1, backgroundColor: Colors.cardBorder },
+    prefRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: Spacing['3'],
+    },
+    prefLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['3'],
+    },
+    iconWrap: {
+        width: 32, height: 32,
+        borderRadius: Radius.sm,
+        backgroundColor: 'rgba(15,51,70,0.07)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 });
 
 export default CommunicationsScreen;

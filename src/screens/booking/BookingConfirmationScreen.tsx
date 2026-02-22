@@ -1,163 +1,215 @@
 // src/screens/booking/BookingConfirmationScreen.tsx
 import React from 'react';
-import {SafeAreaView, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {
+    Linking,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    Share,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { CommonActions } from '@react-navigation/native';
-import {BookingConfirmationScreenProps} from '../../navigation/AppNavigator';
+import { BookingConfirmationScreenProps } from '../../navigation/AppNavigator';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
 
-const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
-                                                                                 route,
-                                                                                 navigation
-                                                                             }) => {
-    const {booking} = route.params;
+const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ route, navigation }) => {
+    const { booking } = route.params;
 
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-GB', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        });
-    };
+    const formatDate = (date: Date) =>
+        date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const handleShare = async () => {
         try {
-            const message = `Reservation Confirmed!\n\n` +
-                `Restaurant: ${booking.restaurant.name}\n` +
-                `Date: ${formatDate(booking.date)}\n` +
-                `Time: ${booking.time}\n` +
-                `Party Size: ${booking.partySize} guests\n` +
-                `Confirmation Code: ${booking.confirmationCode}`;
-
             await Share.share({
-                message,
-                title: 'Restaurant Reservation Confirmation',
+                message:
+                    `Reservation Confirmed!\n\n` +
+                    `Restaurant: ${booking.restaurant.name}\n` +
+                    `Date: ${formatDate(booking.date)}\n` +
+                    `Time: ${booking.time}\n` +
+                    `Party Size: ${booking.partySize} guests\n` +
+                    `Confirmation: ${booking.confirmationCode}`,
+                title: 'Restaurant Reservation',
             });
         } catch (error) {
-            console.error('Error sharing:', error);
+            console.error('Share error:', error);
         }
     };
 
-    const handleDone = () => {
-        // Reset stack to restaurant list, removing BookingScreen and RestaurantDetail from memory
-        navigation.dispatch(
-            CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'RestaurantList' }],
-            })
+    const handleCall = () => {
+        if (!booking.restaurant.phoneNumber) return;
+        const url = `tel:${booking.restaurant.phoneNumber.replace(/\s/g, '')}`;
+        Linking.openURL(url).catch(() =>
+            Alert.alert('Error', 'Unable to open phone dialer')
         );
+    };
+
+    const handleDone = () => {
+        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'RestaurantList' }] }));
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView style={styles.content}>
-                {/* Success Icon */}
-                <View style={styles.successContainer}>
-                    <View style={styles.successIcon}>
-                        <Text style={styles.checkMark}>✓</Text>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* ── Hero header — navy ── */}
+                <View style={styles.hero}>
+                    {/* Success badge */}
+                    <View style={styles.successRing}>
+                        <View style={styles.successCircle}>
+                            <AppText style={styles.checkmark}>✓</AppText>
+                        </View>
                     </View>
-                    <Text style={styles.successTitle}>Reservation Confirmed!</Text>
-                    <Text style={styles.successSubtitle}>
-                        You're all set! We've sent confirmation details to your phone.
-                    </Text>
-                </View>
 
-                {/* Confirmation Details */}
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.sectionTitle}>Reservation Details</Text>
+                    <AppText variant="h3" color={Colors.white} style={styles.heroTitle}>
+                        Reservation Confirmed!
+                    </AppText>
+                    <AppText variant="body" color="rgba(255,255,255,0.7)" style={styles.heroSub}>
+                        We've sent confirmation details to your phone.
+                    </AppText>
 
-                    <View style={styles.detailCard}>
-                        <View style={styles.restaurantHeader}>
-                            <Text style={styles.restaurantName}>{booking.restaurant.name}</Text>
-                            <Text style={styles.confirmationCode}>#{booking.confirmationCode}</Text>
-                        </View>
-
-                        <View style={styles.divider}/>
-
-                        <View style={styles.detailRow}>
-                            <View style={styles.detailItem}>
-                                <Text style={styles.detailLabel}>Date</Text>
-                                <Text style={styles.detailValue}>{formatDate(booking.date)}</Text>
-                            </View>
-                            <View style={styles.detailItem}>
-                                <Text style={styles.detailLabel}>Time</Text>
-                                <Text style={styles.detailValue}>{booking.time}</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.detailRow}>
-                            <View style={styles.detailItem}>
-                                <Text style={styles.detailLabel}>Party Size</Text>
-                                <Text style={styles.detailValue}>{booking.partySize} guests</Text>
-                            </View>
-                            <View style={styles.detailItem}>
-                                <Text style={styles.detailLabel}>Name</Text>
-                                <Text style={styles.detailValue}>{booking.customerName}</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.divider}/>
-
-                        <View style={styles.addressContainer}>
-                            <Text style={styles.detailLabel}>Address</Text>
-                            <Text style={styles.addressText}>{booking.restaurant.address}</Text>
-                        </View>
-
-                        {booking.specialRequests && (
-                            <>
-                                <View style={styles.divider}/>
-                                <View style={styles.specialRequestsContainer}>
-                                    <Text style={styles.detailLabel}>Special Requests</Text>
-                                    <Text style={styles.specialRequestsText}>{booking.specialRequests}</Text>
-                                </View>
-                            </>
-                        )}
+                    {/* Confirmation code pill */}
+                    <View style={styles.codePill}>
+                        <AppText variant="label" color="rgba(255,255,255,0.6)" style={styles.codeLabel}>
+                            CONFIRMATION CODE
+                        </AppText>
+                        <AppText variant="sectionTitle" color={Colors.white} style={styles.codeValue}>
+                            {booking.confirmationCode}
+                        </AppText>
                     </View>
                 </View>
 
-                {/* Important Information */}
-                <View style={styles.infoContainer}>
-                    <Text style={styles.sectionTitle}>Important Information</Text>
-                    <View style={styles.infoCard}>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>🕒</Text>
-                            <Text style={styles.infoText}>
-                                Please arrive 10 minutes before your reservation time
-                            </Text>
-                        </View>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>📱</Text>
-                            <Text style={styles.infoText}>
-                                Show this confirmation or mention your confirmation code
-                            </Text>
-                        </View>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>❌</Text>
-                            <Text style={styles.infoText}>
-                                Cancellations must be made at least 2 hours in advance
-                            </Text>
+                {/* ── Ticket card ── */}
+                <View style={styles.ticketCard}>
+
+                    {/* Notch cutouts */}
+                    <View style={styles.notchLeft} />
+                    <View style={styles.notchRight} />
+
+                    {/* Restaurant name row */}
+                    <View style={styles.ticketTop}>
+                        <AppText variant="sectionTitle" color={Colors.primary} numberOfLines={2} style={styles.ticketRestaurantName}>
+                            {booking.restaurant.name}
+                        </AppText>
+                        <View style={styles.cuisinePill}>
+                            <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                                {booking.restaurant.cuisineType || 'Restaurant'}
+                            </AppText>
                         </View>
                     </View>
+
+                    {/* Dashed perforation line */}
+                    <View style={styles.perforationRow}>
+                        {Array.from({ length: 26 }).map((_, i) => (
+                            <View key={i} style={styles.dash} />
+                        ))}
+                    </View>
+
+                    {/* Detail grid */}
+                    <View style={styles.detailGrid}>
+                        <View style={styles.detailCell}>
+                            <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.cellLabel}>DATE</AppText>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={styles.cellValue}>
+                                {formatDate(booking.date)}
+                            </AppText>
+                        </View>
+                        <View style={[styles.detailCell, styles.detailCellRight]}>
+                            <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.cellLabel}>TIME</AppText>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={styles.cellValue}>
+                                {booking.time}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailCell}>
+                            <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.cellLabel}>GUESTS</AppText>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={styles.cellValue}>
+                                {booking.partySize} {booking.partySize === 1 ? 'guest' : 'guests'}
+                            </AppText>
+                        </View>
+                        <View style={[styles.detailCell, styles.detailCellRight]}>
+                            <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.cellLabel}>NAME</AppText>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={styles.cellValue}>
+                                {booking.customerName}
+                            </AppText>
+                        </View>
+                    </View>
+
+                    {/* Address row */}
+                    <View style={styles.addressRow}>
+                        <AppText style={styles.addressPin}>📍</AppText>
+                        <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.addressText}>
+                            {booking.restaurant.address}
+                        </AppText>
+                    </View>
+
+                    {/* Special requests */}
+                    {booking.specialRequests ? (
+                        <View style={styles.requestsRow}>
+                            <AppText style={styles.addressPin}>📝</AppText>
+                            <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.addressText}>
+                                {booking.specialRequests}
+                            </AppText>
+                        </View>
+                    ) : null}
                 </View>
 
-                {/* Contact Information */}
-                <View style={styles.contactContainer}>
-                    <Text style={styles.sectionTitle}>Need Help?</Text>
-                    <TouchableOpacity style={styles.contactButton}>
-                        <Text style={styles.contactButtonText}>
-                            Call Restaurant: {booking.restaurant.phoneNumber}
-                        </Text>
-                    </TouchableOpacity>
+                {/* ── Info section ── */}
+                <View style={styles.infoSection}>
+                    <View style={styles.sectionLabelRow}>
+                        <View style={styles.sectionTick} />
+                        <AppText variant="sectionTitle" color={Colors.primary}>Good to Know</AppText>
+                    </View>
+
+                    {[
+                        { icon: '🕒', text: 'Please arrive 10 minutes before your reservation time' },
+                        { icon: '📱', text: 'Show this confirmation or quote your code at the door' },
+                        { icon: '🚫', text: 'Cancellations must be made at least 2 hours in advance' },
+                    ].map(({ icon, text }, i) => (
+                        <View key={i} style={styles.infoRow}>
+                            <View style={styles.infoIconWrap}>
+                                <AppText style={styles.infoIcon}>{icon}</AppText>
+                            </View>
+                            <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.infoText}>
+                                {text}
+                            </AppText>
+                        </View>
+                    ))}
                 </View>
+
+                {/* ── Call restaurant ── */}
+                {booking.restaurant.phoneNumber && (
+                    <View style={styles.callSection}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Need Help?</AppText>
+                        </View>
+                        <TouchableOpacity style={styles.callBtn} onPress={handleCall} activeOpacity={0.85}>
+                            <AppText style={styles.callIcon}>📞</AppText>
+                            <AppText variant="bodyMedium" color={Colors.primary}>
+                                Call {booking.restaurant.name}
+                            </AppText>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.callNumber}>
+                                {booking.restaurant.phoneNumber}
+                            </AppText>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                <View style={{ height: 100 }} />
             </ScrollView>
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtonsContainer}>
-                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                    <Text style={styles.shareButtonText}>Share Details</Text>
+            {/* ── Footer action bar ── */}
+            <View style={styles.footer}>
+                <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.85}>
+                    <AppText style={styles.shareBtnIcon}>↗</AppText>
+                    <AppText variant="bodySemiBold" color={Colors.textOnLight}>Share</AppText>
                 </TouchableOpacity>
-
-                <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
-                    <Text style={styles.doneButtonText}>Done</Text>
+                <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85}>
+                    <AppText variant="button" color={Colors.white}>Done</AppText>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -167,198 +219,287 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: Colors.appBackground,
     },
-    content: {
-        flex: 1,
-    },
-    successContainer: {
+    scroll: { flex: 1 },
+    scrollContent: { paddingBottom: Spacing['6'] },
+
+    // ── Hero ───────────────────────────────────────────────────────────────────
+    hero: {
+        backgroundColor: Colors.primary,
         alignItems: 'center',
-        padding: 40,
-        backgroundColor: 'white',
+        paddingTop: Spacing['8'],
+        paddingBottom: Spacing['8'] + Spacing['5'],
+        paddingHorizontal: Spacing['5'],
     },
-    successIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#27ae60',
+    successRing: {
+        width: 88,
+        height: 88,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.12)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: Spacing['4'],
     },
-    checkMark: {
-        fontSize: 40,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    successTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    successSubtitle: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        lineHeight: 22,
-    },
-    detailsContainer: {
-        padding: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
-    },
-    detailCard: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    restaurantHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    successCircle: {
+        width: 68,
+        height: 68,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.success,
+        justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
     },
-    restaurantName: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
+    checkmark: {
+        fontSize: 32,
+        color: Colors.white,
+        fontFamily: FontFamily.bold,
     },
-    confirmationCode: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#007AFF',
-        backgroundColor: '#f0f8ff',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
+    heroTitle: {
+        textAlign: 'center',
+        marginBottom: Spacing['2'],
     },
-    divider: {
-        height: 1,
-        backgroundColor: '#f0f0f0',
-        marginVertical: 16,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    detailItem: {
-        flex: 1,
-    },
-    detailLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4,
-    },
-    detailValue: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#333',
-    },
-    addressContainer: {
-        marginBottom: 16,
-    },
-    addressText: {
-        fontSize: 16,
-        color: '#333',
+    heroSub: {
+        textAlign: 'center',
         lineHeight: 22,
+        marginBottom: Spacing['5'],
     },
-    specialRequestsContainer: {
-        marginBottom: 0,
+    codePill: {
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        borderRadius: Radius.lg,
+        paddingHorizontal: Spacing['5'],
+        paddingVertical: Spacing['3'],
+        alignItems: 'center',
     },
-    specialRequestsText: {
-        fontSize: 16,
-        color: '#333',
-        lineHeight: 22,
+    codeLabel: {
+        letterSpacing: 1.2,
+        marginBottom: 3,
     },
-    infoContainer: {
-        padding: 20,
+    codeValue: {
+        fontSize: FontSize.xl,
+        letterSpacing: 1,
     },
-    infoCard: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 20,
+
+    // ── Ticket card ────────────────────────────────────────────────────────────
+    ticketCard: {
+        backgroundColor: Colors.appBackground,
+        marginHorizontal: Spacing['5'],
+        marginTop: -Spacing['5'],
+        borderRadius: Radius.xl,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 6,
+        overflow: 'visible',
+        paddingBottom: Spacing['4'],
     },
-    infoItem: {
+    // Circular notch cutouts on the sides
+    notchLeft: {
+        position: 'absolute',
+        left: -14,
+        top: '45%',
+        width: 28,
+        height: 28,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.appBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+    },
+    notchRight: {
+        position: 'absolute',
+        right: -14,
+        top: '45%',
+        width: 28,
+        height: 28,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.appBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+    },
+    ticketTop: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 16,
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['5'],
+        paddingBottom: Spacing['4'],
+        gap: Spacing['3'],
     },
-    infoIcon: {
-        fontSize: 20,
-        marginRight: 12,
-        marginTop: 2,
-    },
-    infoText: {
-        fontSize: 14,
-        color: '#666',
+    ticketRestaurantName: {
         flex: 1,
+        fontSize: FontSize.lg,
+    },
+    cuisinePill: {
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        borderRadius: Radius.full,
+        paddingHorizontal: Spacing['2'] + 2,
+        paddingVertical: 4,
+        flexShrink: 0,
+    },
+
+    // Dashed perforation line
+    perforationRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: Spacing['4'],
+        gap: 4,
+    },
+    dash: {
+        width: 6,
+        height: 1.5,
+        backgroundColor: Colors.cardBorder,
+        borderRadius: 1,
+    },
+
+    // Detail grid — 2 columns
+    detailGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: Spacing['5'],
+        marginBottom: Spacing['4'],
+    },
+    detailCell: {
+        width: '50%',
+        marginBottom: Spacing['4'],
+        paddingRight: Spacing['3'],
+    },
+    detailCellRight: {
+        paddingRight: 0,
+        paddingLeft: Spacing['3'],
+        borderLeftWidth: 1,
+        borderLeftColor: Colors.cardBorder,
+    },
+    cellLabel: {
+        letterSpacing: 0.8,
+        marginBottom: 4,
+    },
+    cellValue: {
         lineHeight: 20,
     },
-    contactContainer: {
-        padding: 20,
-        paddingBottom: 120, // Space for action buttons
+
+    // Address + requests
+    addressRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: Spacing['5'],
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
     },
-    contactButton: {
-        backgroundColor: '#007AFF',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 8,
+    requestsRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: Spacing['5'],
+        gap: Spacing['2'],
+    },
+    addressPin: { fontSize: 14, marginTop: 1 },
+    addressText: { flex: 1, lineHeight: 20 },
+
+    // ── Info section ───────────────────────────────────────────────────────────
+    infoSection: {
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['6'],
+    },
+    sectionLabelRow: {
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['4'],
     },
-    contactButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '500',
+    sectionTick: {
+        width: 3,
+        height: 18,
+        backgroundColor: Colors.primary,
+        borderRadius: 2,
     },
-    actionButtonsContainer: {
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: Spacing['3'],
+        gap: Spacing['3'],
+    },
+    infoIconWrap: {
+        width: 36,
+        height: 36,
+        borderRadius: Radius.md,
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexShrink: 0,
+    },
+    infoIcon: { fontSize: 16 },
+    infoText: { flex: 1, lineHeight: 20, marginTop: 8 },
+
+    // ── Call section ───────────────────────────────────────────────────────────
+    callSection: {
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['5'],
+    },
+    callBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['3'],
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        borderRadius: Radius.lg,
+        paddingVertical: Spacing['3'],
+        paddingHorizontal: Spacing['4'],
+    },
+    callIcon: { fontSize: 18 },
+    callNumber: { marginLeft: 'auto' },
+
+    // ── Footer ─────────────────────────────────────────────────────────────────
+    footer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'white',
-        padding: 20,
+        backgroundColor: Colors.appBackground,
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['5'],
+        paddingVertical: Spacing['3'],
         flexDirection: 'row',
+        gap: Spacing['3'],
     },
-    shareButton: {
+    shareBtn: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
-        paddingVertical: 16,
-        borderRadius: 12,
+        flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 10,
+        justifyContent: 'center',
+        gap: Spacing['2'],
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        borderRadius: Radius.lg,
+        paddingVertical: Spacing['3'] + 2,
     },
-    shareButtonText: {
-        color: '#333',
+    shareBtnIcon: {
         fontSize: 16,
-        fontWeight: '500',
+        color: Colors.textOnLight,
+        fontFamily: FontFamily.semiBold,
     },
-    doneButton: {
-        flex: 1,
-        backgroundColor: '#007AFF',
-        paddingVertical: 16,
-        borderRadius: 12,
+    doneBtn: {
+        flex: 2,
+        backgroundColor: Colors.accent,
+        borderRadius: Radius.lg,
         alignItems: 'center',
-        marginLeft: 10,
-    },
-    doneButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        justifyContent: 'center',
+        paddingVertical: Spacing['3'] + 2,
+        shadowColor: Colors.accent,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 4,
     },
 });
 

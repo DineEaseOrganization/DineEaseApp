@@ -9,8 +9,34 @@ import React, {
 } from 'react';
 import { favoritesService, ApiError } from '../services/api';
 import { useAuth } from './AuthContext';
-import { RestaurantDetail } from '../types/api.types';
+import { RestaurantDetail, FavoriteRestaurant } from '../types/api.types';
 import { Restaurant, mapRestaurantDetailToRestaurant } from '../types';
+
+/**
+ * FavoriteRestaurant (slim DTO) → RestaurantDetail-compatible shape
+ * so we can pass it safely to mapRestaurantDetailToRestaurant.
+ */
+const favoriteToDetail = (fav: FavoriteRestaurant): RestaurantDetail => ({
+  id: fav.restaurantId,
+  name: fav.restaurantName,
+  primaryCuisineType: fav.cuisineType ?? null,
+  cuisineTypes: fav.cuisineType ? [fav.cuisineType] : null,
+  description: null,
+  address: fav.address ?? '',
+  postCode: '',
+  country: '',
+  latitude: null,
+  longitude: null,
+  phoneNumber: '',
+  priceRange: fav.priceRange ?? null,
+  coverImageUrl: fav.coverImageUrl ?? null,
+  galleryImages: null,
+  averageRating: fav.averageRating ?? 0,
+  totalReviews: fav.totalReviews ?? 0,
+  isActive: true,
+  acceptsReservations: true,
+  amenities: null,
+});
 
 interface FavoritesContextType {
   favorites: Restaurant[];
@@ -55,11 +81,14 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       if (Array.isArray(response)) {
         restaurantsList = response;
       } else if (response.restaurants && Array.isArray(response.restaurants)) {
+        // Full RestaurantDetail objects — use directly
         restaurantsList = response.restaurants;
       } else if (response.favorites && Array.isArray(response.favorites)) {
-        restaurantsList = response.favorites;
+        // Slim FavoriteRestaurant DTOs — normalise to RestaurantDetail shape
+        restaurantsList = response.favorites.map(favoriteToDetail);
       } else if (response.content && Array.isArray(response.content)) {
-        restaurantsList = response.content;
+        // Spring Page format — also slim DTOs
+        restaurantsList = response.content.map(favoriteToDetail);
       }
 
       // Map to Restaurant type and extract IDs

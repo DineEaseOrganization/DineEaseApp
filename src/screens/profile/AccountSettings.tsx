@@ -1,178 +1,192 @@
+// src/screens/profile/AccountSettings.tsx
 import React from 'react';
-import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
+import {
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+
+const NAVY = Colors.primary;
 
 interface AccountSettingsScreenProps {
-  navigation: any;
+    navigation: any;
 }
 
-const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({navigation}) => {
-  const handleYourDetailsPress = () => {
-    navigation.navigate('YourDetails');
-  };
+const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ navigation }) => {
+    const showComingSoon = (feature: string) =>
+        Alert.alert('Coming Soon', `${feature} will be available soon!`, [{ text: 'OK' }]);
 
-  const handleCommunicationsPress = () => {
-    navigation.navigate('Communications');
-  };
+    const sections = [
+        {
+            label: '👤  ACCOUNT',
+            items: [
+                { icon: 'person-outline' as const,         label: 'Your Details',    sub: 'Name, phone & contact info',     onPress: () => navigation.navigate('YourDetails'),    enabled: true },
+                { icon: 'notifications-outline' as const,  label: 'Communications',  sub: 'Email & push preferences',       onPress: () => navigation.navigate('Communications'), enabled: true },
+                { icon: 'phone-portrait-outline' as const, label: 'Devices',         sub: 'Manage your signed-in devices',  onPress: () => navigation.navigate('Devices'),        enabled: true },
+            ],
+        },
+        {
+            label: '⚙️  MORE',
+            items: [
+                { icon: 'card-outline' as const,               label: 'Payment Methods', sub: 'Manage saved cards',             onPress: () => showComingSoon('Payment Methods'), enabled: false },
+                { icon: 'help-circle-outline' as const,        label: 'Help & Support',  sub: 'FAQs and contact us',            onPress: () => showComingSoon('Help & Support'),  enabled: false },
+                { icon: 'information-circle-outline' as const, label: 'Terms & Privacy', sub: 'Legal information',              onPress: () => showComingSoon('Terms & Privacy'), enabled: false },
+            ],
+        },
+    ];
 
-  const handleDevicesPress = () => {
-    navigation.navigate('Devices');
-  };
+    return (
+        <SafeAreaView style={styles.container}>
 
-  const handleDisabledPress = (feature: string) => {
-    Alert.alert(
-      'Coming Soon',
-      `${feature} feature will be available soon!`,
-      [{text: 'OK'}]
+            {/* ── Navy header ── */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                </TouchableOpacity>
+                <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Account Settings</AppText>
+                <View style={{ width: 36 }} />
+            </View>
+
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {sections.map((section) => (
+                    <View key={section.label} style={{ marginBottom: Spacing['4'] }}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                                {section.label}
+                            </AppText>
+                        </View>
+                        <View style={styles.card}>
+                            {section.items.map((item, i) => (
+                                <View key={item.label}>
+                                    {i > 0 && <View style={styles.divider} />}
+                                    <TouchableOpacity
+                                        style={[styles.menuRow, !item.enabled && styles.menuRowDisabled]}
+                                        onPress={item.onPress}
+                                        activeOpacity={item.enabled ? 0.7 : 0.5}
+                                    >
+                                        <View style={[styles.iconWrap, !item.enabled && styles.iconWrapDisabled]}>
+                                            <Ionicons
+                                                name={item.icon}
+                                                size={18}
+                                                color={item.enabled ? NAVY : Colors.textOnLightTertiary}
+                                            />
+                                        </View>
+                                        <View style={styles.menuText}>
+                                            <AppText
+                                                variant="bodyMedium"
+                                                color={item.enabled ? Colors.textOnLight : Colors.textOnLightTertiary}
+                                            >
+                                                {item.label}
+                                            </AppText>
+                                            <AppText variant="caption" color={Colors.textOnLightTertiary}>
+                                                {item.sub}
+                                            </AppText>
+                                        </View>
+                                        {!item.enabled ? (
+                                            <View style={styles.comingBadge}>
+                                                <AppText variant="captionMedium" color={Colors.textOnLightTertiary} style={{ fontSize: 10 }}>
+                                                    SOON
+                                                </AppText>
+                                            </View>
+                                        ) : (
+                                            <Ionicons name="chevron-forward" size={16} color={Colors.textOnLightTertiary} />
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                ))}
+
+                <View style={{ height: Spacing['8'] }} />
+            </ScrollView>
+        </SafeAreaView>
     );
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.content}>
-          <Text style={styles.title}>Account settings</Text>
-
-          {/* Your Details */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleYourDetailsPress}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="person-outline" size={24} color="#333"/>
-              <Text style={styles.menuItemText}>Your details</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#666"/>
-          </TouchableOpacity>
-
-          {/* Communications */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleCommunicationsPress}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="chatbubble-outline" size={24} color="#333"/>
-              <Text style={styles.menuItemText}>Communications</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#666"/>
-          </TouchableOpacity>
-
-          {/* Devices */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleDevicesPress}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="phone-portrait-outline" size={24} color="#333"/>
-              <Text style={styles.menuItemText}>Devices</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#666"/>
-          </TouchableOpacity>
-
-          {/* Payment Methods - Disabled */}
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemDisabled]}
-            onPress={() => handleDisabledPress('Payment methods')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="card-outline" size={24} color="#999"/>
-              <Text style={[styles.menuItemText, styles.menuItemTextDisabled]}>
-                Payment methods
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#ccc"/>
-          </TouchableOpacity>
-
-          {/* Help & Support - Disabled */}
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemDisabled]}
-            onPress={() => handleDisabledPress('Help & Support')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="help-circle-outline" size={24} color="#999"/>
-              <Text style={[styles.menuItemText, styles.menuItemTextDisabled]}>
-                Help & Support
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#ccc"/>
-          </TouchableOpacity>
-
-          {/* Terms & Privacy - Disabled */}
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemDisabled]}
-            onPress={() => handleDisabledPress('Terms & Privacy')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="information-circle-outline" size={24} color="#999"/>
-              <Text style={[styles.menuItemText, styles.menuItemTextDisabled]}>
-                Terms & Privacy
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#ccc"/>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  content: {
-    backgroundColor: '#fff',
-    paddingTop: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  menuItemDisabled: {
-    opacity: 0.5,
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  menuItemTextDisabled: {
-    color: '#999',
-  },
+    container: { flex: 1, backgroundColor: Colors.appBackground },
+
+    header: {
+        backgroundColor: NAVY,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
+    },
+    backBtn: {
+        width: 36, height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: { fontSize: FontSize.lg },
+
+    scroll: { flex: 1 },
+    scrollContent: { padding: Spacing['4'] },
+
+    sectionLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+    },
+    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+    sectionLabel: { letterSpacing: 0.8 },
+
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['4'],
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    divider: { height: 1, backgroundColor: Colors.cardBorder },
+
+    menuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['3'],
+        paddingVertical: Spacing['3'],
+    },
+    menuRowDisabled: { opacity: 0.55 },
+    menuText: { flex: 1, gap: 2 },
+    iconWrap: {
+        width: 36, height: 36,
+        borderRadius: Radius.sm,
+        backgroundColor: 'rgba(15,51,70,0.08)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    iconWrapDisabled: { backgroundColor: Colors.cardBackground },
+    comingBadge: {
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: 2,
+    },
 });
 
 export default AccountSettingsScreen;

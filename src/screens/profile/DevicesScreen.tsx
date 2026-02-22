@@ -1,5 +1,5 @@
-// src/screens/settings/DevicesScreen.tsx
-import React, {useEffect, useState} from 'react';
+// src/screens/profile/DevicesScreen.tsx
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -7,47 +7,39 @@ import {
     SafeAreaView,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
-import {DeviceDTO} from "../../types/api.types";
-import {ApiError, deviceService} from "../../services/api";
+import { Ionicons } from '@expo/vector-icons';
+import { DeviceDTO } from '../../types/api.types';
+import { ApiError, deviceService } from '../../services/api';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+
+const NAVY = Colors.primary;
 
 interface DevicesScreenProps {
     navigation: any;
 }
 
-const DevicesScreen: React.FC<DevicesScreenProps> = ({navigation}) => {
+const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
     const [devices, setDevices] = useState<DeviceDTO[]>([]);
-    const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        loadDevices();
-    }, []);
+    useEffect(() => { loadDevices(); }, []);
 
     const loadDevices = async () => {
         try {
             setLoading(true);
             const response = await deviceService.listDevices();
-
             if (response.success) {
                 setDevices(response.devices);
-                setCurrentDeviceId(response.currentDeviceId);
             } else {
                 Alert.alert('Error', 'Failed to load devices');
             }
         } catch (error) {
-            console.error('Error loading devices:', error);
-
-            if (error instanceof ApiError) {
-                Alert.alert('Error', error.message);
-            } else {
-                Alert.alert('Error', 'Failed to load devices. Please try again.');
-            }
+            Alert.alert('Error', error instanceof ApiError ? error.message : 'Failed to load devices. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -60,42 +52,24 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({navigation}) => {
     };
 
     const handleRemoveDevice = (device: DeviceDTO) => {
-        // Prevent removing current device
         if (device.isCurrentDevice) {
-            Alert.alert(
-                'Cannot Remove',
-                'You cannot remove the device you are currently using. Please use another device to remove this one.',
-                [{text: 'OK'}]
-            );
+            Alert.alert('Cannot Remove', 'You cannot remove the device you are currently using.', [{ text: 'OK' }]);
             return;
         }
-
         Alert.alert(
             'Remove Device',
-            `Are you sure you want to remove "${device.deviceName || 'Unknown Device'}"? You will need to sign in again on this device.`,
+            `Remove "${device.deviceName || 'Unknown Device'}"? You will need to sign in again on this device.`,
             [
-                {text: 'Cancel', style: 'cancel'},
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Remove',
-                    style: 'destructive',
+                    text: 'Remove', style: 'destructive',
                     onPress: async () => {
                         try {
-                            const response = await deviceService.removeDevice(device.deviceId);
-
-                            if (response.success) {
-                                Alert.alert('Success', response.message);
-                                await loadDevices();
-                            } else {
-                                Alert.alert('Error', response.message);
-                            }
+                            const res = await deviceService.removeDevice(device.deviceId);
+                            if (res.success) { Alert.alert('Removed', res.message); await loadDevices(); }
+                            else Alert.alert('Error', res.message);
                         } catch (error) {
-                            console.error('Error removing device:', error);
-
-                            if (error instanceof ApiError) {
-                                Alert.alert('Error', error.message);
-                            } else {
-                                Alert.alert('Error', 'Failed to remove device. Please try again.');
-                            }
+                            Alert.alert('Error', error instanceof ApiError ? error.message : 'Failed to remove device.');
                         }
                     },
                 },
@@ -104,77 +78,35 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({navigation}) => {
     };
 
     const handleToggleTrust = async (device: DeviceDTO) => {
-        const newTrustStatus = !device.isTrusted;
-
+        const newTrust = !device.isTrusted;
         try {
-            const response = await deviceService.updateDeviceTrust(
-                device.deviceId,
-                newTrustStatus
-            );
-
-            if (response.success) {
-                setDevices(prevDevices =>
-                    prevDevices.map(d =>
-                        d.deviceId === device.deviceId
-                            ? {...d, isTrusted: newTrustStatus}
-                            : d
-                    )
-                );
-
-                Alert.alert(
-                    'Success',
-                    newTrustStatus
-                        ? 'Device marked as trusted'
-                        : 'Device trust removed'
-                );
-            } else {
-                Alert.alert('Error', response.message);
-            }
+            const res = await deviceService.updateDeviceTrust(device.deviceId, newTrust);
+            if (res.success) {
+                setDevices(prev => prev.map(d => d.deviceId === device.deviceId ? { ...d, isTrusted: newTrust } : d));
+                Alert.alert('Updated', newTrust ? 'Device marked as trusted' : 'Device trust removed');
+            } else Alert.alert('Error', res.message);
         } catch (error) {
-            console.error('Error updating trust status:', error);
-
-            if (error instanceof ApiError) {
-                Alert.alert('Error', error.message);
-            } else {
-                Alert.alert('Error', 'Failed to update device trust. Please try again.');
-            }
+            Alert.alert('Error', error instanceof ApiError ? error.message : 'Failed to update trust.');
         }
     };
 
-    const handleRemoveAllOtherDevices = () => {
-        const otherDevices = devices.filter(d => !d.isCurrentDevice);
-
-        if (otherDevices.length === 0) {
-            Alert.alert('No Devices', 'You don\'t have any other devices to remove.');
-            return;
-        }
-
+    const handleRemoveAll = () => {
+        const others = devices.filter(d => !d.isCurrentDevice);
+        if (!others.length) { Alert.alert('No Devices', "You don't have any other devices to remove."); return; }
         Alert.alert(
             'Remove All Other Devices',
-            `This will remove ${otherDevices.length} device(s). You will need to sign in again on those devices.`,
+            `This will remove ${others.length} device(s). They will need to sign in again.`,
             [
-                {text: 'Cancel', style: 'cancel'},
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Remove All',
-                    style: 'destructive',
+                    text: 'Remove All', style: 'destructive',
                     onPress: async () => {
                         try {
-                            const promises = otherDevices.map(device =>
-                                deviceService.removeDevice(device.deviceId)
-                            );
-
-                            await Promise.all(promises);
-
-                            Alert.alert('Success', 'All other devices have been removed.');
+                            await Promise.all(others.map(d => deviceService.removeDevice(d.deviceId)));
+                            Alert.alert('Done', 'All other devices have been removed.');
                             await loadDevices();
-                        } catch (error) {
-                            console.error('Error removing all devices:', error);
-
-                            if (error instanceof ApiError) {
-                                Alert.alert('Error', error.message);
-                            } else {
-                                Alert.alert('Error', 'Failed to remove some devices. Please try again.');
-                            }
+                        } catch {
+                            Alert.alert('Error', 'Failed to remove some devices.');
                         }
                     },
                 },
@@ -182,46 +114,42 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({navigation}) => {
         );
     };
 
-    const getDeviceIcon = (platform: string | null): string => {
+    const getDeviceIcon = (platform: string | null): keyof typeof Ionicons.glyphMap => {
         if (!platform) return 'phone-portrait-outline';
-
-        const platformLower = platform.toLowerCase();
-        if (platformLower.includes('ios') || platformLower.includes('iphone')) {
-            return 'phone-portrait-outline';
-        } else if (platformLower.includes('ipad')) {
-            return 'tablet-portrait-outline';
-        } else if (platformLower.includes('android')) {
-            return 'phone-portrait-outline';
-        } else if (platformLower.includes('web') || platformLower.includes('windows') || platformLower.includes('mac')) {
-            return 'desktop-outline';
-        }
+        const p = platform.toLowerCase();
+        if (p.includes('ipad')) return 'tablet-portrait-outline';
+        if (p.includes('web') || p.includes('windows') || p.includes('mac')) return 'desktop-outline';
         return 'phone-portrait-outline';
     };
 
     const formatLastSeen = (lastSeenAt: string | null): string => {
         if (!lastSeenAt) return 'Never';
-
-        const date = new Date(lastSeenAt);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return 'Active now';
-        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-        if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-
-        return date.toLocaleDateString();
+        const diff = Date.now() - new Date(lastSeenAt).getTime();
+        const mins = Math.floor(diff / 60000);
+        const hrs = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        if (mins < 1) return 'Active now';
+        if (mins < 60) return `${mins}m ago`;
+        if (hrs < 24) return `${hrs}h ago`;
+        if (days < 7) return `${days}d ago`;
+        return new Date(lastSeenAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     };
 
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#007AFF"/>
-                    <Text style={styles.loadingText}>Loading devices...</Text>
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                        <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    </TouchableOpacity>
+                    <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Devices</AppText>
+                    <View style={{ width: 36 }} />
+                </View>
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color={NAVY} />
+                    <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginTop: Spacing['3'] }}>
+                        Loading devices...
+                    </AppText>
                 </View>
             </SafeAreaView>
         );
@@ -229,376 +157,291 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({navigation}) => {
 
     return (
         <SafeAreaView style={styles.container}>
+
+            {/* ── Navy header ── */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                </TouchableOpacity>
+                <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Devices</AppText>
+                <View style={{ width: 36 }} />
+            </View>
+
             <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor="#007AFF"
-                    />
-                }
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={NAVY} />}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Text style={styles.backText}>← Back</Text>
-                    </TouchableOpacity>
+                {/* Info tip */}
+                <View style={styles.infoBanner}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color={NAVY} />
+                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>
+                        Trusted devices skip two-factor authentication for future logins.
+                    </AppText>
                 </View>
 
-                <View style={styles.content}>
-                    <Text style={styles.title}>Devices</Text>
-                    <Text style={styles.subtitle}>
-                        Manage devices where you're currently logged in. You can remove any
-                        device or mark devices as trusted.
-                    </Text>
+                {/* Active Devices */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={styles.sectionTick} />
+                    <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                        📱  ACTIVE DEVICES ({devices.length})
+                    </AppText>
+                    {devices.length > 1 && (
+                        <TouchableOpacity onPress={handleRemoveAll} activeOpacity={0.8}>
+                            <AppText variant="captionMedium" color={Colors.error}>Remove Others</AppText>
+                        </TouchableOpacity>
+                    )}
+                </View>
 
-                    {/* Info Alert */}
-                    <View style={styles.infoSection}>
-                        <Ionicons name="information-circle" size={20} color="#007AFF"/>
-                        <Text style={styles.infoText}>
-                            Trusted devices won't require two-factor authentication for future logins.
-                        </Text>
+                {devices.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                        <Ionicons name="phone-portrait-outline" size={40} color={Colors.textOnLightTertiary} />
+                        <AppText variant="body" color={Colors.textOnLightTertiary} style={{ marginTop: Spacing['3'] }}>
+                            No devices found
+                        </AppText>
                     </View>
-
-                    {/* Devices Section */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionHeaderTitle}>
-                                <Text>Active Devices (</Text>
-                                <Text>{devices.length}</Text>
-                                <Text>)</Text>
-                            </Text>
-                            {devices.length > 1 && (
-                                <TouchableOpacity onPress={handleRemoveAllOtherDevices}>
-                                    <Text style={styles.removeAllText}>Remove All Others</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        {devices.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <Ionicons
-                                    name="phone-portrait-outline"
-                                    size={48}
-                                    color="#999"
-                                />
-                                <Text style={styles.emptyStateText}>No devices found</Text>
-                            </View>
-                        ) : (
-                            devices.map((device, index) => (
-                                <View
-                                    key={device.deviceId}
-                                    style={[
-                                        styles.deviceCard,
-                                        index === devices.length - 1 && styles.deviceCardLast,
-                                    ]}
-                                >
-                                    <View style={styles.deviceIcon}>
+                ) : (
+                    <View style={styles.card}>
+                        {devices.map((device, i) => (
+                            <View key={device.deviceId}>
+                                {i > 0 && <View style={styles.divider} />}
+                                <View style={styles.deviceRow}>
+                                    {/* Icon */}
+                                    <View style={[styles.deviceIconWrap, device.isCurrentDevice && styles.deviceIconWrapCurrent]}>
                                         <Ionicons
-                                            name={getDeviceIcon(device.platform) as any}
-                                            size={24}
-                                            color="#007AFF"
+                                            name={getDeviceIcon(device.platform)}
+                                            size={20}
+                                            color={device.isCurrentDevice ? Colors.white : NAVY}
                                         />
                                     </View>
 
+                                    {/* Info */}
                                     <View style={styles.deviceInfo}>
-                                        <View style={styles.deviceHeader}>
-                                            <Text style={styles.deviceName}>
+                                        <View style={styles.deviceNameRow}>
+                                            <AppText variant="bodyMedium" color={Colors.textOnLight} numberOfLines={1} style={{ flex: 1 }}>
                                                 {device.deviceName || 'Unknown Device'}
-                                            </Text>
+                                            </AppText>
                                             {device.isCurrentDevice && (
                                                 <View style={styles.currentBadge}>
-                                                    <Text style={styles.currentBadgeText}>
+                                                    <AppText variant="captionMedium" color={Colors.success} style={{ fontSize: 10 }}>
                                                         THIS DEVICE
-                                                    </Text>
+                                                    </AppText>
                                                 </View>
                                             )}
-                                            {device.isTrusted && (
-                                                <Ionicons
-                                                    name="shield-checkmark"
-                                                    size={16}
-                                                    color="#2E7D32"
-                                                    style={styles.shieldIcon}
-                                                />
+                                            {device.isTrusted && !device.isCurrentDevice && (
+                                                <Ionicons name="shield-checkmark" size={14} color={Colors.success} />
                                             )}
                                         </View>
 
-                                        <Text style={styles.devicePlatform}>
-                                            {device.platform || 'Unknown Platform'}
-                                            {device.platformVersion && ` ${device.platformVersion}`}
-                                            {device.deviceModel && ` • ${device.deviceModel}`}
-                                        </Text>
+                                        <AppText variant="caption" color={Colors.textOnLightSecondary}>
+                                            {[device.platform, device.platformVersion, device.deviceModel].filter(Boolean).join(' · ')}
+                                        </AppText>
+                                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ marginTop: 2 }}>
+                                            Last active: {formatLastSeen(device.lastSeenAt)}
+                                        </AppText>
 
-                                        <Text style={styles.deviceActivity}>
-                                            <Text>Last active: </Text>
-                                            <Text>{formatLastSeen(device.lastSeenAt)}</Text>
-                                        </Text>
-
-                                        {/* Device Actions */}
+                                        {/* Actions */}
                                         <View style={styles.deviceActions}>
                                             <TouchableOpacity
-                                                style={styles.trustButton}
+                                                style={[styles.actionPill, device.isTrusted && styles.actionPillTrusted]}
                                                 onPress={() => handleToggleTrust(device)}
+                                                activeOpacity={0.8}
                                             >
                                                 <Ionicons
                                                     name={device.isTrusted ? 'shield' : 'shield-outline'}
-                                                    size={14}
-                                                    color={device.isTrusted ? '#2E7D32' : '#007AFF'}
+                                                    size={12}
+                                                    color={device.isTrusted ? Colors.success : NAVY}
                                                 />
-                                                <Text
-                                                    style={[
-                                                        styles.trustButtonText,
-                                                        device.isTrusted && styles.trustButtonTextActive,
-                                                    ]}
-                                                >
-                                                    {device.isTrusted ? 'Trusted' : 'Mark as Trusted'}
-                                                </Text>
+                                                <AppText variant="captionMedium" color={device.isTrusted ? Colors.success : NAVY}>
+                                                    {device.isTrusted ? 'Trusted' : 'Mark Trusted'}
+                                                </AppText>
                                             </TouchableOpacity>
-
                                             {!device.isCurrentDevice && (
                                                 <TouchableOpacity
-                                                    style={styles.removeButton}
+                                                    style={styles.removePill}
                                                     onPress={() => handleRemoveDevice(device)}
+                                                    activeOpacity={0.8}
                                                 >
-                                                    <Text style={styles.removeButtonText}>Remove</Text>
+                                                    <AppText variant="captionMedium" color={Colors.error}>Remove</AppText>
                                                 </TouchableOpacity>
                                             )}
                                         </View>
                                     </View>
                                 </View>
-                            ))
-                        )}
+                            </View>
+                        ))}
                     </View>
+                )}
 
-                    {/* Security Tips */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Security Tips</Text>
-                        <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#2E7D32"/>
-                            <Text style={styles.tipText}>
-                                Regularly review your active devices
-                            </Text>
-                        </View>
-                        <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#2E7D32"/>
-                            <Text style={styles.tipText}>
-                                Remove devices you no longer use
-                            </Text>
-                        </View>
-                        <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#2E7D32"/>
-                            <Text style={styles.tipText}>
-                                Only mark your personal devices as trusted
-                            </Text>
-                        </View>
-                    </View>
+                {/* Security tips */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={styles.sectionTick} />
+                    <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                        🔒  SECURITY TIPS
+                    </AppText>
                 </View>
+                <View style={styles.tipsCard}>
+                    {[
+                        'Regularly review your active devices',
+                        'Remove devices you no longer use',
+                        'Only mark your personal devices as trusted',
+                    ].map((tip, i) => (
+                        <View key={i} style={styles.tipRow}>
+                            <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>{tip}</AppText>
+                        </View>
+                    ))}
+                </View>
+
+                <View style={{ height: Spacing['8'] }} />
             </ScrollView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f8f9fa',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        fontSize: 16,
-        color: '#666',
-        marginTop: 12,
-    },
+    container: { flex: 1, backgroundColor: Colors.appBackground },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
+
     header: {
-        padding: 20,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backText: {
-        fontSize: 16,
-        color: '#007AFF',
-        fontWeight: '500',
-    },
-    content: {
-        paddingBottom: 40,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#333',
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-        paddingHorizontal: 20,
-        marginBottom: 24,
-    },
-    infoSection: {
+        backgroundColor: NAVY,
         flexDirection: 'row',
-        backgroundColor: '#f0f8ff',
-        padding: 16,
-        marginHorizontal: 20,
-        marginBottom: 10,
-        borderRadius: 8,
-        alignItems: 'flex-start',
-    },
-    infoText: {
-        flex: 1,
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-        marginLeft: 12,
-    },
-    section: {
-        backgroundColor: '#fff',
-        padding: 20,
-        marginBottom: 10,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
     },
-    sectionHeaderTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 16,
-    },
-    removeAllText: {
-        fontSize: 14,
-        color: '#e74c3c',
-        fontWeight: '500',
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    emptyStateText: {
-        fontSize: 16,
-        color: '#999',
-        marginTop: 12,
-    },
-    deviceCard: {
-        flexDirection: 'row',
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    deviceCardLast: {
-        borderBottomWidth: 0,
-    },
-    deviceIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#f0f8ff',
+    backBtn: {
+        width: 36, height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
     },
-    deviceInfo: {
-        flex: 1,
+    headerTitle: { fontSize: FontSize.lg },
+
+    scroll: { flex: 1 },
+    scrollContent: { padding: Spacing['4'] },
+
+    infoBanner: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: Spacing['2'],
+        backgroundColor: 'rgba(15,51,70,0.05)',
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(15,51,70,0.10)',
+        padding: Spacing['3'],
+        marginBottom: Spacing['4'],
     },
-    deviceHeader: {
+
+    sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
-        flexWrap: 'wrap',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+        marginTop: Spacing['1'],
     },
-    deviceName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginRight: 8,
+    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+    sectionLabel: { flex: 1, letterSpacing: 0.8 },
+
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['4'],
+        marginBottom: Spacing['4'],
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    divider: { height: 1, backgroundColor: Colors.cardBorder },
+    emptyCard: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        padding: Spacing['8'],
+        alignItems: 'center',
+        marginBottom: Spacing['4'],
+    },
+
+    deviceRow: {
+        flexDirection: 'row',
+        gap: Spacing['3'],
+        paddingVertical: Spacing['3'],
+    },
+    deviceIconWrap: {
+        width: 42, height: 42,
+        borderRadius: Radius.md,
+        backgroundColor: 'rgba(15,51,70,0.08)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexShrink: 0,
+    },
+    deviceIconWrapCurrent: {
+        backgroundColor: NAVY,
+    },
+    deviceInfo: { flex: 1 },
+    deviceNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: 3,
     },
     currentBadge: {
-        backgroundColor: '#E7F5E7',
-        paddingHorizontal: 8,
+        backgroundColor: Colors.successFaded,
+        paddingHorizontal: Spacing['2'],
         paddingVertical: 2,
-        borderRadius: 12,
-        marginRight: 6,
-    },
-    currentBadgeText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#2E7D32',
-    },
-    shieldIcon: {
-        marginLeft: 0,
-    },
-    devicePlatform: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4,
-    },
-    deviceActivity: {
-        fontSize: 12,
-        color: '#999',
-        marginBottom: 8,
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.success,
     },
     deviceActions: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
+        gap: Spacing['2'],
+        marginTop: Spacing['2'],
     },
-    trustButton: {
+    actionPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f0f8ff',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 6,
+        gap: 4,
+        backgroundColor: 'rgba(15,51,70,0.07)',
+        paddingHorizontal: Spacing['2'] + 2,
+        paddingVertical: 4,
+        borderRadius: Radius.full,
     },
-    trustButtonText: {
-        fontSize: 13,
-        color: '#007AFF',
-        fontWeight: '500',
-        marginLeft: 6,
+    actionPillTrusted: {
+        backgroundColor: Colors.successFaded,
     },
-    trustButtonTextActive: {
-        color: '#2E7D32',
-    },
-    removeButton: {
-        backgroundColor: '#fff',
+    removePill: {
+        paddingHorizontal: Spacing['2'] + 2,
+        paddingVertical: 4,
+        borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: '#e74c3c',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 6,
+        borderColor: Colors.error,
+        backgroundColor: Colors.errorFaded,
     },
-    removeButtonText: {
-        fontSize: 13,
-        color: '#e74c3c',
-        fontWeight: '500',
+
+    tipsCard: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        padding: Spacing['4'],
+        gap: Spacing['2'],
+        marginBottom: Spacing['4'],
     },
-    tipItem: {
+    tipRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 12,
-    },
-    tipText: {
-        flex: 1,
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-        marginLeft: 12,
+        gap: Spacing['2'],
     },
 });
 
