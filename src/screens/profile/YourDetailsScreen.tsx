@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     },
     initials: {
         fontSize: 24,
-        fontFamily: 'Merriweather-Bold',
+        fontFamily: 'Inter_700Bold',
         color: Colors.white,
     },
 

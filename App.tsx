@@ -4,12 +4,6 @@ import { View, ActivityIndicator } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useFonts,
-  Merriweather_400Regular,
-  Merriweather_700Bold,
-  Merriweather_400Regular_Italic,
-  Merriweather_700Bold_Italic,
-} from '@expo-google-fonts/merriweather';
-import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
@@ -35,10 +29,6 @@ const queryClient = new QueryClient({
 
 const App = () => {
     const [fontsLoaded] = useFonts({
-        Merriweather_400Regular,
-        Merriweather_700Bold,
-        Merriweather_400Regular_Italic,
-        Merriweather_700Bold_Italic,
         Inter_400Regular,
         Inter_500Medium,
         Inter_600SemiBold,

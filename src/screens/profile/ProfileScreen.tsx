@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     },
     initials: {
         fontSize: 30,
-        fontFamily: 'Merriweather-Bold',
+        fontFamily: 'Inter_700Bold',
         color: Colors.white,
         letterSpacing: 1,
     },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     },
     statValue: {
         fontSize: FontSize['2xl'],
-        fontFamily: 'Merriweather-Bold',
+        fontFamily: 'Inter_700Bold',
         color: NAVY,
         marginBottom: 3,
     },

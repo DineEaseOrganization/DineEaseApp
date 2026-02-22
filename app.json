@@ -36,7 +36,7 @@
       ],
       "package": "com.dineease.app",
       "versionCode": 3,
-      "jsEngine": "jsc",
+      "jsEngine": "hermes",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDse7alp224CMWmHvcDg--OxBuhGkdKi5I"

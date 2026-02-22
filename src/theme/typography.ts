@@ -1,16 +1,15 @@
 /**
  * DineEase Design System — Typography
  *
- * Display / Headings: Merriweather (serif, elegant)
- * Body / UI:          Inter (sans-serif, readable)
+ * All text: Inter (sans-serif, readable, compact)
  */
 
 export const FontFamily = {
-  // Merriweather variants
-  displayRegular: 'Merriweather_400Regular',
-  displayBold: 'Merriweather_700Bold',
-  displayItalic: 'Merriweather_400Regular_Italic',
-  displayBoldItalic: 'Merriweather_700Bold_Italic',
+  // Display / Headings — Inter Bold for strong hierarchy
+  displayRegular: 'Inter_400Regular',
+  displayBold: 'Inter_700Bold',
+  displayItalic: 'Inter_400Regular',
+  displayBoldItalic: 'Inter_700Bold',
 
   // Inter variants
   regular: 'Inter_400Regular',
