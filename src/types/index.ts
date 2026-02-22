@@ -21,7 +21,7 @@ export interface Restaurant {
     averageRating: number;
     totalReviews: number;
     priceRange: string;
-    coverImageUrl: string;
+    coverImageUrl: string | null;
     galleryImages: string[];
     description: string;
     amenities: string[];

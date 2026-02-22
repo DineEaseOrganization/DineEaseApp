@@ -1,518 +1,470 @@
-import React, {useState} from 'react';
+// src/screens/profile/YourDetailsScreen.tsx
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
-import {useAuth} from '../../context/AuthContext';
-import {profileService} from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { profileService } from '../../services/api';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+
+const NAVY = Colors.primary;
 
 interface YourDetailsScreenProps {
-  navigation: any;
+    navigation: any;
 }
 
-const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({navigation}) => {
-  const {user, refreshUserData, logout} = useAuth();
+const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => {
+    const { user, refreshUserData } = useAuth();
 
-  const [firstName, setFirstName] = useState(user?.firstName || '');
-  const [lastName, setLastName] = useState(user?.lastName || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [phoneCountryCode, setPhoneCountryCode] = useState(user?.phoneCountryCode || '+357');
-  const [phone, setPhone] = useState(user?.phone || '');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+    const [firstName, setFirstName] = useState(user?.firstName || '');
+    const [lastName, setLastName] = useState(user?.lastName || '');
+    const [phoneCountryCode, setPhoneCountryCode] = useState(user?.phoneCountryCode || '+357');
+    const [phone, setPhone] = useState(user?.phone || '');
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
-    if (!firstName || !lastName || !phone) {
-      Alert.alert('Missing Information', 'Please fill in all required fields.');
-      return;
-    }
+    const handleSave = async () => {
+        if (!firstName || !lastName || !phone) {
+            Alert.alert('Missing Information', 'Please fill in all required fields.'); return;
+        }
+        if (firstName.length > 120 || lastName.length > 120) {
+            Alert.alert('Invalid Input', 'Name must not exceed 120 characters.'); return;
+        }
+        if (phone.length > 32) {
+            Alert.alert('Invalid Input', 'Phone number must not exceed 32 characters.'); return;
+        }
+        if (!/^\+?[0-9]{1,4}$/.test(phoneCountryCode)) {
+            Alert.alert('Invalid Input', 'Invalid phone country code format.'); return;
+        }
 
-    // Validate name lengths
-    if (firstName.length > 120 || lastName.length > 120) {
-      Alert.alert('Invalid Input', 'Name must not exceed 120 characters.');
-      return;
-    }
+        setIsSaving(true);
+        try {
+            const updateData: any = {};
+            if (firstName !== user?.firstName) updateData.firstName = firstName;
+            if (lastName !== user?.lastName) updateData.lastName = lastName;
+            if (phone !== user?.phone) updateData.phone = phone;
+            if (phoneCountryCode !== user?.phoneCountryCode) updateData.phoneCountryCode = phoneCountryCode;
 
-    // Validate phone
-    if (phone.length > 32) {
-      Alert.alert('Invalid Input', 'Phone number must not exceed 32 characters.');
-      return;
-    }
+            if (Object.keys(updateData).length === 0) { setIsEditing(false); return; }
 
-    // Validate phone country code
-    const countryCodeRegex = /^\+?[0-9]{1,4}$/;
-    if (!countryCodeRegex.test(phoneCountryCode)) {
-      Alert.alert('Invalid Input', 'Invalid phone country code format.');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const updateData: any = {};
-
-      // Only include changed fields
-      if (firstName !== user?.firstName) updateData.firstName = firstName;
-      if (lastName !== user?.lastName) updateData.lastName = lastName;
-      if (phone !== user?.phone) updateData.phone = phone;
-      if (phoneCountryCode !== user?.phoneCountryCode) updateData.phoneCountryCode = phoneCountryCode;
-
-      // If nothing changed
-      if (Object.keys(updateData).length === 0) {
-        setIsEditing(false);
-        return;
-      }
-
-      const response = await profileService.updateProfile(updateData);
-
-      if (response.success) {
-        // Refresh user data from context
-        await refreshUserData();
-
-        Alert.alert(
-          'Success',
-          'Your details have been updated successfully.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setIsEditing(false);
-              }
+            const response = await profileService.updateProfile(updateData);
+            if (response.success) {
+                await refreshUserData();
+                Alert.alert('Saved', 'Your details have been updated.', [{ text: 'OK', onPress: () => setIsEditing(false) }]);
+            } else {
+                Alert.alert('Error', response.message || 'Failed to update profile.');
             }
-          ]
-        );
-      } else {
-        Alert.alert('Error', response.message || 'Failed to update profile.');
-      }
-    } catch (error: any) {
-      console.error('Update profile error:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to update profile.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
-  const handleCancel = () => {
-    setFirstName(user?.firstName || '');
-    setLastName(user?.lastName || '');
-    setEmail(user?.email || '');
-    setPhoneCountryCode(user?.phoneCountryCode || '+357');
-    setPhone(user?.phone || '');
-    setIsEditing(false);
-  };
+    const handleCancel = () => {
+        setFirstName(user?.firstName || '');
+        setLastName(user?.lastName || '');
+        setPhoneCountryCode(user?.phoneCountryCode || '+357');
+        setPhone(user?.phone || '');
+        setIsEditing(false);
+    };
 
-  const handleVerifyEmail = () => {
-    navigation.navigate('EmailVerification', {email: user?.email || ''});
-  };
+    const initials = user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : 'U';
 
-  const handleVerifyPhone = () => {
-    Alert.alert('Verify Phone', 'Phone verification functionality coming soon!');
-  };
+    return (
+        <SafeAreaView style={styles.container}>
 
-  const handleChangePassword = () => {
-    navigation.navigate('ChangePassword');
-  };
-
-  const handleDeleteAccount = () => {
-    navigation.navigate('DeleteAccount');
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          {isEditing ? (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity onPress={handleCancel} disabled={isSaving}>
-                <Text style={[styles.cancelText, isSaving && styles.disabledText]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-                {isSaving ? (
-                  <ActivityIndicator size="small" color="#007AFF"/>
+            {/* ── Navy header ── */}
+            <View style={styles.header}>
+                {isEditing ? (
+                    <>
+                        <TouchableOpacity onPress={handleCancel} disabled={isSaving} style={styles.headerSideBtn}>
+                            <AppText variant="captionMedium" color="rgba(255,255,255,0.75)">Cancel</AppText>
+                        </TouchableOpacity>
+                        <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Your Details</AppText>
+                        <TouchableOpacity onPress={handleSave} disabled={isSaving} style={styles.headerSideBtn}>
+                            {isSaving
+                                ? <ActivityIndicator size="small" color={Colors.white} />
+                                : <AppText variant="bodySemiBold" color={Colors.white}>Save</AppText>
+                            }
+                        </TouchableOpacity>
+                    </>
                 ) : (
-                  <Text style={styles.saveText}>Save</Text>
+                    <>
+                        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                            <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                        </TouchableOpacity>
+                        <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Your Details</AppText>
+                        <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.headerSideBtn}>
+                            <AppText variant="captionMedium" color="rgba(255,255,255,0.85)">Edit</AppText>
+                        </TouchableOpacity>
+                    </>
                 )}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.backText}>← Back</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>Your details</Text>
-            {!isEditing && (
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Text style={styles.editButton}>Edit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Profile Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>First Name *</Text>
-              <TextInput
-                style={[styles.input, !isEditing && styles.inputDisabled]}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="First name"
-                editable={isEditing}
-                maxLength={120}
-              />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Last Name *</Text>
-              <TextInput
-                style={[styles.input, !isEditing && styles.inputDisabled]}
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Last name"
-                editable={isEditing}
-                maxLength={120}
-              />
-            </View>
-          </View>
-
-          {/* Contact Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contact Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.emailContainer}>
-                <Text style={styles.emailText}>{email}</Text>
-                {user?.emailVerified ? (
-                  <View style={styles.verifiedBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color="#2E7D32"/>
-                    <Text style={styles.verifiedText}>Verified</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.verifyButton}
-                    onPress={handleVerifyEmail}
-                  >
-                    <Text style={styles.verifyButtonText}>Verify</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <Text style={styles.helperText}>
-                Email cannot be changed. Contact support if you need to update it.
-              </Text>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number *</Text>
-              <View style={styles.phoneInputContainer}>
-                <TextInput
-                  style={[styles.countryCodeInput, !isEditing && styles.inputDisabled]}
-                  value={phoneCountryCode}
-                  onChangeText={setPhoneCountryCode}
-                  placeholder="+357"
-                  keyboardType="phone-pad"
-                  editable={isEditing}
-                  maxLength={5}
-                />
-                <View style={styles.phoneInputWrapper}>
-                  <TextInput
-                    style={[styles.phoneInput, !isEditing && styles.inputDisabled]}
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="Phone number"
-                    keyboardType="phone-pad"
-                    editable={isEditing}
-                    maxLength={32}
-                  />
-                  {user?.phoneVerified ? (
-                    <View style={styles.verifiedBadgePhone}>
-                      <Ionicons name="checkmark-circle" size={16} color="#2E7D32"/>
-                      <Text style={styles.verifiedText}>Verified</Text>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* ── Avatar block ── */}
+                <View style={styles.avatarBlock}>
+                    <View style={styles.avatarRing}>
+                        <View style={styles.avatar}>
+                            <AppText style={styles.initials}>{initials}</AppText>
+                        </View>
                     </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.verifyButtonPhone}
-                      onPress={handleVerifyPhone}
-                    >
-                      <Text style={styles.verifyButtonText}>Verify</Text>
-                    </TouchableOpacity>
-                  )}
+                    <AppText variant="cardTitle" color={NAVY}>
+                        {user?.firstName} {user?.lastName}
+                    </AppText>
+                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: 2 }}>
+                        {user?.email}
+                    </AppText>
                 </View>
-              </View>
-            </View>
-          </View>
 
-          {/* Security */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Security</Text>
+                {/* ── Profile Information ── */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={styles.sectionTick} />
+                    <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                        👤  PROFILE INFORMATION
+                    </AppText>
+                </View>
+                <View style={styles.card}>
+                    {/* First name */}
+                    <View style={styles.fieldRow}>
+                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.fieldLabel}>FIRST NAME</AppText>
+                        <TextInput
+                            style={[styles.fieldInput, !isEditing && styles.fieldInputReadOnly]}
+                            value={firstName}
+                            onChangeText={setFirstName}
+                            placeholder="First name"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            editable={isEditing}
+                            maxLength={120}
+                        />
+                    </View>
+                    <View style={styles.divider} />
+                    {/* Last name */}
+                    <View style={styles.fieldRow}>
+                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.fieldLabel}>LAST NAME</AppText>
+                        <TextInput
+                            style={[styles.fieldInput, !isEditing && styles.fieldInputReadOnly]}
+                            value={lastName}
+                            onChangeText={setLastName}
+                            placeholder="Last name"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            editable={isEditing}
+                            maxLength={120}
+                        />
+                    </View>
+                </View>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleChangePassword}
-            >
-              <View style={styles.actionButtonLeft}>
-                <Ionicons name="lock-closed-outline" size={20} color="#007AFF"/>
-                <Text style={styles.actionButtonText}>Change Password</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#666"/>
-            </TouchableOpacity>
-          </View>
+                {/* ── Contact Information ── */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={styles.sectionTick} />
+                    <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                        📬  CONTACT INFORMATION
+                    </AppText>
+                </View>
+                <View style={styles.card}>
+                    {/* Email */}
+                    <View style={styles.fieldRow}>
+                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.fieldLabel}>EMAIL</AppText>
+                        <View style={styles.fieldValueRow}>
+                            <AppText variant="body" color={Colors.textOnLightSecondary} style={{ flex: 1 }} numberOfLines={1}>
+                                {user?.email}
+                            </AppText>
+                            {user?.emailVerified ? (
+                                <View style={styles.verifiedPill}>
+                                    <Ionicons name="checkmark-circle" size={13} color={Colors.success} />
+                                    <AppText variant="captionMedium" color={Colors.success}>Verified</AppText>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.verifyBtn}
+                                    onPress={() => navigation.navigate('EmailVerification', { email: user?.email || '' })}
+                                >
+                                    <AppText variant="captionMedium" color={Colors.white}>Verify</AppText>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={styles.helperText}>
+                            Email cannot be changed. Contact support if needed.
+                        </AppText>
+                    </View>
 
-          {/* Danger Zone */}
-          <View style={styles.section}>
-            <Text style={styles.dangerTitle}>Danger Zone</Text>
+                    <View style={styles.divider} />
 
-            <TouchableOpacity
-              style={styles.deleteAccountButton}
-              onPress={handleDeleteAccount}
-            >
-              <Ionicons name="trash-outline" size={20} color="#e74c3c"/>
-              <Text style={styles.deleteAccountText}>Delete Account</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+                    {/* Phone */}
+                    <View style={styles.fieldRow}>
+                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.fieldLabel}>PHONE NUMBER</AppText>
+                        <View style={styles.phoneRow}>
+                            <TextInput
+                                style={[styles.countryCodeInput, !isEditing && styles.fieldInputReadOnly]}
+                                value={phoneCountryCode}
+                                onChangeText={setPhoneCountryCode}
+                                placeholder="+357"
+                                placeholderTextColor={Colors.textOnLightTertiary}
+                                keyboardType="phone-pad"
+                                editable={isEditing}
+                                maxLength={5}
+                            />
+                            <View style={{ flex: 1, position: 'relative' }}>
+                                <TextInput
+                                    style={[styles.phoneInput, !isEditing && styles.fieldInputReadOnly, { paddingRight: 90 }]}
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    placeholder="Phone number"
+                                    placeholderTextColor={Colors.textOnLightTertiary}
+                                    keyboardType="phone-pad"
+                                    editable={isEditing}
+                                    maxLength={32}
+                                />
+                                {user?.phoneVerified ? (
+                                    <View style={styles.phoneVerifiedPill}>
+                                        <Ionicons name="checkmark-circle" size={13} color={Colors.success} />
+                                        <AppText variant="captionMedium" color={Colors.success}>Verified</AppText>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.phoneVerifyBtn}
+                                        onPress={() => Alert.alert('Verify Phone', 'Phone verification coming soon!')}
+                                    >
+                                        <AppText variant="captionMedium" color={Colors.white}>Verify</AppText>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* ── Security ── */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={styles.sectionTick} />
+                    <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                        🔒  SECURITY
+                    </AppText>
+                </View>
+                <View style={styles.card}>
+                    <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('ChangePassword')} activeOpacity={0.7}>
+                        <View style={styles.menuIconWrap}>
+                            <Ionicons name="lock-closed-outline" size={18} color={NAVY} />
+                        </View>
+                        <AppText variant="bodyMedium" color={Colors.textOnLight} style={{ flex: 1 }}>Change Password</AppText>
+                        <Ionicons name="chevron-forward" size={17} color={Colors.textOnLightTertiary} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* ── Danger Zone ── */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={[styles.sectionTick, { backgroundColor: Colors.error }]} />
+                    <AppText variant="label" color={Colors.error} style={styles.sectionLabel}>
+                        ⚠️  DANGER ZONE
+                    </AppText>
+                </View>
+                <View style={styles.card}>
+                    <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('DeleteAccount')} activeOpacity={0.7}>
+                        <View style={[styles.menuIconWrap, { backgroundColor: Colors.errorFaded }]}>
+                            <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                        </View>
+                        <AppText variant="bodyMedium" color={Colors.error} style={{ flex: 1 }}>Delete Account</AppText>
+                        <Ionicons name="chevron-forward" size={17} color={Colors.error} />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={{ height: Spacing['8'] }} />
+            </ScrollView>
+        </SafeAreaView>
+    );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  cancelText: {
-    fontSize: 16,
-    color: '#e74c3c',
-    fontWeight: '500',
-  },
-  saveText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  disabledText: {
-    opacity: 0.5,
-  },
-  content: {
-    paddingBottom: 40,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  editButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  section: {
-    backgroundColor: '#fff',
-    padding: 20,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  dangerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#e74c3c',
-    marginBottom: 16,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
-  },
-  inputDisabled: {
-    backgroundColor: '#f8f9fa',
-    color: '#666',
-  },
-  emailContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
-  },
-  emailText: {
-    fontSize: 16,
-    color: '#666',
-    flex: 1,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#E7F5E7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2E7D32',
-  },
-  verifyButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  verifyButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  phoneInputContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  countryCodeInput: {
-    width: 80,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
-  },
-  phoneInputWrapper: {
-    flex: 1,
-    position: 'relative',
-  },
-  phoneInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingRight: 100,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
-  },
-  verifiedBadgePhone: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#E7F5E7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  verifyButtonPhone: {
-    position: 'absolute',
-    right: 12,
-    top: 10,
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  actionButtonLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  deleteAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  deleteAccountText: {
-    fontSize: 16,
-    color: '#e74c3c',
-    fontWeight: '500',
-  },
+    container: { flex: 1, backgroundColor: Colors.appBackground },
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    header: {
+        backgroundColor: NAVY,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
+    },
+    backBtn: {
+        width: 36, height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: { fontSize: FontSize.lg },
+    headerSideBtn: { minWidth: 52, alignItems: 'flex-end' },
+
+    // ── Scroll ────────────────────────────────────────────────────────────────
+    scroll: { flex: 1 },
+    scrollContent: { padding: Spacing['4'] },
+
+    // ── Avatar block ──────────────────────────────────────────────────────────
+    avatarBlock: {
+        alignItems: 'center',
+        paddingVertical: Spacing['5'],
+        marginBottom: Spacing['2'],
+    },
+    avatarRing: {
+        width: 80, height: 80,
+        borderRadius: Radius.full,
+        borderWidth: 2,
+        borderColor: Colors.cardBorder,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: Spacing['3'],
+        backgroundColor: Colors.cardBackground,
+    },
+    avatar: {
+        width: 68, height: 68,
+        borderRadius: Radius.full,
+        backgroundColor: NAVY,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    initials: {
+        fontSize: 24,
+        fontFamily: 'Merriweather-Bold',
+        color: Colors.white,
+    },
+
+    // ── Section labels ────────────────────────────────────────────────────────
+    sectionLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+        marginTop: Spacing['1'],
+    },
+    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+    sectionLabel: { letterSpacing: 0.8 },
+
+    // ── Card ──────────────────────────────────────────────────────────────────
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['4'],
+        marginBottom: Spacing['4'],
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    divider: { height: 1, backgroundColor: Colors.cardBorder },
+
+    // ── Field rows ────────────────────────────────────────────────────────────
+    fieldRow: { paddingVertical: Spacing['3'] },
+    fieldLabel: {
+        letterSpacing: 0.8,
+        fontSize: 10,
+        marginBottom: 5,
+    },
+    fieldValueRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+    },
+    fieldInput: {
+        fontSize: FontSize.sm,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+        paddingVertical: 4,
+    },
+    fieldInputReadOnly: {
+        color: Colors.textOnLightSecondary,
+    },
+    helperText: { marginTop: 4 },
+
+    // Verified / verify pills
+    verifiedPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: Colors.successFaded,
+        borderRadius: Radius.full,
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: 4,
+    },
+    verifyBtn: {
+        backgroundColor: Colors.accent,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: 4,
+        borderRadius: Radius.full,
+    },
+
+    // Phone row
+    phoneRow: { flexDirection: 'row', gap: Spacing['2'] },
+    countryCodeInput: {
+        width: 64,
+        fontSize: FontSize.sm,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+        paddingVertical: 4,
+        textAlign: 'center',
+    },
+    phoneInput: {
+        flex: 1,
+        fontSize: FontSize.sm,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+        paddingVertical: 4,
+    },
+    phoneVerifiedPill: {
+        position: 'absolute',
+        right: 0,
+        top: 3,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: Colors.successFaded,
+        borderRadius: Radius.full,
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: 4,
+    },
+    phoneVerifyBtn: {
+        position: 'absolute',
+        right: 0,
+        top: 1,
+        backgroundColor: Colors.accent,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: 4,
+        borderRadius: Radius.full,
+    },
+
+    // Menu rows (Security / Danger Zone)
+    menuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['3'],
+        paddingVertical: Spacing['3'],
+    },
+    menuIconWrap: {
+        width: 34, height: 34,
+        borderRadius: Radius.sm,
+        backgroundColor: 'rgba(15,51,70,0.07)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 });
 
 export default YourDetailsScreen;

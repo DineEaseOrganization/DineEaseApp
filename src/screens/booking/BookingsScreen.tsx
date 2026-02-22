@@ -1,12 +1,25 @@
 // src/screens/booking/BookingsScreen.tsx
-import React, {useCallback, useState} from 'react';
-import {Alert, SafeAreaView, FlatList, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator} from 'react-native';
-import {Reservation} from '../../types';
-import {BookingsScreenProps} from '../../navigation/AppNavigator';
-import {useReservations} from '../../hooks/useReservations';
-import {mapReservationDtosToReservations} from '../../utils/reservationMapper';
-import {processingService} from '../../services/api/processingService';
-import {useFocusEffect} from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
+import {
+    Alert,
+    SafeAreaView,
+    FlatList,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+    ActivityIndicator,
+} from 'react-native';
+import { Reservation } from '../../types';
+import { BookingsScreenProps } from '../../navigation/AppNavigator';
+import { useReservations } from '../../hooks/useReservations';
+import { mapReservationDtosToReservations } from '../../utils/reservationMapper';
+import { processingService } from '../../services/api/processingService';
+import { useFocusEffect } from '@react-navigation/native';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+import AppButton from '../../components/ui/AppButton';
+
+const NAVY = Colors.primary;
 
 const formatReservationDate = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -15,279 +28,257 @@ const formatReservationDate = (dateStr: string): string => {
 
 const isReservationPast = (date: string, time: string): boolean => {
     const [hours, minutes] = time.split(':').map(Number);
-    const reservationDateTime = new Date(date);
-    reservationDateTime.setHours(hours, minutes, 0, 0);
-    return reservationDateTime < new Date();
+    const dt = new Date(date);
+    dt.setHours(hours, minutes, 0, 0);
+    return dt < new Date();
 };
 
-const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
-    const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
-    const [reviewedReservationIds, setReviewedReservationIds] = useState<Set<number>>(new Set());
-    const {
-        reservations: reservationDtos,
-        isLoading,
-        error,
-        refetch,
-        cancelReservation: cancelReservationApi,
-        totalElements,
-        hasMore,
-        loadMore
-    } = useReservations({
-        usePagination: true,
-        filter: filter,
-        pageSize: 20
-    });
+const FILTERS = [
+    { key: 'all',      label: 'All' },
+    { key: 'upcoming', label: 'Upcoming' },
+    { key: 'past',     label: 'Past' },
+] as const;
 
-    // Fetch reviewed reservation IDs on focus (so it refreshes after submitting a review)
+type FilterKey = typeof FILTERS[number]['key'];
+
+const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
+    const [filter, setFilter] = useState<FilterKey>('all');
+    const [reviewedReservationIds, setReviewedReservationIds] = useState<Set<number>>(new Set());
+
+    const { reservations: reservationDtos, isLoading, error, refetch, cancelReservation: cancelReservationApi, hasMore, loadMore } =
+        useReservations({ usePagination: true, filter, pageSize: 20 });
+
     useFocusEffect(
         useCallback(() => {
             processingService.getCustomerReviews()
-                .then(reviews => {
-                    const ids = new Set(reviews.map(r => r.reservationId));
-                    setReviewedReservationIds(ids);
-                })
-                .catch(() => {
-                    // If fetch fails, don't block — just allow reviews
-                });
+                .then(reviews => setReviewedReservationIds(new Set(reviews.map(r => r.reservationId))))
+                .catch(() => {});
         }, [])
     );
 
-    // Map backend DTOs to UI Reservation type
     const reservations = mapReservationDtosToReservations(reservationDtos, undefined, reviewedReservationIds);
 
-    const handleReviewPress = (reservation: Reservation) => {
-        // Navigate to ReviewScreen within BookingsStack
-        navigation.navigate('ReviewScreen', { reservation });
-    };
+    const handleReviewPress = (reservation: Reservation) => navigation.navigate('ReviewScreen', { reservation });
 
     const handleCancelReservation = async (reservationId: number) => {
-        Alert.alert(
-            'Cancel Reservation',
-            'Are you sure you want to cancel this reservation?',
-            [
-                {text: 'No', style: 'cancel'},
-                {
-                    text: 'Yes, Cancel',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await cancelReservationApi(reservationId);
-                            Alert.alert('Cancelled', 'Your reservation has been cancelled.');
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to cancel reservation. Please try again.');
-                            console.error('Error canceling reservation:', error);
-                        }
+        Alert.alert('Cancel Reservation', 'Are you sure you want to cancel this reservation?', [
+            { text: 'No', style: 'cancel' },
+            {
+                text: 'Yes, Cancel', style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await cancelReservationApi(reservationId);
+                        Alert.alert('Cancelled', 'Your reservation has been cancelled.');
+                    } catch {
+                        Alert.alert('Error', 'Failed to cancel reservation. Please try again.');
                     }
-                }
-            ]
-        );
+                },
+            },
+        ]);
     };
 
-    const handleTagPress = (tagName: string, note?: string | null) => {
-        const trimmedNote = note?.trim();
-        Alert.alert(
-            tagName,
-            trimmedNote ? trimmedNote : 'No note provided.'
-        );
+    const handleTagPress = (tagName: string, note?: string | null) =>
+        Alert.alert(tagName, note?.trim() || 'No note provided.');
+
+    // ── Status config ─────────────────────────────────────────────────────────
+    const statusConfig: Record<string, { badge: object; textColor: string; label: string }> = {
+        confirmed: { badge: styles.statusConfirmed, textColor: Colors.success,  label: 'CONFIRMED' },
+        pending:   { badge: styles.statusPending,   textColor: Colors.warning,  label: 'PENDING'   },
+        completed: { badge: styles.statusCompleted, textColor: NAVY,            label: 'COMPLETED' },
+        cancelled: { badge: styles.statusCancelled, textColor: Colors.error,    label: 'CANCELLED' },
+        no_show:   { badge: styles.statusNoShow,    textColor: Colors.warning,  label: 'NO SHOW'   },
     };
 
+    // ── Status accent colour (left strip + header tint) ───────────────────────
+    const statusAccent: Record<string, string> = {
+        confirmed: Colors.success,
+        pending:   Colors.warning,
+        completed: NAVY,
+        cancelled: Colors.error,
+        no_show:   Colors.warning,
+    };
+
+    // ── Booking card ──────────────────────────────────────────────────────────
     const renderBookingCard = (reservation: Reservation) => {
-        const isPast = isReservationPast(reservation.date, reservation.time);
-        const isNoShow = reservation.status === 'no_show';
+        const isPast    = isReservationPast(reservation.date, reservation.time);
+        const isNoShow  = reservation.status === 'no_show';
         const canCancel = (reservation.status === 'confirmed' || reservation.status === 'pending') && !isPast;
         const canReview = reservation.canReview && reservation.status === 'completed';
+        const key       = isNoShow ? 'no_show' : reservation.status;
+        const { badge, textColor, label } = statusConfig[key] ?? statusConfig.pending;
+        const accent    = statusAccent[key] ?? NAVY;
 
         return (
-        <View key={reservation.id} style={[styles.bookingCard, isNoShow && styles.bookingCardNoShow]}>
-            {/* Status Badge - Top Right Corner */}
-            <View style={[
-                styles.statusBadge,
-                reservation.status === 'confirmed' && styles.statusConfirmed,
-                reservation.status === 'pending' && styles.statusPending,
-                reservation.status === 'completed' && styles.statusCompleted,
-                reservation.status === 'cancelled' && styles.statusCancelled,
-                isNoShow && styles.statusNoShow,
-            ]}>
-                <Text style={[
-                    styles.statusText,
-                    reservation.status === 'confirmed' && styles.statusTextConfirmed,
-                    reservation.status === 'pending' && styles.statusTextPending,
-                    reservation.status === 'completed' && styles.statusTextCompleted,
-                    reservation.status === 'cancelled' && styles.statusTextCancelled,
-                    isNoShow && styles.statusTextNoShow,
-                ]}>
-                    {isNoShow ? 'NO SHOW' : reservation.status.toUpperCase()}
-                </Text>
-            </View>
+            <View key={reservation.id} style={[styles.card, { borderLeftColor: accent, borderLeftWidth: 3 }]}>
 
-            {/* Restaurant Name - Full Width */}
-            <Text style={styles.restaurantName} numberOfLines={2} ellipsizeMode="tail">
-                {reservation.restaurant.name}
-            </Text>
+                {/* ── Header row: name + status badge ── */}
+                <View style={styles.cardHeader}>
+                    <AppText variant="cardTitle" color={Colors.textOnLight} numberOfLines={1} style={styles.restaurantName}>
+                        {reservation.restaurant.name}
+                    </AppText>
+                    <View style={[styles.statusBadge, badge]}>
+                        <AppText variant="captionMedium" color={textColor} style={styles.statusText}>{label}</AppText>
+                    </View>
+                </View>
 
-            {/* Date & Time Row */}
-            <View style={styles.infoRow}>
-                <View style={styles.leftInfoItem}>
-                    <Text style={styles.icon}>📅</Text>
-                    <Text style={styles.infoText}>{formatReservationDate(reservation.date)}</Text>
+                {/* ── Inline detail pills ── */}
+                <View style={styles.pillRow}>
+                    <View style={styles.pill}>
+                        <AppText style={styles.pillIcon}>📅</AppText>
+                        <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                            {formatReservationDate(reservation.date)}
+                        </AppText>
+                    </View>
+                    <View style={styles.pillDot} />
+                    <View style={styles.pill}>
+                        <AppText style={styles.pillIcon}>🕐</AppText>
+                        <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                            {reservation.time}
+                        </AppText>
+                    </View>
+                    <View style={styles.pillDot} />
+                    <View style={styles.pill}>
+                        <AppText style={styles.pillIcon}>👥</AppText>
+                        <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                            {reservation.partySize}
+                        </AppText>
+                    </View>
                 </View>
-                <View style={styles.rightInfoItem}>
-                    <Text style={styles.icon}>🕐</Text>
-                    <Text style={styles.infoText}>{reservation.time}</Text>
-                </View>
-            </View>
 
-            {/* Party Size & Confirmation Row */}
-            <View style={styles.infoRow}>
-                <View style={styles.leftInfoItem}>
-                    <Text style={styles.icon}>👥</Text>
-                    <Text style={styles.infoText}>{reservation.partySize} {reservation.partySize === 1 ? 'guest' : 'guests'}</Text>
+                {/* ── Confirmation code ── */}
+                <View style={styles.codeRow}>
+                    <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.codeLabel}>REF</AppText>
+                    <AppText variant="captionMedium" color={NAVY} style={styles.code}>
+                        {reservation.confirmationCode}
+                    </AppText>
                 </View>
-                <View style={styles.rightInfoItem}>
-                    <Text style={styles.confirmationLabel}>Code:</Text>
-                    <Text style={styles.confirmationCode}>{reservation.confirmationCode}</Text>
-                </View>
-            </View>
 
-            {/* Reservation Tags */}
-            {reservation.tags && reservation.tags.length > 0 && (
-                <View style={styles.tagsSection}>
-                    <Text style={styles.tagsLabel}>Tags</Text>
+                {/* ── Tags ── */}
+                {reservation.tags && reservation.tags.length > 0 && (
                     <View style={styles.tagsRow}>
                         {reservation.tags.map((tag) => (
                             <TouchableOpacity
                                 key={tag.tagId}
                                 style={styles.tagPill}
                                 onPress={() => handleTagPress(tag.tagName, tag.note)}
-                                activeOpacity={0.85}
+                                activeOpacity={0.8}
                             >
-                                {tag.icon ? <Text style={styles.tagIcon}>{tag.icon}</Text> : null}
-                                <Text style={styles.tagText} numberOfLines={1}>
-                                    {tag.tagName}
-                                </Text>
+                                {tag.icon ? <AppText style={styles.tagIcon}>{tag.icon}</AppText> : null}
+                                <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>{tag.tagName}</AppText>
                             </TouchableOpacity>
                         ))}
                     </View>
-                </View>
-            )}
+                )}
 
-            {/* Special Requests */}
-            {reservation.specialRequests && (
-                <View style={styles.specialRequestsContainer}>
-                    <Text style={styles.specialRequestsLabel}>💭</Text>
-                    <Text style={styles.specialRequestsText} numberOfLines={2}>
-                        {reservation.specialRequests}
-                    </Text>
-                </View>
-            )}
+                {/* ── Special requests ── */}
+                {reservation.specialRequests && (
+                    <View style={styles.requestRow}>
+                        <AppText style={styles.requestIcon}>💭</AppText>
+                        <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }} numberOfLines={2}>
+                            {reservation.specialRequests}
+                        </AppText>
+                    </View>
+                )}
 
-            {/* Action Buttons */}
-            {(canCancel || canReview) && (
-                <View style={styles.actionButtons}>
-                    {canCancel && (
-                        <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() => handleCancelReservation(reservation.id)}
-                        >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                    )}
-
-                    {canReview && (
-                        <TouchableOpacity
-                            style={styles.reviewButton}
-                            onPress={() => handleReviewPress(reservation)}
-                        >
-                            <Text style={styles.reviewButtonText}>Leave a Review</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
-        </View>
+                {/* ── Actions ── */}
+                {(canCancel || canReview) && (
+                    <View style={styles.actions}>
+                        {canCancel && (
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => handleCancelReservation(reservation.id)}>
+                                <AppText variant="captionMedium" color={Colors.error}>✕  Cancel</AppText>
+                            </TouchableOpacity>
+                        )}
+                        {canReview && (
+                            <TouchableOpacity style={styles.reviewBtn} onPress={() => handleReviewPress(reservation)}>
+                                <AppText variant="captionMedium" color={Colors.white}>⭐  Leave a Review</AppText>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
+            </View>
         );
     };
 
     return (
         <SafeAreaView style={styles.container}>
+
+            {/* ── Navy header ── */}
             <View style={styles.header}>
-                <Text style={styles.title}>My Bookings</Text>
+                <View style={styles.headerRow}>
+                    <AppText variant="h3" color={Colors.white} style={styles.headerTitle}>My Bookings</AppText>
+                </View>
+                {/* Filter chips */}
+                <View style={styles.filterRow}>
+                    {FILTERS.map(({ key, label }) => {
+                        const active = filter === key;
+                        return (
+                            <TouchableOpacity
+                                key={key}
+                                style={[styles.filterChip, active && styles.filterChipActive]}
+                                onPress={() => setFilter(key)}
+                                activeOpacity={0.8}
+                            >
+                                <AppText
+                                    variant="captionMedium"
+                                    color={active ? Colors.primary : 'rgba(255,255,255,0.75)'}
+                                >
+                                    {label}
+                                </AppText>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
             </View>
 
-            {/* Filter Buttons */}
-            <View style={styles.filterContainer}>
-                {[
-                    {key: 'all', label: 'All'},
-                    {key: 'upcoming', label: 'Upcoming'},
-                    {key: 'past', label: 'Past'}
-                ].map((filterOption) => (
-                    <TouchableOpacity
-                        key={filterOption.key}
-                        style={[
-                            styles.filterButton,
-                            filter === filterOption.key && styles.filterButtonActive
-                        ]}
-                        onPress={() => setFilter(filterOption.key as 'all' | 'upcoming' | 'past')}
-                    >
-                        <Text style={[
-                            styles.filterText,
-                            filter === filterOption.key && styles.filterTextActive
-                        ]}>
-                            {filterOption.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            {/* Loading State */}
+            {/* ── Content ── */}
             {isLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={styles.loadingText}>Loading your bookings...</Text>
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color={NAVY} />
+                    <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginTop: Spacing['3'] }}>
+                        Loading your bookings...
+                    </AppText>
                 </View>
             ) : error ? (
-                /* Error State */
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Failed to load bookings</Text>
-                    <Text style={styles.errorSubtext}>{error.message}</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
-                    </TouchableOpacity>
+                <View style={styles.center}>
+                    <AppText style={{ fontSize: 40, marginBottom: Spacing['3'] }}>⚠️</AppText>
+                    <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>
+                        Couldn't load bookings
+                    </AppText>
+                    <AppText variant="body" color={Colors.textOnLightSecondary} style={{ textAlign: 'center', marginBottom: Spacing['5'] }}>
+                        {error.message}
+                    </AppText>
+                    <AppButton label="Retry" onPress={refetch} />
                 </View>
             ) : (
-                /* Data State */
                 <FlatList
                     data={reservations}
                     renderItem={({ item }) => renderBookingCard(item)}
                     keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={styles.bookingsList}
+                    contentContainerStyle={styles.list}
                     showsVerticalScrollIndicator={false}
-                    onEndReached={() => {
-                        if (hasMore && !isLoading) {
-                            loadMore?.();
-                        }
-                    }}
+                    onEndReached={() => { if (hasMore && !isLoading) loadMore?.(); }}
                     onEndReachedThreshold={0.5}
                     ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyStateText}>No bookings found</Text>
-                            <Text style={styles.emptyStateSubtext}>
-                                {filter === 'upcoming'
-                                    ? "You don't have any upcoming reservations."
-                                    : filter === 'past'
-                                        ? "You don't have any past reservations."
-                                        : "You haven't made any reservations yet."
-                                }
-                            </Text>
+                        <View style={styles.empty}>
+                            <AppText style={styles.emptyIcon}>📅</AppText>
+                            <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>
+                                No bookings found
+                            </AppText>
+                            <AppText variant="body" color={Colors.textOnLightSecondary} style={{ textAlign: 'center' }}>
+                                {filter === 'upcoming' ? "You don't have any upcoming reservations."
+                                    : filter === 'past' ? "You don't have any past reservations."
+                                        : "You haven't made any reservations yet."}
+                            </AppText>
                         </View>
                     }
-                    ListFooterComponent={
-                        hasMore && !isLoading ? (
-                            <View style={styles.loadMoreContainer}>
-                                <ActivityIndicator size="small" color="#007AFF" />
-                                <Text style={styles.loadMoreText}>Loading more...</Text>
-                            </View>
-                        ) : null
-                    }
+                    ListFooterComponent={hasMore && !isLoading ? (
+                        <View style={styles.loadMore}>
+                            <ActivityIndicator size="small" color={NAVY} />
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['2'] }}>
+                                Loading more...
+                            </AppText>
+                        </View>
+                    ) : null}
                 />
             )}
         </SafeAreaView>
@@ -297,356 +288,194 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F7FA',
+        backgroundColor: Colors.appBackground,
     },
+
+    // ── Header ─────────────────────────────────────────────────────────────────
     header: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E8ECF0',
+        backgroundColor: NAVY,
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['3'],
+        paddingBottom: Spacing['3'],
     },
-    title: {
-        fontSize: 32,
-        fontWeight: '700',
-        color: '#1A1D1F',
-        letterSpacing: -0.5,
-    },
-    filterContainer: {
+    headerRow: {
         flexDirection: 'row',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: 'white',
-        marginBottom: 16,
-        gap: 8,
+        alignItems: 'center',
+        marginBottom: Spacing['3'],
     },
-    filterButton: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        backgroundColor: '#F0F3F6',
-        borderRadius: 24,
-        borderWidth: 1.5,
-        borderColor: 'transparent',
+    headerTitle: {
+        fontSize: FontSize['2xl'],
     },
-    filterButtonActive: {
-        backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
-        shadowColor: '#007AFF',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+    filterRow: {
+        flexDirection: 'row',
+        gap: Spacing['2'],
     },
-    filterText: {
-        fontSize: 15,
-        color: '#6B7280',
-        fontWeight: '600',
-    },
-    filterTextActive: {
-        color: 'white',
-    },
-    bookingsList: {
-        paddingHorizontal: 20,
-        paddingTop: 8,
-    },
-    bookingCard: {
-        backgroundColor: 'white',
-        borderRadius: 14,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 3,
+    filterChip: {
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['1'] + 2,
+        borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: '#F0F3F6',
-        position: 'relative',
+        borderColor: 'rgba(255,255,255,0.25)',
+        backgroundColor: 'rgba(255,255,255,0.10)',
     },
-    bookingCardNoShow: {
-        backgroundColor: '#FFF7ED',
-        borderColor: '#FED7AA',
+    filterChipActive: {
+        backgroundColor: Colors.white,
+        borderColor: Colors.white,
+    },
+
+    // ── List ───────────────────────────────────────────────────────────────────
+    list: {
+        paddingHorizontal: Spacing['4'],
+        paddingTop: Spacing['4'],
+        paddingBottom: Spacing['8'],
+    },
+
+    // ── Card ───────────────────────────────────────────────────────────────────
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
+        marginBottom: Spacing['3'],
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
+        overflow: 'hidden',
+    },
+
+    // Card header row
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
     },
     restaurantName: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#1A1D1F',
-        marginBottom: 10,
-        marginTop: 4,
-        lineHeight: 22,
-        letterSpacing: -0.2,
-        paddingRight: 100,
-        flexShrink: 1,
+        flex: 1,
+        fontSize: FontSize.md,
     },
+
+    // Status badge
     statusBadge: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 12,
-        zIndex: 10,
-    },
-    statusConfirmed: {
-        backgroundColor: '#ECFDF5',
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: 3,
+        borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: '#A7F3D0',
+        flexShrink: 0,
     },
-    statusPending: {
-        backgroundColor: '#FEF3C7',
-        borderWidth: 1,
-        borderColor: '#FDE68A',
-    },
-    statusCompleted: {
-        backgroundColor: '#EFF6FF',
-        borderWidth: 1,
-        borderColor: '#BFDBFE',
-    },
-    statusCancelled: {
-        backgroundColor: '#FEE2E2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-    },
-    statusNoShow: {
-        backgroundColor: '#FFF7ED',
-        borderWidth: 1,
-        borderColor: '#FED7AA',
-    },
-    statusText: {
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.5,
-    },
-    statusTextConfirmed: {
-        color: '#059669',
-    },
-    statusTextPending: {
-        color: '#D97706',
-    },
-    statusTextCompleted: {
-        color: '#2563EB',
-    },
-    statusTextCancelled: {
-        color: '#DC2626',
-    },
-    statusTextNoShow: {
-        color: '#EA580C',
-    },
-    infoRow: {
+    statusText: { letterSpacing: 0.5, fontSize: FontSize.xs },
+    statusConfirmed: { backgroundColor: Colors.successFaded,  borderColor: Colors.success },
+    statusPending:   { backgroundColor: Colors.warningFaded,  borderColor: Colors.warning },
+    statusCompleted: { backgroundColor: 'rgba(15,51,70,0.07)', borderColor: Colors.cardBorder },
+    statusCancelled: { backgroundColor: Colors.errorFaded,    borderColor: Colors.error },
+    statusNoShow:    { backgroundColor: Colors.warningFaded,  borderColor: Colors.warning },
+
+    // Inline pill row
+    pillRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        backgroundColor: '#F9FAFB',
-        borderRadius: 10,
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+        flexWrap: 'wrap',
     },
-    leftInfoItem: {
+    pill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        flex: 1,
+        gap: 4,
     },
-    rightInfoItem: {
+    pillIcon: { fontSize: 12 },
+    pillDot: {
+        width: 3,
+        height: 3,
+        borderRadius: 2,
+        backgroundColor: Colors.cardBorder,
+    },
+
+    // Confirmation code
+    codeRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        flex: 1,
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
     },
-    icon: {
-        fontSize: 16,
-        width: 20,
-        textAlign: 'center',
+    codeLabel: {
+        letterSpacing: 1,
+        fontSize: FontSize.xs,
     },
-    infoText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#374151',
+    code: {
+        fontFamily: FontFamily.bold,
+        letterSpacing: 1,
+        fontSize: FontSize.sm,
     },
-    confirmationLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#6B7280',
-    },
-    confirmationCode: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0284C7',
-        fontFamily: 'monospace',
-    },
-    tagsSection: {
-        marginTop: 4,
-        marginBottom: 8,
-    },
-    tagsLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#6B7280',
-        letterSpacing: 0.4,
-        marginBottom: 6,
-        textTransform: 'uppercase',
-    },
+
+    // Tags
     tagsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
+        gap: 6,
+        marginBottom: Spacing['2'],
     },
     tagPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 14,
-        backgroundColor: '#F1F5F9',
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: 3,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(15,51,70,0.05)',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: 'rgba(15,51,70,0.10)',
+        gap: 4,
     },
-    tagIcon: {
-        fontSize: 13,
-        marginRight: 6,
-    },
-    tagText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#334155',
-    },
-    specialRequestsContainer: {
+    tagIcon: { fontSize: 11 },
+
+    // Special requests
+    requestRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 8,
-        backgroundColor: '#FFFBEB',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 10,
-        marginTop: 2,
-        borderWidth: 1,
-        borderColor: '#FDE68A',
+        gap: Spacing['2'],
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.md,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['2'],
+        marginBottom: Spacing['2'],
     },
-    specialRequestsLabel: {
-        fontSize: 14,
-    },
-    specialRequestsText: {
-        flex: 1,
-        fontSize: 13,
-        color: '#78350F',
-        lineHeight: 18,
-    },
-    actionButtons: {
+    requestIcon: { fontSize: 13, marginTop: 1 },
+
+    // Actions
+    actions: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        gap: 8,
-        marginTop: 4,
-        paddingTop: 8,
+        gap: Spacing['2'],
+        paddingTop: Spacing['2'],
+        marginTop: Spacing['1'],
         borderTopWidth: 1,
-        borderTopColor: '#F0F3F6',
+        borderTopColor: Colors.cardBorder,
     },
-    cancelButton: {
-        backgroundColor: '#FEE2E2',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 10,
+    cancelBtn: {
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['1'] + 2,
+        borderRadius: Radius.md,
+        backgroundColor: Colors.errorFaded,
         borderWidth: 1,
-        borderColor: '#FCA5A5',
+        borderColor: Colors.error,
     },
-    cancelButtonText: {
-        color: '#DC2626',
-        fontSize: 14,
-        fontWeight: '700',
+    reviewBtn: {
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['1'] + 2,
+        borderRadius: Radius.md,
+        backgroundColor: Colors.accent,
     },
-    reviewButton: {
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 10,
-    },
-    reviewButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 80,
-        paddingHorizontal: 40,
-    },
-    emptyStateText: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#1A1D1F',
-        marginBottom: 12,
-        letterSpacing: -0.3,
-    },
-    emptyStateSubtext: {
-        fontSize: 15,
-        color: '#6B7280',
-        textAlign: 'center',
-        lineHeight: 22,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 80,
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#6B7280',
-        fontWeight: '500',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingVertical: 80,
-    },
-    errorText: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#DC2626',
-        marginBottom: 12,
-        letterSpacing: -0.3,
-    },
-    errorSubtext: {
-        fontSize: 15,
-        color: '#6B7280',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 22,
-    },
-    retryButton: {
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 28,
-        paddingVertical: 14,
-        borderRadius: 12,
-        shadowColor: '#007AFF',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 5,
-        elevation: 4,
-    },
-    retryButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: 0.3,
-    },
-    loadMoreContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 24,
-        paddingBottom: 32,
-    },
-    loadMoreText: {
-        marginLeft: 12,
-        fontSize: 15,
-        color: '#6B7280',
-        fontWeight: '500',
-    },
+
+    // States
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
+    empty: { alignItems: 'center', paddingVertical: Spacing['10'], paddingHorizontal: Spacing['5'] },
+    emptyIcon: { fontSize: 44, marginBottom: Spacing['4'] },
+    loadMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing['6'] },
 });
 
 export default BookingsScreen;

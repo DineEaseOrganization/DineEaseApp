@@ -1,12 +1,25 @@
 // src/screens/reviews/ReviewScreen.tsx
-import React, {useCallback, useEffect, useState} from 'react';
-import {Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
-import {ReviewScreenProps} from '../../navigation/AppNavigator';
-import {processingService, RatingCategory} from '../../services/api/processingService';
-import {updatesService} from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+    ActivityIndicator,
+} from 'react-native';
+import { ReviewScreenProps } from '../../navigation/AppNavigator';
+import { processingService, RatingCategory } from '../../services/api/processingService';
+import { updatesService } from '../../services/api';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
 
-const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
-    const {reservation, updateId} = route.params;
+const NAVY = Colors.primary;
+
+const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
+    const { reservation, updateId } = route.params;
 
     const [overallRating, setOverallRating] = useState(5);
     const [categoryRatings, setCategoryRatings] = useState<Record<number, number>>({});
@@ -18,15 +31,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
         processingService.getRatingCategories(reservation.restaurant.id)
             .then((cats) => {
                 setCategories(cats);
-                // Initialize all category ratings to 5
                 const initial: Record<number, number> = {};
                 cats.forEach(c => { initial[c.categoryId] = 5; });
                 setCategoryRatings(initial);
             })
-            .catch(() => {
-                // Fallback: no dynamic categories, submit without them
-                setCategories([]);
-            });
+            .catch(() => setCategories([]));
     }, [reservation.restaurant.id]);
 
     const handleSubmitReview = async () => {
@@ -43,145 +52,223 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
                 })),
             });
 
-            // Delete the review notification if navigated from Updates screen
             if (updateId) {
-                updatesService.deleteUpdate(updateId).catch(() => {
-                    // Non-critical: notification cleanup failed, but review was submitted
-                });
+                updatesService.deleteUpdate(updateId).catch(() => {});
             }
 
             Alert.alert(
                 'Review Submitted!',
                 'Thank you for your feedback. Your review has been posted.',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => {
-                            reservation.canReview = false;
-                            navigation.goBack();
-                        }
-                    }
-                ]
+                [{
+                    text: 'Done',
+                    onPress: () => {
+                        reservation.canReview = false;
+                        navigation.goBack();
+                    },
+                }]
             );
         } catch (error: any) {
-            const message = error?.message || 'Failed to submit review. Please try again.';
-            Alert.alert('Error', message);
+            Alert.alert('Error', error?.message || 'Failed to submit review. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const setCategoryRating = (categoryId: number, score: number) => {
-        setCategoryRatings(prev => ({...prev, [categoryId]: score}));
+    const setCategoryRating = (categoryId: number, score: number) =>
+        setCategoryRatings(prev => ({ ...prev, [categoryId]: score }));
+
+    const getCategoryDisplayName = (name: string): string => {
+        switch (name) {
+            case 'FOOD':     return 'Food Quality';
+            case 'SERVICE':  return 'Service';
+            case 'AMBIANCE': return 'Ambiance';
+            default:         return name.charAt(0) + name.slice(1).toLowerCase();
+        }
     };
 
-    const renderStarRating = (rating: number, setRating: (rating: number) => void, label: string) => (
-        <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>{label}</Text>
-            <View style={styles.starsContainer}>
+    const getCategoryEmoji = (name: string): string => {
+        switch (name) {
+            case 'FOOD':     return '🍽️';
+            case 'SERVICE':  return '🤝';
+            case 'AMBIANCE': return '✨';
+            default:         return '⭐';
+        }
+    };
+
+    const renderStarRating = (
+        rating: number,
+        setRating: (r: number) => void,
+        label: string,
+        emoji?: string,
+        isOverall = false,
+    ) => (
+        <View style={[styles.ratingRow, isOverall && styles.ratingRowOverall]}>
+            <View style={styles.ratingMeta}>
+                {emoji && <AppText style={styles.ratingEmoji}>{emoji}</AppText>}
+                <AppText
+                    variant={isOverall ? 'sectionTitle' : 'bodyMedium'}
+                    color={isOverall ? NAVY : Colors.textOnLight}
+                >
+                    {label}
+                </AppText>
+            </View>
+            <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity
                         key={star}
                         onPress={() => setRating(star)}
-                        style={styles.starButton}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
-                        <Text style={[
+                        <AppText style={[
                             styles.star,
-                            star <= rating ? styles.starFilled : styles.starEmpty
+                            isOverall && styles.starLarge,
+                            { color: star <= rating ? '#F5A623' : Colors.cardBorder },
                         ]}>
                             ★
-                        </Text>
+                        </AppText>
                     </TouchableOpacity>
                 ))}
-                <Text style={styles.ratingValue}>({rating}/5)</Text>
+                <AppText variant="caption" color={Colors.textOnLightTertiary} style={styles.ratingNum}>
+                    {rating}/5
+                </AppText>
             </View>
         </View>
     );
 
-    const getCategoryDisplayName = (name: string): string => {
-        switch (name) {
-            case 'FOOD': return 'Food Quality';
-            case 'SERVICE': return 'Service';
-            case 'AMBIANCE': return 'Ambiance';
-            default: return name.charAt(0) + name.slice(1).toLowerCase();
-        }
-    };
+    const visitDate = new Date(reservation.date).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric',
+    });
 
     return (
         <SafeAreaView style={styles.container}>
+
+            {/* ── Navy header ── */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Text style={styles.backButton}>← Back</Text>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                    <AppText style={styles.backIcon}>←</AppText>
                 </TouchableOpacity>
-                <Text style={styles.title}>Write Review</Text>
+                <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>
+                    Write a Review
+                </AppText>
+                <View style={{ width: 36 }} />
             </View>
 
-            <ScrollView style={styles.content}>
-                {/* Restaurant Info */}
-                <View style={styles.restaurantInfo}>
-                    <Text style={styles.restaurantName}>{reservation.restaurant.name}</Text>
-                    <Text style={styles.visitDate}>
-                        Visited on {reservation.date} at {reservation.time}
-                    </Text>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* ── Restaurant banner ── */}
+                <View style={styles.restaurantBanner}>
+                    <View style={styles.bannerAccent} />
+                    <View style={styles.bannerText}>
+                        <AppText variant="cardTitle" color={NAVY} numberOfLines={2}>
+                            {reservation.restaurant.name}
+                        </AppText>
+                        <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: 3 }}>
+                            📅 {visitDate}  ·  🕐 {reservation.time}  ·  👥 {reservation.partySize} guests
+                        </AppText>
+                    </View>
                 </View>
 
-                {/* Overall Rating */}
-                {renderStarRating(overallRating, setOverallRating, 'Overall Experience')}
-
-                {/* Dynamic Category Ratings */}
-                {categories.map(category => (
-                    <View key={category.categoryId}>
-                        {renderStarRating(
-                            categoryRatings[category.categoryId] || 5,
-                            (score) => setCategoryRating(category.categoryId, score),
-                            getCategoryDisplayName(category.name)
-                        )}
+                {/* ── Overall rating ── */}
+                <View style={styles.card}>
+                    <View style={styles.sectionLabelRow}>
+                        <View style={styles.sectionTick} />
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                            OVERALL EXPERIENCE
+                        </AppText>
                     </View>
-                ))}
+                    {renderStarRating(overallRating, setOverallRating, 'How was your visit?', '⭐', true)}
+                </View>
 
-                {/* Review Text */}
-                <View style={styles.reviewSection}>
-                    <Text style={styles.reviewLabel}>Your Review</Text>
+                {/* ── Category ratings ── */}
+                {categories.length > 0 && (
+                    <View style={styles.card}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                                RATE BY CATEGORY
+                            </AppText>
+                        </View>
+                        {categories.map((cat, i) => (
+                            <View key={cat.categoryId}>
+                                {renderStarRating(
+                                    categoryRatings[cat.categoryId] || 5,
+                                    (score) => setCategoryRating(cat.categoryId, score),
+                                    getCategoryDisplayName(cat.name),
+                                    getCategoryEmoji(cat.name),
+                                )}
+                                {i < categories.length - 1 && <View style={styles.divider} />}
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* ── Review text ── */}
+                <View style={styles.card}>
+                    <View style={styles.sectionLabelRow}>
+                        <View style={styles.sectionTick} />
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                            YOUR REVIEW
+                        </AppText>
+                    </View>
                     <TextInput
                         style={styles.reviewInput}
                         placeholder="Share your experience with other diners..."
+                        placeholderTextColor={Colors.textOnLightTertiary}
                         value={reviewText}
                         onChangeText={setReviewText}
                         multiline
-                        numberOfLines={6}
                         textAlignVertical="top"
                         maxLength={500}
                     />
-                    <Text style={styles.characterCount}>{reviewText.length}/500</Text>
+                    <AppText variant="caption" color={Colors.textOnLightTertiary} style={styles.charCount}>
+                        {reviewText.length}/500
+                    </AppText>
                 </View>
 
-                {/* Tips */}
-                <View style={styles.tipsSection}>
-                    <Text style={styles.tipsTitle}>Review Tips</Text>
-                    <Text style={styles.tipsText}>
-                        • Mention specific dishes you tried{'\n'}
-                        • Comment on the service quality{'\n'}
-                        • Describe the atmosphere{'\n'}
-                        • Be honest and helpful for other diners
-                    </Text>
+                {/* ── Tips ── */}
+                <View style={styles.tipsCard}>
+                    <AppText style={styles.tipsIcon}>💡</AppText>
+                    <View style={{ flex: 1 }}>
+                        <AppText variant="captionMedium" color={NAVY} style={{ marginBottom: 5 }}>
+                            Tips for a great review
+                        </AppText>
+                        {[
+                            'Mention specific dishes you tried',
+                            'Comment on the service quality',
+                            'Describe the atmosphere',
+                            'Be honest and helpful for other diners',
+                        ].map((tip, i) => (
+                            <AppText key={i} variant="caption" color={Colors.textOnLightSecondary} style={styles.tipLine}>
+                                · {tip}
+                            </AppText>
+                        ))}
+                    </View>
                 </View>
+
+                <View style={{ height: Spacing['10'] }} />
             </ScrollView>
 
-            {/* Submit Button */}
-            <View style={styles.submitButtonContainer}>
+            {/* ── Sticky submit ── */}
+            <View style={styles.footer}>
                 <TouchableOpacity
-                    style={[
-                        styles.submitButton,
-                        isSubmitting && styles.submitButtonDisabled
-                    ]}
+                    style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
                     onPress={handleSubmitReview}
                     disabled={isSubmitting}
+                    activeOpacity={0.85}
                 >
-                    <Text style={styles.submitButtonText}>
-                        {isSubmitting ? 'Submitting...' : 'Submit Review'}
-                    </Text>
+                    {isSubmitting ? (
+                        <ActivityIndicator color={Colors.white} />
+                    ) : (
+                        <AppText variant="button" color={Colors.white}>Submit Review</AppText>
+                    )}
                 </TouchableOpacity>
             </View>
+
         </SafeAreaView>
     );
 };
@@ -189,142 +276,194 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({route, navigation}) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: Colors.appBackground,
     },
+
+    // ── Header ─────────────────────────────────────────────────────────────────
     header: {
+        backgroundColor: NAVY,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
     },
-    backButton: {
+    backBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backIcon: {
         fontSize: 16,
-        color: '#007AFF',
-        marginRight: 16,
+        color: Colors.white,
+        fontFamily: 'Inter-SemiBold',
     },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
+    headerTitle: {
+        fontSize: FontSize.lg,
+        color: Colors.white,
     },
-    content: {
+
+    // ── Scroll ─────────────────────────────────────────────────────────────────
+    scroll: { flex: 1 },
+    scrollContent: {
+        paddingHorizontal: Spacing['4'],
+        paddingTop: Spacing['4'],
+    },
+
+    // ── Restaurant banner ──────────────────────────────────────────────────────
+    restaurantBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        marginBottom: Spacing['3'],
+        overflow: 'hidden',
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    bannerAccent: {
+        width: 4,
+        alignSelf: 'stretch',
+        backgroundColor: NAVY,
+    },
+    bannerText: {
+        flex: 1,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['3'],
+    },
+
+    // ── Card ───────────────────────────────────────────────────────────────────
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        padding: Spacing['4'],
+        marginBottom: Spacing['3'],
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+
+    // Section label
+    sectionLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['3'],
+    },
+    sectionTick: {
+        width: 3,
+        height: 14,
+        backgroundColor: NAVY,
+        borderRadius: 2,
+    },
+    sectionLabel: { letterSpacing: 1 },
+
+    // ── Rating row ─────────────────────────────────────────────────────────────
+    ratingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: Spacing['2'],
+    },
+    ratingRowOverall: {
+        paddingVertical: Spacing['1'],
+    },
+    ratingMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
         flex: 1,
     },
-    restaurantInfo: {
-        backgroundColor: 'white',
-        padding: 20,
-        marginBottom: 10,
-    },
-    restaurantName: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    visitDate: {
-        fontSize: 14,
-        color: '#666',
-    },
-    ratingSection: {
-        backgroundColor: 'white',
-        padding: 20,
-        marginBottom: 1,
-    },
-    ratingLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 12,
-    },
-    starsContainer: {
+    ratingEmoji: { fontSize: 16 },
+    starsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    starButton: {
-        marginRight: 4,
+        gap: 3,
     },
     star: {
-        fontSize: 28,
+        fontSize: 26,
     },
-    starFilled: {
-        color: '#FFD700',
+    starLarge: {
+        fontSize: 34,
     },
-    starEmpty: {
-        color: '#ddd',
+    ratingNum: {
+        marginLeft: Spacing['2'],
+        minWidth: 28,
     },
-    ratingValue: {
-        marginLeft: 12,
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
+    divider: {
+        height: 1,
+        backgroundColor: Colors.cardBorder,
+        marginVertical: Spacing['1'],
     },
-    reviewSection: {
-        backgroundColor: 'white',
-        padding: 20,
-        marginBottom: 10,
-    },
-    reviewLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 12,
-    },
+
+    // ── Review text ────────────────────────────────────────────────────────────
     reviewInput: {
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.md,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        height: 120,
-        backgroundColor: '#fafafa',
+        borderColor: Colors.cardBorder,
+        padding: Spacing['3'],
+        fontSize: FontSize.sm,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+        minHeight: 110,
     },
-    characterCount: {
+    charCount: {
         textAlign: 'right',
-        fontSize: 12,
-        color: '#999',
-        marginTop: 8,
+        marginTop: Spacing['2'],
     },
-    tipsSection: {
-        backgroundColor: 'white',
-        padding: 20,
-        marginBottom: 100,
+
+    // ── Tips ───────────────────────────────────────────────────────────────────
+    tipsCard: {
+        flexDirection: 'row',
+        gap: Spacing['3'],
+        backgroundColor: 'rgba(15,51,70,0.04)',
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(15,51,70,0.08)',
+        padding: Spacing['3'],
+        marginBottom: Spacing['3'],
     },
-    tipsTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
-    },
-    tipsText: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-    },
-    submitButtonContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'white',
-        padding: 20,
+    tipsIcon: { fontSize: 18, marginTop: 1 },
+    tipLine: { lineHeight: 20 },
+
+    // ── Footer ─────────────────────────────────────────────────────────────────
+    footer: {
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: Colors.cardBorder,
+        backgroundColor: Colors.white,
     },
-    submitButton: {
-        backgroundColor: '#007AFF',
-        paddingVertical: 16,
-        borderRadius: 12,
+    submitBtn: {
+        backgroundColor: Colors.accent,
+        paddingVertical: Spacing['3'] + 2,
+        borderRadius: Radius.lg,
         alignItems: 'center',
+        shadowColor: Colors.accent,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 4,
     },
-    submitButtonDisabled: {
-        backgroundColor: '#ccc',
-    },
-    submitButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+    submitBtnDisabled: {
+        backgroundColor: Colors.textOnLightTertiary,
+        shadowOpacity: 0,
+        elevation: 0,
     },
 });
 

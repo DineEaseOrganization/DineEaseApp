@@ -1,400 +1,395 @@
-// src/screens/settings/DeleteAccountScreen.tsx
-import React, {useState} from 'react';
+// src/screens/profile/DeleteAccountScreen.tsx
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
-import {profileService} from '../../services/api';
-import {useAuth} from '../../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { profileService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+
+const NAVY = Colors.primary;
 
 interface DeleteAccountScreenProps {
-  navigation: any;
+    navigation: any;
 }
 
-const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({navigation}) => {
-  const {logout} = useAuth();
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [action, setAction] = useState<'DEACTIVATE' | 'DELETE'>('DEACTIVATE');
-  const [reason, setReason] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation }) => {
+    const { logout } = useAuth();
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [action, setAction] = useState<'DEACTIVATE' | 'DELETE'>('DEACTIVATE');
+    const [reason, setReason] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-  const handleDeleteAccount = async () => {
-    if (!password) {
-      Alert.alert('Missing Password', 'Please enter your password to confirm.');
-      return;
-    }
+    const handleSubmit = async () => {
+        if (!password) { Alert.alert('Missing Password', 'Please enter your password to confirm.'); return; }
 
-    const actionText = action === 'DEACTIVATE' ? 'deactivate' : 'permanently delete';
-    const warningText = action === 'DELETE'
-      ? 'This action cannot be undone. All your data will be permanently deleted.'
-      : 'Your account will be deactivated but can be restored within 30 days.';
+        const actionText = action === 'DEACTIVATE' ? 'deactivate' : 'permanently delete';
+        const warningText = action === 'DELETE'
+            ? 'This action cannot be undone. All your data will be permanently deleted.'
+            : 'Your account will be deactivated but can be restored within 30 days.';
 
-    Alert.alert(
-      `${action === 'DELETE' ? 'Delete' : 'Deactivate'} Account`,
-      `Are you sure you want to ${actionText} your account? ${warningText}`,
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: action === 'DELETE' ? 'Delete' : 'Deactivate',
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoading(true);
-            try {
-              const response = await profileService.deleteAccount({
-                password,
-                action,
-                reason: reason.trim() || undefined,
-              });
+        Alert.alert(
+            `${action === 'DELETE' ? 'Delete' : 'Deactivate'} Account`,
+            `Are you sure you want to ${actionText} your account?\n\n${warningText}`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: action === 'DELETE' ? 'Delete' : 'Deactivate',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setIsLoading(true);
+                        try {
+                            const response = await profileService.deleteAccount({ password, action, reason: reason.trim() || undefined });
+                            if (response.success) {
+                                Alert.alert(
+                                    `Account ${action === 'DELETE' ? 'Deleted' : 'Deactivated'}`,
+                                    response.message,
+                                    [{
+                                        text: 'OK',
+                                        onPress: async () => {
+                                            await logout();
+                                            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+                                        },
+                                    }]
+                                );
+                            } else {
+                                Alert.alert('Error', response.message);
+                            }
+                        } catch (error: any) {
+                            Alert.alert('Error', error.message || 'Failed. Please try again.');
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
-              if (response.success) {
-                Alert.alert(
-                  'Account ' + (action === 'DELETE' ? 'Deleted' : 'Deactivated'),
-                  response.message,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: async () => {
-                        await logout();
-                        navigation.reset({
-                          index: 0,
-                          routes: [{name: 'Login'}],
-                        });
-                      }
-                    }
-                  ]
-                );
-              } else {
-                Alert.alert('Error', response.message);
-              }
-            } catch (error: any) {
-              console.error('Delete account error:', error);
-              Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
-            } finally {
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="warning-outline" size={64} color="#e74c3c"/>
-          </View>
-
-          <Text style={styles.title}>Delete Account</Text>
-          <Text style={styles.subtitle}>
-            We're sorry to see you go. Please select what you'd like to do with your account.
-          </Text>
-
-          {/* Action Selection */}
-          <View style={styles.section}>
+    const ActionOption = ({ type, title, description }: { type: 'DEACTIVATE' | 'DELETE'; title: string; description: string }) => {
+        const selected = action === type;
+        const isDelete = type === 'DELETE';
+        return (
             <TouchableOpacity
-              style={[
-                styles.actionCard,
-                action === 'DEACTIVATE' && styles.actionCardSelected,
-              ]}
-              onPress={() => setAction('DEACTIVATE')}
+                style={[
+                    styles.actionCard,
+                    selected && (isDelete ? styles.actionCardSelectedDelete : styles.actionCardSelectedDeactivate),
+                ]}
+                onPress={() => setAction(type)}
+                activeOpacity={0.8}
             >
-              <View style={styles.actionCardHeader}>
-                <View style={styles.radioOuter}>
-                  {action === 'DEACTIVATE' && <View style={styles.radioInner}/>}
+                <View style={styles.actionCardHeader}>
+                    <View style={[styles.radio, selected && (isDelete ? styles.radioDelete : styles.radioDeactivate)]}>
+                        {selected && <View style={styles.radioInner} />}
+                    </View>
+                    <AppText variant="bodyMedium" color={isDelete ? Colors.error : NAVY}>{title}</AppText>
                 </View>
-                <Text style={styles.actionCardTitle}>Deactivate Account</Text>
-              </View>
-              <Text style={styles.actionCardDescription}>
-                Temporarily disable your account. You can restore it within 30 days by logging back in.
-              </Text>
+                <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.actionDesc}>
+                    {description}
+                </AppText>
             </TouchableOpacity>
+        );
+    };
 
-            <TouchableOpacity
-              style={[
-                styles.actionCard,
-                action === 'DELETE' && styles.actionCardSelected,
-              ]}
-              onPress={() => setAction('DELETE')}
-            >
-              <View style={styles.actionCardHeader}>
-                <View style={styles.radioOuter}>
-                  {action === 'DELETE' && <View style={styles.radioInner}/>}
-                </View>
-                <Text style={styles.actionCardTitle}>Permanently Delete</Text>
-              </View>
-              <Text style={styles.actionCardDescription}>
-                Permanently delete your account and all associated data. This action cannot be undone.
-              </Text>
-            </TouchableOpacity>
-          </View>
+    return (
+        <SafeAreaView style={styles.container}>
 
-          {/* Password Confirmation */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Confirm Password *</Text>
-            <View style={styles.passwordInputContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color="#666"
-                />
-              </TouchableOpacity>
+            {/* ── Navy header ── */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                </TouchableOpacity>
+                <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Delete Account</AppText>
+                <View style={{ width: 36 }} />
             </View>
-          </View>
 
-          {/* Optional Reason */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Reason (Optional)</Text>
-            <TextInput
-              style={styles.textArea}
-              value={reason}
-              onChangeText={setReason}
-              placeholder="Tell us why you're leaving (optional)"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              maxLength={500}
-            />
-            <Text style={styles.characterCount}>{reason.length}/500</Text>
-          </View>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* Warning banner */}
+                <View style={styles.warningBanner}>
+                    <Ionicons name="warning-outline" size={22} color={Colors.error} />
+                    <AppText variant="captionMedium" color={Colors.error} style={{ flex: 1 }}>
+                        This section contains sensitive account actions. Please read carefully.
+                    </AppText>
+                </View>
 
-          {/* Warning Box */}
-          <View style={styles.warningBox}>
-            <Ionicons name="alert-circle-outline" size={20} color="#e74c3c"/>
-            <Text style={styles.warningText}>
-              {action === 'DELETE'
-                ? 'Permanent deletion cannot be undone. All your reservations, reviews, and preferences will be lost forever.'
-                : 'After deactivation, you have 30 days to restore your account by logging back in. After 30 days, your account will be permanently deleted.'}
-            </Text>
-          </View>
+                {/* Action selection */}
+                <View style={styles.sectionLabelRow}>
+                    <View style={[styles.sectionTick, { backgroundColor: Colors.error }]} />
+                    <AppText variant="label" color={Colors.error} style={styles.sectionLabel}>
+                        SELECT ACTION
+                    </AppText>
+                </View>
 
-          {/* Delete Button */}
-          <TouchableOpacity
-            style={[
-              styles.deleteButton,
-              (!password || isLoading) && styles.deleteButtonDisabled,
-            ]}
-            onPress={handleDeleteAccount}
-            disabled={!password || isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff"/>
-            ) : (
-              <Text style={styles.deleteButtonText}>
-                {action === 'DELETE' ? 'Permanently Delete Account' : 'Deactivate Account'}
-              </Text>
-            )}
-          </TouchableOpacity>
+                <ActionOption
+                    type="DEACTIVATE"
+                    title="Deactivate Account"
+                    description="Temporarily disable your account. You can restore it within 30 days by logging back in."
+                />
+                <ActionOption
+                    type="DELETE"
+                    title="Permanently Delete"
+                    description="Permanently delete your account and all associated data. This cannot be undone."
+                />
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+                {/* Password confirmation */}
+                <View style={[styles.sectionLabelRow, { marginTop: Spacing['4'] }]}>
+                    <View style={[styles.sectionTick, { backgroundColor: Colors.error }]} />
+                    <AppText variant="label" color={Colors.error} style={styles.sectionLabel}>
+                        CONFIRM WITH PASSWORD
+                    </AppText>
+                </View>
+                <View style={styles.card}>
+                    <View style={styles.fieldGroup}>
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.fieldLabel}>
+                            Your Password *
+                        </AppText>
+                        <View style={styles.passwordWrap}>
+                            <TextInput
+                                style={styles.passwordInput}
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder="Enter your password"
+                                placeholderTextColor={Colors.textOnLightTertiary}
+                                secureTextEntry={!showPassword}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)} activeOpacity={0.7}>
+                                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={Colors.textOnLightSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.fieldGroup}>
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.fieldLabel}>
+                            Reason (Optional)
+                        </AppText>
+                        <TextInput
+                            style={styles.textArea}
+                            value={reason}
+                            onChangeText={setReason}
+                            placeholder="Tell us why you're leaving (optional)"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            multiline
+                            textAlignVertical="top"
+                            maxLength={500}
+                        />
+                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ textAlign: 'right', marginTop: 4 }}>
+                            {reason.length}/500
+                        </AppText>
+                    </View>
+                </View>
+
+                {/* Dynamic warning */}
+                <View style={styles.dangerBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color={Colors.error} />
+                    <AppText variant="caption" color={Colors.error} style={{ flex: 1 }}>
+                        {action === 'DELETE'
+                            ? 'Permanent deletion cannot be undone. All your reservations, reviews, and preferences will be lost forever.'
+                            : 'After deactivation you have 30 days to restore your account. After that, it will be permanently deleted.'}
+                    </AppText>
+                </View>
+
+                {/* Action button */}
+                <TouchableOpacity
+                    style={[styles.deleteBtn, (!password || isLoading) && styles.deleteBtnDisabled]}
+                    onPress={handleSubmit}
+                    disabled={!password || isLoading}
+                    activeOpacity={0.85}
+                >
+                    {isLoading
+                        ? <ActivityIndicator color={Colors.white} />
+                        : <AppText variant="button" color={Colors.white}>
+                            {action === 'DELETE' ? 'Permanently Delete Account' : 'Deactivate Account'}
+                        </AppText>
+                    }
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                    <AppText variant="bodyMedium" color={Colors.textOnLightSecondary}>Cancel</AppText>
+                </TouchableOpacity>
+
+                <View style={{ height: Spacing['8'] }} />
+            </ScrollView>
+        </SafeAreaView>
+    );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  content: {
-    padding: 20,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 32,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  actionCard: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  actionCardSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
-  },
-  actionCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#007AFF',
-  },
-  actionCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  actionCardDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginLeft: 32,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
-  },
-  passwordInputContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingRight: 48,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    padding: 4,
-  },
-  textArea: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
-    height: 100,
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'right',
-    marginTop: 4,
-  },
-  warningBox: {
-    flexDirection: 'row',
-    backgroundColor: '#fff5f5',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffe0e0',
-    gap: 12,
-    marginBottom: 24,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#e74c3c',
-    lineHeight: 20,
-  },
-  deleteButton: {
-    backgroundColor: '#e74c3c',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  deleteButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
-  },
+    container: { flex: 1, backgroundColor: Colors.appBackground },
+
+    header: {
+        backgroundColor: NAVY,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
+    },
+    backBtn: {
+        width: 36, height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: { fontSize: FontSize.lg },
+
+    scroll: { flex: 1 },
+    scrollContent: { padding: Spacing['4'] },
+
+    warningBanner: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: Spacing['2'],
+        backgroundColor: Colors.errorFaded,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: Colors.error,
+        padding: Spacing['3'],
+        marginBottom: Spacing['4'],
+    },
+
+    sectionLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+    },
+    sectionTick: { width: 3, height: 14, borderRadius: 2 },
+    sectionLabel: { letterSpacing: 0.8 },
+
+    // Action option cards
+    actionCard: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 2,
+        borderColor: Colors.cardBorder,
+        padding: Spacing['4'],
+        marginBottom: Spacing['2'],
+    },
+    actionCardSelectedDeactivate: { borderColor: NAVY, backgroundColor: 'rgba(15,51,70,0.04)' },
+    actionCardSelectedDelete: { borderColor: Colors.error, backgroundColor: Colors.errorFaded },
+    actionCardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['3'],
+        marginBottom: 6,
+    },
+    radio: {
+        width: 20, height: 20,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: Colors.cardBorder,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioDeactivate: { borderColor: NAVY },
+    radioDelete: { borderColor: Colors.error },
+    radioInner: {
+        width: 10, height: 10,
+        borderRadius: 5,
+        backgroundColor: Colors.error,
+    },
+    actionDesc: { marginLeft: 32, lineHeight: 18 },
+
+    // Form card
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingHorizontal: Spacing['4'],
+        paddingBottom: Spacing['2'],
+        marginBottom: Spacing['3'],
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    divider: { height: 1, backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
+    fieldGroup: { paddingTop: Spacing['3'] },
+    fieldLabel: { letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase', fontSize: 11 },
+    passwordWrap: { position: 'relative' },
+    passwordInput: {
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        borderRadius: Radius.md,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: 11,
+        paddingRight: 44,
+        fontSize: FontSize.sm,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+    },
+    eyeBtn: { position: 'absolute', right: 12, top: 11, padding: 2 },
+    textArea: {
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        borderRadius: Radius.md,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['2'],
+        fontSize: FontSize.sm,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+        minHeight: 80,
+    },
+
+    dangerBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: Spacing['2'],
+        backgroundColor: Colors.errorFaded,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: Colors.error,
+        padding: Spacing['3'],
+        marginBottom: Spacing['4'],
+    },
+
+    deleteBtn: {
+        backgroundColor: Colors.error,
+        paddingVertical: Spacing['3'] + 2,
+        borderRadius: Radius.lg,
+        alignItems: 'center',
+        marginBottom: Spacing['2'],
+        shadowColor: Colors.error,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    deleteBtnDisabled: {
+        backgroundColor: Colors.textOnLightTertiary,
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    cancelBtn: {
+        paddingVertical: Spacing['3'],
+        alignItems: 'center',
+    },
 });
 
 export default DeleteAccountScreen;

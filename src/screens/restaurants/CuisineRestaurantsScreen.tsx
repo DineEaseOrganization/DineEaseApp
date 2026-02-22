@@ -2,13 +2,11 @@
 import React, {useState, useEffect} from 'react';
 import {
     View,
-    Text,
     FlatList,
     StyleSheet,
     ActivityIndicator,
     SafeAreaView,
     TouchableOpacity,
-    Image,
     Alert,
 } from 'react-native';
 import {RouteProp} from '@react-navigation/native';
@@ -16,6 +14,12 @@ import {StackNavigationProp} from '@react-navigation/stack';
 import {DiscoverStackParamList} from '../../navigation/AppNavigator';
 import {restaurantService} from '../../services/api';
 import {Restaurant, mapRestaurantDetailToRestaurant} from '../../types';
+import {CachedImage} from '../../components/CachedImage';
+import { Colors, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+import AppButton from '../../components/ui/AppButton';
+
+const NAVY = Colors.primary;
 
 type CuisineRestaurantsScreenRouteProp = RouteProp<DiscoverStackParamList, 'CuisineRestaurants'>;
 type CuisineRestaurantsScreenNavigationProp = StackNavigationProp<DiscoverStackParamList, 'CuisineRestaurants'>;
@@ -27,35 +31,22 @@ interface Props {
 
 const CuisineRestaurantsScreen: React.FC<Props> = ({route, navigation}) => {
     const {cuisineType, latitude, longitude, radius = 10} = route.params;
-
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    useEffect(() => {
-        void loadRestaurants();
-    }, []);
+    useEffect(() => { void loadRestaurants(); }, []);
 
     const loadRestaurants = async () => {
         try {
             setLoading(true);
-            const response = await restaurantService.getRestaurantsByCuisine(
-                cuisineType,
-                latitude,
-                longitude,
-                radius,
-                0,
-                20
-            );
-
-            const mappedRestaurants = response.restaurants.map(mapRestaurantDetailToRestaurant);
-            setRestaurants(mappedRestaurants);
+            const response = await restaurantService.getRestaurantsByCuisine(cuisineType, latitude, longitude, radius, 0, 20);
+            setRestaurants(response.restaurants.map(mapRestaurantDetailToRestaurant));
             setHasMore(response.hasMore);
             setPage(0);
-        } catch (error) {
-            console.error('Error loading restaurants:', error);
+        } catch {
             Alert.alert('Error', 'Failed to load restaurants');
         } finally {
             setLoading(false);
@@ -64,69 +55,64 @@ const CuisineRestaurantsScreen: React.FC<Props> = ({route, navigation}) => {
 
     const loadMoreRestaurants = async () => {
         if (loadingMore || !hasMore) return;
-
         try {
             setLoadingMore(true);
             const nextPage = page + 1;
-            const response = await restaurantService.getRestaurantsByCuisine(
-                cuisineType,
-                latitude,
-                longitude,
-                radius,
-                nextPage,
-                20
-            );
-
-            const mappedRestaurants = response.restaurants.map(mapRestaurantDetailToRestaurant);
-            setRestaurants(prev => [...prev, ...mappedRestaurants]);
+            const response = await restaurantService.getRestaurantsByCuisine(cuisineType, latitude, longitude, radius, nextPage, 20);
+            setRestaurants(prev => [...prev, ...response.restaurants.map(mapRestaurantDetailToRestaurant)]);
             setHasMore(response.hasMore);
             setPage(nextPage);
-        } catch (error) {
-            console.error('Error loading more restaurants:', error);
         } finally {
             setLoadingMore(false);
         }
     };
 
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-        const R = 3959; // Earth radius in miles
+    const calcDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 3959;
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a =
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+        const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     };
 
-    const renderRestaurant = ({item}: {item: Restaurant}) => (
+    const renderItem = ({item}: {item: Restaurant}) => (
         <TouchableOpacity
-            style={styles.restaurantCard}
+            style={styles.card}
             onPress={() => navigation.navigate('RestaurantDetail', {restaurant: item})}
+            activeOpacity={0.88}
         >
-            <Image
-                source={{uri: item.coverImageUrl || 'https://via.placeholder.com/120'}}
-                style={styles.restaurantImage}
-            />
-            <View style={styles.restaurantInfo}>
-                <Text style={styles.restaurantName}>{item.name}</Text>
+            <CachedImage uri={item.coverImageUrl} style={styles.image} fallbackColor="#cdd8e0" />
+
+            <View style={styles.info}>
+                <AppText variant="cardTitle" color={NAVY} numberOfLines={1} style={styles.name}>
+                    {item.name}
+                </AppText>
+
                 <View style={styles.ratingRow}>
-                    <Text style={styles.star}>★</Text>
-                    <Text style={styles.rating}>{item.averageRating.toFixed(1)}</Text>
-                    <Text style={styles.reviews}>({item.totalReviews} reviews)</Text>
+                    <AppText style={styles.star}>★</AppText>
+                    <AppText variant="bodySemiBold" color={Colors.textOnLight}> {item.averageRating.toFixed(1)}</AppText>
+                    <AppText variant="caption" color={Colors.textOnLightTertiary}> ({item.totalReviews})</AppText>
                 </View>
-                <Text style={styles.address}>{item.address}</Text>
-                <View style={styles.detailsRow}>
-                    <Text style={styles.priceRange}>{item.priceRange}</Text>
-                    <Text style={styles.dot}>•</Text>
-                    <Text style={styles.cuisineType}>{item.cuisineType}</Text>
+
+                <AppText variant="caption" color={Colors.textOnLightSecondary} numberOfLines={1} style={styles.address}>
+                    📍 {item.address}
+                </AppText>
+
+                <View style={styles.metaRow}>
+                    {item.priceRange && (
+                        <View style={styles.pricePill}>
+                            <AppText variant="captionMedium" color={NAVY}>{item.priceRange}</AppText>
+                        </View>
+                    )}
+                    <View style={styles.dot} />
+                    <AppText variant="caption" color={Colors.textOnLightSecondary}>{item.cuisineType}</AppText>
                     {item.latitude && item.longitude && (
                         <>
-                            <Text style={styles.dot}>•</Text>
-                            <Text style={styles.distance}>
-                                {calculateDistance(latitude, longitude, item.latitude, item.longitude).toFixed(1)} mi
-                            </Text>
+                            <View style={styles.dot} />
+                            <AppText variant="caption" color={Colors.textOnLightSecondary}>
+                                {calcDistance(latitude, longitude, item.latitude, item.longitude).toFixed(1)} mi
+                            </AppText>
                         </>
                     )}
                 </View>
@@ -134,32 +120,47 @@ const CuisineRestaurantsScreen: React.FC<Props> = ({route, navigation}) => {
         </TouchableOpacity>
     );
 
-    const renderFooter = () => {
-        if (!loadingMore) return null;
-        return (
-            <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#dc3545" />
-            </View>
-        );
-    };
-
     if (loading) {
         return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#dc3545" />
-                <Text style={styles.loadingText}>Loading {cuisineType} restaurants...</Text>
-            </View>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <AppText variant="bodySemiBold" color="rgba(255,255,255,0.75)">←</AppText>
+                    </TouchableOpacity>
+                    <AppText variant="h3" color={Colors.white}>{cuisineType}</AppText>
+                    <View style={{ width: 32 }} />
+                </View>
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color={NAVY} />
+                    <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginTop: Spacing['4'] }}>
+                        Loading {cuisineType} restaurants...
+                    </AppText>
+                </View>
+            </SafeAreaView>
         );
     }
 
     if (restaurants.length === 0) {
         return (
-            <View style={styles.centerContainer}>
-                <Text style={styles.emptyText}>No {cuisineType} restaurants found nearby</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={loadRestaurants}>
-                    <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
-            </View>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <AppText variant="bodySemiBold" color="rgba(255,255,255,0.75)">←</AppText>
+                    </TouchableOpacity>
+                    <AppText variant="h3" color={Colors.white}>{cuisineType}</AppText>
+                    <View style={{ width: 32 }} />
+                </View>
+                <View style={styles.center}>
+                    <AppText style={styles.emptyIcon}>🍽️</AppText>
+                    <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>
+                        No restaurants found
+                    </AppText>
+                    <AppText variant="body" color={Colors.textOnLightSecondary} style={{ textAlign: 'center', marginBottom: Spacing['5'] }}>
+                        No {cuisineType} restaurants found within {radius}km
+                    </AppText>
+                    <AppButton label="Try Again" onPress={loadRestaurants} />
+                </View>
+            </SafeAreaView>
         );
     }
 
@@ -167,150 +168,103 @@ const CuisineRestaurantsScreen: React.FC<Props> = ({route, navigation}) => {
         <SafeAreaView style={styles.container}>
             <FlatList
                 data={restaurants}
-                renderItem={renderRestaurant}
+                renderItem={renderItem}
                 keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={styles.list}
+                showsVerticalScrollIndicator={false}
                 onEndReached={loadMoreRestaurants}
                 onEndReachedThreshold={0.5}
-                ListFooterComponent={renderFooter}
                 ListHeaderComponent={
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>{cuisineType} Restaurants</Text>
-                        <Text style={styles.headerSubtitle}>
-                            {restaurants.length} restaurant{restaurants.length !== 1 ? 's' : ''} within {radius}km
-                        </Text>
-                    </View>
+                    <>
+                        {/* Header — navy */}
+                        <View style={styles.headerInline}>
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                                <AppText variant="bodySemiBold" color="rgba(255,255,255,0.75)">←</AppText>
+                            </TouchableOpacity>
+                            <View>
+                                <AppText variant="h3" color={Colors.white}>{cuisineType}</AppText>
+                                <AppText variant="caption" color="rgba(255,255,255,0.65)">
+                                    {restaurants.length} restaurant{restaurants.length !== 1 ? 's' : ''} within {radius}km
+                                </AppText>
+                            </View>
+                            <View style={{ width: 32 }} />
+                        </View>
+                        <View style={{ height: Spacing['4'] }} />
+                    </>
                 }
+                ListFooterComponent={loadingMore ? (
+                    <View style={styles.footer}>
+                        <ActivityIndicator size="small" color={NAVY} />
+                    </View>
+                ) : null}
             />
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    centerContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-    retryButton: {
-        backgroundColor: '#dc3545',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
-    },
-    retryButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    listContent: {
-        padding: 16,
-    },
+    container: { flex: 1, backgroundColor: Colors.appBackground },
+
     header: {
-        marginBottom: 16,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#666',
-    },
-    restaurantCard: {
+        backgroundColor: NAVY,
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['3'],
+        paddingBottom: Spacing['3'],
+    },
+    // Inline header used inside FlatList ListHeaderComponent
+    headerInline: {
+        backgroundColor: NAVY,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['3'],
+        paddingBottom: Spacing['3'],
+        marginHorizontal: -Spacing['4'],  // counteract list padding
+        marginTop: -Spacing['4'],
+    },
+    backBtn: { width: 32, justifyContent: 'center' },
+
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
+    emptyIcon: { fontSize: 40, marginBottom: Spacing['4'] },
+
+    list: { padding: Spacing['4'], paddingBottom: Spacing['8'] },
+
+    // ── Card ──────────────────────────────────────────────────────────────────
+    card: {
+        flexDirection: 'row',
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.xl,
+        marginBottom: Spacing['3'],
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        shadowColor: '#1a2e3b',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
     },
-    restaurantImage: {
-        width: 120,
-        height: 120,
+    image: { width: 108, height: 108 },
+    info: { flex: 1, padding: Spacing['3'], justifyContent: 'center', gap: 4 },
+    name: { fontSize: 15 },
+    ratingRow: { flexDirection: 'row', alignItems: 'center' },
+    star: { color: Colors.star, fontSize: 12 },
+    address: {},
+    metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 2 },
+    dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.cardBorder, marginHorizontal: 5 },
+    pricePill: {
+        backgroundColor: 'rgba(15,51,70,0.07)',
+        borderWidth: 1,
+        borderColor: 'rgba(15,51,70,0.12)',
+        borderRadius: Radius.full,
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: 2,
     },
-    restaurantInfo: {
-        flex: 1,
-        padding: 12,
-    },
-    restaurantName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    ratingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    star: {
-        color: '#FFD700',
-        fontSize: 14,
-        marginRight: 4,
-    },
-    rating: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginRight: 4,
-    },
-    reviews: {
-        fontSize: 12,
-        color: '#666',
-    },
-    address: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 8,
-    },
-    detailsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    priceRange: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-    },
-    dot: {
-        marginHorizontal: 6,
-        color: '#999',
-    },
-    cuisineType: {
-        fontSize: 14,
-        color: '#666',
-    },
-    distance: {
-        fontSize: 14,
-        color: '#666',
-    },
-    footerLoader: {
-        paddingVertical: 20,
-        alignItems: 'center',
-    },
+    footer: { paddingVertical: Spacing['5'], alignItems: 'center' },
 });
 
 export default CuisineRestaurantsScreen;

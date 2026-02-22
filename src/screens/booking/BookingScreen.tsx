@@ -5,7 +5,6 @@ import {
     SafeAreaView,
     ScrollView,
     StyleSheet,
-    Text,
     TextInput,
     TouchableOpacity,
     View,
@@ -20,16 +19,16 @@ import { AvailableSlot, ReservationTag, ReservationTagRequest } from '../../type
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import { processingService, restaurantService } from '../../services/api';
+import { Colors, Radius, Spacing, FontFamily, FontSize } from '../../theme';
+import AppText from '../../components/ui/AppText';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
     const { isAuthenticated, user } = useAuth();
     const isFocused = useIsFocused();
 
-    // Format date for the streaming hook
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
-    // Availability data with automatic polling (only when authenticated)
     const {
         slots: streamedSlots,
         isLoading: slotsLoading,
@@ -44,14 +43,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         pollingIntervalMs: 30000,
     });
 
-    // Derive availability error from stream error
     const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
-
-    // Map streamed slots to local state format
     const availableSlots = streamedSlots;
 
-    // Form state
     const [selectedTime, setSelectedTime] = useState<string>(initialSelectedTime || '');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
@@ -60,125 +55,74 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Reservation tags state
     const [availableTags, setAvailableTags] = useState<ReservationTag[]>([]);
     const [selectedTags, setSelectedTags] = useState<ReservationTagRequest[]>([]);
 
-    // Auto-fill user information from profile when authenticated
     useEffect(() => {
         if (user) {
-            // Combine first and last name
             const fullName = `${user.firstName} ${user.lastName}`.trim();
-            if (fullName) {
-                setCustomerName(fullName);
-            }
-
-            // Set phone with country code if available
+            if (fullName) setCustomerName(fullName);
             if (user.phone) {
-                const phoneNumber = user.phoneCountryCode
-                  ? `${user.phoneCountryCode} ${user.phone}`
-                  : user.phone;
-                setCustomerPhone(phoneNumber);
+                setCustomerPhone(user.phoneCountryCode ? `${user.phoneCountryCode} ${user.phone}` : user.phone);
             }
-
-            // Set email
-            if (user.email) {
-                setCustomerEmail(user.email);
-            }
+            if (user.email) setCustomerEmail(user.email);
         }
     }, [user]);
 
-    // Check authentication on mount - show prompt immediately if not logged in
     useEffect(() => {
-        if (!isAuthenticated) {
-            setShowAuthPrompt(true);
-        }
+        if (!isAuthenticated) setShowAuthPrompt(true);
     }, [isAuthenticated]);
 
-    // Fetch available reservation tags for the restaurant
     useEffect(() => {
         const fetchTags = async () => {
             try {
                 const tags = await restaurantService.getReservationTags(restaurant.id);
                 setAvailableTags(tags);
-            } catch (error) {
-                console.log('Failed to fetch reservation tags:', error);
-                // Non-critical - tags are optional
+            } catch {
+                // Non-critical
             }
         };
         fetchTags();
     }, [restaurant.id]);
 
-    // Handle tag toggle
     const handleTagToggle = (tagId: number) => {
         setSelectedTags(prev => {
             const exists = prev.find(t => t.tagId === tagId);
-            if (exists) {
-                return prev.filter(t => t.tagId !== tagId);
-            }
+            if (exists) return prev.filter(t => t.tagId !== tagId);
             return [...prev, { tagId, note: undefined }];
         });
     };
 
-    // Handle tag note change
     const handleTagNoteChange = (tagId: number, note: string) => {
-        setSelectedTags(prev =>
-            prev.map(t => t.tagId === tagId ? { ...t, note: note || undefined } : t)
-        );
+        setSelectedTags(prev => prev.map(t => t.tagId === tagId ? { ...t, note: note || undefined } : t));
     };
 
-    // Handle streaming errors and no-slot scenarios
     useEffect(() => {
         if (streamError) {
-            const parsedError = parseAvailabilityError(streamError);
-            setAvailabilityError(parsedError);
+            setAvailabilityError(parseAvailabilityError(streamError));
         } else if (!slotsLoading && availableSlots.length === 0) {
             setAvailabilityError({
                 type: 'no_slots',
                 title: 'No Availability',
                 message: 'No tables available for the selected date and party size. Please try a different date or time.',
-                showContactInfo: true
+                showContactInfo: true,
             });
         } else {
             setAvailabilityError(null);
         }
     }, [streamError, slotsLoading, availableSlots]);
 
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    };
+    const formatDate = (date: Date) =>
+        date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const handleLogin = () => {
         setShowAuthPrompt(false);
-
-        navigation.dispatch(
-          CommonActions.reset({
-              index: 0,
-              routes: [
-                  { name: 'MainTabs' },
-                  { name: 'Login' }
-              ],
-          })
-        );
+        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }, { name: 'Login' }] }));
     };
 
     const handleRegister = () => {
         setShowAuthPrompt(false);
-
-        navigation.dispatch(
-          CommonActions.reset({
-              index: 0,
-              routes: [
-                  { name: 'MainTabs' },
-                  { name: 'Register' }
-              ],
-          })
-        );
+        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }, { name: 'Register' }] }));
     };
 
     const handleGoBack = () => {
@@ -186,737 +130,550 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         navigation.goBack();
     };
 
-    const handleConfirmBooking = async () => {
-        if (!isAuthenticated) {
-            console.log('⚠️ [BookingScreen] User not authenticated, showing auth prompt');
-            setShowAuthPrompt(true);
-            return;
+    const handleCallRestaurant = () => {
+        if (restaurant.phoneNumber) {
+            Alert.alert('Contact Restaurant', `Would you like to call ${restaurant.name}?\n\n${restaurant.phoneNumber}`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Call', onPress: () => console.log('Calling:', restaurant.phoneNumber) },
+            ]);
         }
+    };
 
+    const handleConfirmBooking = async () => {
+        if (!isAuthenticated) { setShowAuthPrompt(true); return; }
         if (!selectedTime || !customerName || !customerPhone) {
             Alert.alert('Missing Information', 'Please fill in all required fields.');
             return;
         }
-
         try {
-            // Show loading state
             setIsLoading(true);
-
-            // Check token in storage
             const AsyncStorage = require('@react-native-async-storage/async-storage').default;
             const token = await AsyncStorage.getItem('@dineease_access_token');
-            console.log('🔑 [BookingScreen] Token in storage:', token ? `${token.substring(0, 20)}...` : 'NULL');
+            console.log('🔑 Token:', token ? `${token.substring(0, 20)}...` : 'NULL');
 
-            // Create reservation via API
-            // Parse phone number to extract country code
-            const parsePhoneNumber = (phone: string): { phoneNumber: string; phoneCountryCode: string } => {
-                // Remove all spaces
+            const parsePhoneNumber = (phone: string) => {
                 const cleanPhone = phone.replace(/\s+/g, '');
-
-                // Check for common country codes at the start
-                const countryCodePatterns = [
-                    { code: '+357', length: 4 },  // Cyprus
-                    { code: '+30', length: 3 },   // Greece
-                    { code: '+44', length: 3 },   // UK
-                    { code: '+1', length: 2 },    // US/Canada
-                    { code: '+49', length: 3 },   // Germany
-                    { code: '+33', length: 3 },   // France
-                    { code: '+39', length: 3 },   // Italy
-                    { code: '+34', length: 3 },   // Spain
+                const patterns = [
+                    { code: '+357', length: 4 }, { code: '+30', length: 3 }, { code: '+44', length: 3 },
+                    { code: '+1', length: 2 }, { code: '+49', length: 3 }, { code: '+33', length: 3 },
+                    { code: '+39', length: 3 }, { code: '+34', length: 3 },
                 ];
-
-                for (const { code, length } of countryCodePatterns) {
-                    if (cleanPhone.startsWith(code)) {
-                        return {
-                            phoneCountryCode: code,
-                            phoneNumber: cleanPhone.substring(length),
-                        };
-                    }
+                for (const { code, length } of patterns) {
+                    if (cleanPhone.startsWith(code)) return { phoneCountryCode: code, phoneNumber: cleanPhone.substring(length) };
                 }
-
-                // Default to +357 if no country code found
-                return {
-                    phoneCountryCode: '+357',
-                    phoneNumber: cleanPhone,
-                };
+                return { phoneCountryCode: '+357', phoneNumber: cleanPhone };
             };
 
             const { phoneNumber, phoneCountryCode } = parsePhoneNumber(customerPhone);
-
             const reservation = {
-                reservationDate: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD
-                reservationStartTime: selectedTime, // HH:mm format
-                reservationDuration: 120, // 2 hours default
+                reservationDate: selectedDate.toISOString().split('T')[0],
+                reservationStartTime: selectedTime,
+                reservationDuration: 120,
                 partySize,
                 noOfAdults: partySize,
                 noOfKids: 0,
                 isSmoking: false,
-                customer: {
-                    name: customerName,
-                    phoneNumber: phoneNumber,
-                    phoneCountryCode: phoneCountryCode,
-                    email: customerEmail || undefined,
-                },
+                customer: { name: customerName, phoneNumber, phoneCountryCode, email: customerEmail || undefined },
                 restaurantId: restaurant.id,
                 state: 'CONFIRMED',
                 comments: specialRequests || undefined,
                 tagRequests: selectedTags.length > 0 ? selectedTags : undefined,
             };
 
-            console.log('📝 [BookingScreen] Calling createReservation with:', {
-                date: reservation.reservationDate,
-                time: reservation.reservationStartTime,
-                restaurantId: reservation.restaurantId,
-                partySize: reservation.partySize,
-            });
-
             const response = await processingService.createReservation(reservation);
-
-            console.log('✅ [BookingScreen] Reservation created successfully:', response);
-
-            // Generate confirmation code from response or use reservation ID
-            const confirmationCode = response.reservationId
-                ? `RES${response.reservationId}`
-                : 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
-
+            const confirmationCode = response.reservationId ? `RES${response.reservationId}` : 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
             setIsLoading(false);
-
             navigation.navigate('BookingConfirmation', {
-                booking: {
-                    restaurant,
-                    date: selectedDate,
-                    time: selectedTime,
-                    partySize,
-                    customerName,
-                    customerPhone,
-                    customerEmail,
-                    specialRequests,
-                    confirmationCode,
-                }
+                booking: { restaurant, date: selectedDate, time: selectedTime, partySize, customerName, customerPhone, customerEmail, specialRequests, confirmationCode },
             });
         } catch (error: any) {
             setIsLoading(false);
-            console.error('❌ [BookingScreen] Reservation creation failed:', error);
-            console.error('❌ [BookingScreen] Error details:', {
-                message: error.message,
-                statusCode: error.statusCode,
-                response: error.response,
-            });
-            Alert.alert(
-                'Booking Failed',
-                error.message || 'Unable to create reservation. Please try again.',
-                [{ text: 'OK' }]
-            );
+            Alert.alert('Booking Failed', error.message || 'Unable to create reservation. Please try again.', [{ text: 'OK' }]);
         }
     };
 
-    const handleCallRestaurant = () => {
-        if (restaurant.phoneNumber) {
-            Alert.alert(
-              'Contact Restaurant',
-              `Would you like to call ${restaurant.name}?\n\n${restaurant.phoneNumber}`,
-              [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Call', onPress: () => {
-                          // In a real app, you'd use Linking.openURL(`tel:${restaurant.phoneNumber}`)
-                          console.log('Calling restaurant:', restaurant.phoneNumber);
-                      }}
-              ]
-            );
-        }
-    };
-
-    /**
-     * Get visible slots for horizontal scroll
-     * Shows 6-8 slots centered around selected time, or first 8 if none selected
-     */
     const getVisibleSlots = (): AvailableSlot[] => {
         const available = availableSlots.filter(s => s.isAvailable);
-
-        if (available.length <= 8) {
-            return available; // Show all if 8 or fewer
-        }
-
-        // If no time selected, show first 8
-        if (!selectedTime) {
-            return available.slice(0, 8);
-        }
-
-        // Find index of selected time
+        if (available.length <= 8) return available;
+        if (!selectedTime) return available.slice(0, 8);
         const selectedIndex = available.findIndex(s => s.time === selectedTime);
-
-        if (selectedIndex === -1) {
-            // Selected time not found, show first 8
-            return available.slice(0, 8);
-        }
-
-        // Show 3 before, selected, and 4 after (total 8 slots)
+        if (selectedIndex === -1) return available.slice(0, 8);
         const start = Math.max(0, selectedIndex - 3);
         const end = Math.min(available.length, start + 9);
-
-        // Adjust start if we're near the end
-        const adjustedStart = Math.max(0, end - 8);
-
-        return available.slice(adjustedStart, end);
+        return available.slice(Math.max(0, end - 8), end);
     };
 
-
-    // Render authentication prompt modal
     const renderAuthPrompt = () => (
-      <Modal
-        visible={showAuthPrompt}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleGoBack}
-      >
-          <View style={styles.modalOverlay}>
-              <View style={styles.authPromptContainer}>
-                  <View style={styles.authPromptIcon}>
-                      <Text style={styles.authPromptEmoji}>🔐</Text>
-                  </View>
-
-                  <Text style={styles.authPromptTitle}>Sign in to Book</Text>
-                  <Text style={styles.authPromptMessage}>
-                      You need to be signed in to make a reservation at {restaurant.name}
-                  </Text>
-
-                  <View style={styles.authPromptButtons}>
-                      <TouchableOpacity
-                        style={styles.authPromptButtonPrimary}
-                        onPress={handleLogin}
-                      >
-                          <Text style={styles.authPromptButtonPrimaryText}>Sign In</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.authPromptButtonSecondary}
-                        onPress={handleRegister}
-                      >
-                          <Text style={styles.authPromptButtonSecondaryText}>Create Account</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.authPromptButtonCancel}
-                        onPress={handleGoBack}
-                      >
-                          <Text style={styles.authPromptButtonCancelText}>Go Back</Text>
-                      </TouchableOpacity>
-                  </View>
-              </View>
-          </View>
-      </Modal>
+        <Modal visible={showAuthPrompt} transparent animationType="fade" onRequestClose={handleGoBack}>
+            <View style={styles.modalOverlay}>
+                <View style={styles.authCard}>
+                    <View style={styles.authIconCircle}>
+                        <AppText style={styles.authEmoji}>🔐</AppText>
+                    </View>
+                    <AppText variant="sectionTitle" color={Colors.primary} style={styles.authTitle}>
+                        Sign in to Book
+                    </AppText>
+                    <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.authMessage}>
+                        You need to be signed in to make a reservation at {restaurant.name}
+                    </AppText>
+                    <TouchableOpacity style={styles.btnPrimary} onPress={handleLogin}>
+                        <AppText variant="button" color={Colors.white}>Sign In</AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.btnSecondary} onPress={handleRegister}>
+                        <AppText variant="button" color={Colors.primary}>Create Account</AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.btnGhost} onPress={handleGoBack}>
+                        <AppText variant="body" color={Colors.textOnLightTertiary}>Go Back</AppText>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
     );
 
-    // If not authenticated, only show the auth prompt modal
     if (!isAuthenticated && showAuthPrompt) {
-        return (
-          <SafeAreaView style={styles.container}>
-              {renderAuthPrompt()}
-          </SafeAreaView>
-        );
+        return <SafeAreaView style={styles.container}>{renderAuthPrompt()}</SafeAreaView>;
     }
 
+    const isFormReady = !!selectedTime && !!customerName && !!customerPhone;
+
     return (
-      <SafeAreaView style={styles.container}>
-          <ScrollView style={styles.content}>
-              {/* Header */}
-              <View style={styles.header}>
-                  <TouchableOpacity onPress={() => navigation.goBack()}>
-                      <Text style={styles.backButton}>← Back</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.title}>Make Reservation</Text>
-              </View>
+        <SafeAreaView style={styles.container}>
+            {/* ── Navy header ── */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+                    <AppText style={styles.backArrow}>←</AppText>
+                </TouchableOpacity>
+                <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>
+                    Make Reservation
+                </AppText>
+            </View>
 
-              {/* Restaurant Info */}
-              <View style={styles.restaurantInfo}>
-                  <Text style={styles.restaurantName}>{restaurant.name}</Text>
-                  <Text style={styles.bookingDetails}>
-                      {formatDate(selectedDate)} • {partySize} guests
-                  </Text>
-              </View>
+            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-              {/* Time Selection */}
-              <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Select Time</Text>
-                      {!slotsLoading && !availabilityError && availableSlots.filter(s => s.isAvailable).length > 6 && (
-                        <TouchableOpacity onPress={() => setShowAllSlotsModal(true)}>
-                            <Text style={styles.viewAllText}>View All →</Text>
-                        </TouchableOpacity>
-                      )}
-                  </View>
+                {/* ── Restaurant info block ── */}
+                <View style={styles.restaurantBlock}>
+                    <AppText variant="h3" color={Colors.primary} style={styles.restaurantName} numberOfLines={2}>
+                        {restaurant.name}
+                    </AppText>
+                    <AppText variant="body" color={Colors.textOnLightSecondary}>
+                        {formatDate(selectedDate)} · {partySize} {partySize === 1 ? 'guest' : 'guests'}
+                    </AppText>
+                </View>
 
-                  {slotsLoading ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#7C3AED" />
-                        <Text style={styles.loadingText}>Finding available times...</Text>
+                {/* ── Select Time ── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionLabelRow}>
+                        <View style={styles.sectionTick} />
+                        <AppText variant="sectionTitle" color={Colors.primary}>Select Time</AppText>
+                        {!slotsLoading && !availabilityError && availableSlots.filter(s => s.isAvailable).length > 6 && (
+                            <TouchableOpacity onPress={() => setShowAllSlotsModal(true)} style={styles.viewAllBtn}>
+                                <AppText variant="captionMedium" color={Colors.accent}>View all →</AppText>
+                            </TouchableOpacity>
+                        )}
                     </View>
-                  ) : availabilityError ? (
-                    <AvailabilityErrorDisplay
-                      error={availabilityError}
-                      onContactRestaurant={handleCallRestaurant}
-                    />
-                  ) : availableSlots.filter(s => s.isAvailable).length > 0 ? (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.horizontalScrollContent}
-                    >
-                        {getVisibleSlots().map((slot, index) => (
-                          <TimeSlotDisplay
-                            key={index}
-                            slot={slot}
-                            onPress={() => setSelectedTime(slot.time)}
-                            variant="horizontal"
-                            isSelected={selectedTime === slot.time}
-                          />
-                        ))}
-                    </ScrollView>
-                  ) : (
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No time slots available</Text>
+
+                    {slotsLoading ? (
+                        <View style={styles.loadingRow}>
+                            <ActivityIndicator size="small" color={Colors.accent} />
+                            <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['2'] }}>
+                                Finding available times...
+                            </AppText>
+                        </View>
+                    ) : availabilityError ? (
+                        <AvailabilityErrorDisplay error={availabilityError} onContactRestaurant={handleCallRestaurant} />
+                    ) : availableSlots.filter(s => s.isAvailable).length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.slotScroll}>
+                            {getVisibleSlots().map((slot, i) => (
+                                <TimeSlotDisplay
+                                    key={i}
+                                    slot={slot}
+                                    onPress={() => setSelectedTime(slot.time)}
+                                    variant="modal"
+                                    isSelected={selectedTime === slot.time}
+                                />
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <AppText variant="body" color={Colors.textOnLightSecondary} style={{ fontStyle: 'italic' }}>
+                            No time slots available
+                        </AppText>
+                    )}
+                </View>
+
+                {/* ── Your Information ── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionLabelRow}>
+                        <View style={styles.sectionTick} />
+                        <AppText variant="sectionTitle" color={Colors.primary}>Your Information</AppText>
                     </View>
-                  )}
-              </View>
 
-              {/* Customer Information */}
-              <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Your Information</Text>
+                    <View style={styles.inputGroup}>
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.inputLabel}>
+                            FULL NAME *
+                        </AppText>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter your full name"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            value={customerName}
+                            onChangeText={setCustomerName}
+                        />
+                    </View>
 
-                  <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Full Name *</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Enter your full name"
-                        value={customerName}
-                        onChangeText={setCustomerName}
-                      />
-                  </View>
+                    <View style={styles.inputGroup}>
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.inputLabel}>
+                            PHONE NUMBER *
+                        </AppText>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="+357 99 123456"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            value={customerPhone}
+                            onChangeText={setCustomerPhone}
+                            keyboardType="phone-pad"
+                        />
+                    </View>
 
-                  <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Phone Number *</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="+357 99 123456"
-                        value={customerPhone}
-                        onChangeText={setCustomerPhone}
-                        keyboardType="phone-pad"
-                      />
-                  </View>
+                    <View style={styles.inputGroup}>
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.inputLabel}>
+                            EMAIL (OPTIONAL)
+                        </AppText>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="your.email@example.com"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            value={customerEmail}
+                            onChangeText={setCustomerEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                        />
+                    </View>
 
-                  <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Email (Optional)</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="your.email@example.com"
-                        value={customerEmail}
-                        onChangeText={setCustomerEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                      />
-                  </View>
+                    <View style={styles.inputGroup}>
+                        <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.inputLabel}>
+                            SPECIAL REQUESTS (OPTIONAL)
+                        </AppText>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Any dietary restrictions or special requests?"
+                            placeholderTextColor={Colors.textOnLightTertiary}
+                            value={specialRequests}
+                            onChangeText={setSpecialRequests}
+                            multiline
+                            numberOfLines={4}
+                            textAlignVertical="top"
+                        />
+                    </View>
+                </View>
 
-                  <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Special Requests (Optional)</Text>
-                      <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Any dietary restrictions or special requests?"
-                        value={specialRequests}
-                        onChangeText={setSpecialRequests}
-                        multiline
-                        numberOfLines={4}
-                      />
-                  </View>
-              </View>
+                {/* ── Special Occasion tags ── */}
+                {availableTags.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Special Occasion</AppText>
+                        </View>
+                        <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.tagSubtitle}>
+                            Let us know if you're celebrating something special
+                        </AppText>
+                        <View style={styles.tagsRow}>
+                            {availableTags.map((tag) => {
+                                const isSelected = selectedTags.some(t => t.tagId === tag.tagId);
+                                return (
+                                    <TouchableOpacity
+                                        key={tag.tagId}
+                                        style={[styles.tagPill, isSelected && styles.tagPillSelected]}
+                                        onPress={() => handleTagToggle(tag.tagId)}
+                                    >
+                                        {tag.icon && <AppText style={styles.tagIcon}>{tag.icon}</AppText>}
+                                        <AppText
+                                            variant="captionMedium"
+                                            color={isSelected ? Colors.white : Colors.textOnLight}
+                                        >
+                                            {tag.tagName}
+                                        </AppText>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                        {selectedTags.length > 0 && (
+                            <View style={styles.tagNotes}>
+                                {selectedTags.map((selectedTag) => {
+                                    const tag = availableTags.find(t => t.tagId === selectedTag.tagId);
+                                    if (!tag) return null;
+                                    return (
+                                        <View key={selectedTag.tagId} style={styles.inputGroup}>
+                                            <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.inputLabel}>
+                                                {tag.icon} {tag.tagName.toUpperCase()} NOTE
+                                            </AppText>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Add details (e.g., 'Turning 30!')"
+                                                placeholderTextColor={Colors.textOnLightTertiary}
+                                                value={selectedTag.note || ''}
+                                                onChangeText={(text) => handleTagNoteChange(selectedTag.tagId, text)}
+                                            />
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
+                    </View>
+                )}
 
-              {/* Reservation Tags Section */}
-              {availableTags.length > 0 && (
-                  <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Special Occasion (Optional)</Text>
-                      <Text style={styles.tagSubtitle}>Let us know if you're celebrating something special</Text>
-                      <View style={styles.tagsContainer}>
-                          {availableTags.map((tag) => {
-                              const isSelected = selectedTags.some(t => t.tagId === tag.tagId);
-                              return (
-                                  <TouchableOpacity
-                                      key={tag.tagId}
-                                      style={[
-                                          styles.tagButton,
-                                          isSelected && styles.tagButtonSelected
-                                      ]}
-                                      onPress={() => handleTagToggle(tag.tagId)}
-                                  >
-                                      {tag.icon && <Text style={styles.tagIcon}>{tag.icon}</Text>}
-                                      <Text style={[
-                                          styles.tagText,
-                                          isSelected && styles.tagTextSelected
-                                      ]}>
-                                          {tag.tagName}
-                                      </Text>
-                                  </TouchableOpacity>
-                              );
-                          })}
-                      </View>
-                      {/* Note inputs for selected tags */}
-                      {selectedTags.length > 0 && (
-                          <View style={styles.tagNotesContainer}>
-                              {selectedTags.map((selectedTag) => {
-                                  const tag = availableTags.find(t => t.tagId === selectedTag.tagId);
-                                  if (!tag) return null;
-                                  return (
-                                      <View key={selectedTag.tagId} style={styles.tagNoteInput}>
-                                          <Text style={styles.tagNoteLabel}>
-                                              {tag.icon} {tag.tagName} note:
-                                          </Text>
-                                          <TextInput
-                                              style={styles.input}
-                                              placeholder="Add details (e.g., 'Turning 30!')"
-                                              value={selectedTag.note || ''}
-                                              onChangeText={(text) => handleTagNoteChange(selectedTag.tagId, text)}
-                                          />
-                                      </View>
-                                  );
-                              })}
-                          </View>
-                      )}
-                  </View>
-              )}
+                {/* ── Confirm button ── */}
+                <TouchableOpacity
+                    style={[styles.confirmBtn, (!isFormReady || isLoading) && styles.confirmBtnDisabled]}
+                    onPress={handleConfirmBooking}
+                    disabled={!isFormReady || isLoading}
+                    activeOpacity={0.85}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color={Colors.white} />
+                    ) : (
+                        <AppText variant="button" color={Colors.white}>Confirm Reservation</AppText>
+                    )}
+                </TouchableOpacity>
 
-              {/* Confirm Button */}
-              <TouchableOpacity
-                style={[
-                    styles.confirmButton,
-                    (!selectedTime || !customerName || !customerPhone || isLoading) && styles.confirmButtonDisabled
-                ]}
-                onPress={handleConfirmBooking}
-                disabled={!selectedTime || !customerName || !customerPhone || isLoading}
-              >
-                  {isLoading ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                      <Text style={styles.confirmButtonText}>Confirm Reservation</Text>
-                  )}
-              </TouchableOpacity>
-          </ScrollView>
+                <View style={{ height: Spacing['8'] }} />
+            </ScrollView>
 
-          {/* View All Slots Modal */}
-          <AllSlotsModal
-            visible={showAllSlotsModal}
-            onClose={() => setShowAllSlotsModal(false)}
-            slots={availableSlots}
-            selectedTime={selectedTime}
-            onTimeSelect={(slot) => {
-              setSelectedTime(slot.time);
-              setShowAllSlotsModal(false);
-            }}
-            headerTitle="All Available Times"
-            headerSubtitle={`${formatDate(selectedDate)} • ${partySize} guests`}
-          />
+            <AllSlotsModal
+                visible={showAllSlotsModal}
+                onClose={() => setShowAllSlotsModal(false)}
+                slots={availableSlots}
+                selectedTime={selectedTime}
+                onTimeSelect={(slot) => { setSelectedTime(slot.time); setShowAllSlotsModal(false); }}
+                headerTitle="All Available Times"
+                headerSubtitle={`${formatDate(selectedDate)} · ${partySize} guests`}
+            />
 
-          {/* Authentication Prompt Modal */}
-          {renderAuthPrompt()}
-      </SafeAreaView>
+            {renderAuthPrompt()}
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: Colors.appBackground,
     },
-    content: {
-        flex: 1,
-    },
+
+    // ── Header ─────────────────────────────────────────────────────────────────
     header: {
+        backgroundColor: Colors.primary,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        paddingHorizontal: Spacing['5'],
+        paddingVertical: Spacing['3'],
+        gap: Spacing['3'],
+    },
+    backBtn: {
+        width: 34,
+        height: 34,
+        borderRadius: Radius.full,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backArrow: {
+        fontSize: 18,
+        color: Colors.white,
+    },
+    headerTitle: {
+        fontSize: FontSize.lg,
+    },
+
+    // ── Scroll ─────────────────────────────────────────────────────────────────
+    scroll: { flex: 1 },
+    scrollContent: {
+        paddingBottom: Spacing['6'],
+    },
+
+    // ── Restaurant block ───────────────────────────────────────────────────────
+    restaurantBlock: {
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['5'],
+        paddingBottom: Spacing['4'],
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backButton: {
-        fontSize: 16,
-        color: '#7C3AED',
-        marginRight: 16,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    restaurantInfo: {
-        padding: 20,
-        backgroundColor: '#f8f9fa',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: Colors.cardBorder,
     },
     restaurantName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: FontSize['2xl'],
+        marginBottom: Spacing['1'],
     },
-    bookingDetails: {
-        fontSize: 16,
-        color: '#666',
-    },
+
+    // ── Section ────────────────────────────────────────────────────────────────
     section: {
-        padding: 20,
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['5'],
+        paddingBottom: Spacing['2'],
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.cardBorder,
     },
-    sectionHeader: {
+    sectionLabelRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        gap: Spacing['2'],
+        marginBottom: Spacing['4'],
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
+    sectionTick: {
+        width: 3,
+        height: 18,
+        backgroundColor: Colors.primary,
+        borderRadius: 2,
     },
-    viewAllText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#7C3AED',
+    viewAllBtn: {
+        marginLeft: 'auto',
     },
-    horizontalScrollContent: {
-        paddingRight: 20,
-        gap: 12,
+
+    // ── Time slots ─────────────────────────────────────────────────────────────
+    slotScroll: {
+        gap: Spacing['2'],
+        paddingBottom: Spacing['3'],
     },
-    timeSlotHorizontal: {
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#e0e0e0',
-        minWidth: 90,
+    loadingRow: {
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingVertical: Spacing['3'],
     },
-    loadingContainer: {
-        paddingVertical: 40,
-        alignItems: 'center',
-    },
-    loadingText: {
-        fontSize: 14,
-        color: '#999',
-        marginTop: 12,
-    },
-    emptyContainer: {
-        paddingVertical: 40,
-        alignItems: 'center',
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#999',
-    },
+
+    // ── Form inputs ────────────────────────────────────────────────────────────
     inputGroup: {
-        marginBottom: 20,
+        marginBottom: Spacing['4'],
     },
     inputLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        marginBottom: Spacing['1'] + 2,
+        letterSpacing: 0.8,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#e0e0e0',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        color: '#333',
-        backgroundColor: '#fff',
+        borderColor: Colors.cardBorder,
+        borderRadius: Radius.lg,
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['3'],
+        fontSize: FontSize.base,
+        fontFamily: FontFamily.regular,
+        color: Colors.textOnLight,
+        backgroundColor: Colors.cardBackground,
     },
     textArea: {
-        height: 100,
-        textAlignVertical: 'top',
+        height: 90,
+        paddingTop: Spacing['3'],
     },
-    // Tag selection styles
+
+    // ── Tags ───────────────────────────────────────────────────────────────────
     tagSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-        marginBottom: 12,
+        marginTop: -Spacing['2'],
+        marginBottom: Spacing['3'],
     },
-    tagsContainer: {
+    tagsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 10,
+        gap: Spacing['2'],
+        marginBottom: Spacing['3'],
     },
-    tagButton: {
+    tagPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 20,
+        gap: 5,
+        paddingVertical: Spacing['2'],
+        paddingHorizontal: Spacing['3'],
+        borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
-        backgroundColor: '#fff',
+        borderColor: Colors.cardBorder,
+        backgroundColor: Colors.cardBackground,
     },
-    tagButtonSelected: {
-        backgroundColor: '#7C3AED',
-        borderColor: '#7C3AED',
+    tagPillSelected: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
     },
-    tagIcon: {
-        fontSize: 16,
-        marginRight: 6,
-    },
-    tagText: {
-        fontSize: 14,
-        color: '#333',
-        fontWeight: '500',
-    },
-    tagTextSelected: {
-        color: '#fff',
-    },
-    tagNotesContainer: {
-        marginTop: 16,
-    },
-    tagNoteInput: {
-        marginBottom: 12,
-    },
-    tagNoteLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#333',
-        marginBottom: 6,
-    },
-    confirmButton: {
-        margin: 20,
-        backgroundColor: '#7C3AED',
-        paddingVertical: 16,
-        borderRadius: 12,
+    tagIcon: { fontSize: 14 },
+    tagNotes: { marginTop: Spacing['2'] },
+
+    // ── Confirm button ─────────────────────────────────────────────────────────
+    confirmBtn: {
+        marginHorizontal: Spacing['5'],
+        marginTop: Spacing['6'],
+        backgroundColor: Colors.accent,
+        paddingVertical: Spacing['4'],
+        borderRadius: Radius.lg,
         alignItems: 'center',
-        shadowColor: '#7C3AED',
+        shadowColor: Colors.accent,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 5,
     },
-    confirmButtonDisabled: {
-        backgroundColor: '#CCCCCC',
+    confirmBtnDisabled: {
+        backgroundColor: Colors.cardBorder,
         shadowOpacity: 0,
+        elevation: 0,
     },
-    confirmButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    // Auth Prompt Modal Styles
+
+    // ── Auth prompt modal ──────────────────────────────────────────────────────
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(9,31,43,0.7)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: Spacing['5'],
     },
-    authPromptContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 30,
+    authCard: {
+        backgroundColor: Colors.appBackground,
+        borderRadius: Radius['2xl'],
+        padding: Spacing['6'],
         width: '100%',
         maxWidth: 400,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
         shadowRadius: 20,
         elevation: 10,
     },
-    authPromptIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#F3E8FF',
+    authIconCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: Spacing['4'],
     },
-    authPromptEmoji: {
-        fontSize: 40,
-    },
-    authPromptTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 12,
+    authEmoji: { fontSize: 34 },
+    authTitle: {
+        marginBottom: Spacing['2'],
         textAlign: 'center',
     },
-    authPromptMessage: {
-        fontSize: 16,
-        color: '#666',
+    authMessage: {
         textAlign: 'center',
-        lineHeight: 24,
-        marginBottom: 30,
+        lineHeight: 22,
+        marginBottom: Spacing['5'],
     },
-    authPromptButtons: {
+    btnPrimary: {
         width: '100%',
-        gap: 12,
-    },
-    authPromptButtonPrimary: {
-        backgroundColor: '#7C3AED',
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: Colors.accent,
+        paddingVertical: Spacing['3'] + 2,
+        borderRadius: Radius.lg,
         alignItems: 'center',
-        shadowColor: '#7C3AED',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
+        marginBottom: Spacing['2'],
     },
-    authPromptButtonPrimaryText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    authPromptButtonSecondary: {
-        backgroundColor: '#fff',
-        paddingVertical: 16,
-        borderRadius: 12,
+    btnSecondary: {
+        width: '100%',
+        backgroundColor: Colors.appBackground,
+        paddingVertical: Spacing['3'] + 2,
+        borderRadius: Radius.lg,
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#7C3AED',
+        borderWidth: 1,
+        borderColor: Colors.primary,
+        marginBottom: Spacing['2'],
     },
-    authPromptButtonSecondaryText: {
-        color: '#7C3AED',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    authPromptButtonCancel: {
-        paddingVertical: 12,
+    btnGhost: {
+        paddingVertical: Spacing['2'],
         alignItems: 'center',
-    },
-    authPromptButtonCancelText: {
-        color: '#999',
-        fontSize: 16,
-    },
-    // Real-time streaming indicator styles
-    sectionTitleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    liveIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ECFDF5',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 4,
-    },
-    liveDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#10B981',
-    },
-    liveText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#059669',
-        textTransform: 'uppercase',
     },
 });
 

@@ -5,6 +5,7 @@ import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack
 import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Text} from 'react-native';
 import {navigationRef} from '../utils/navigationHelper';
+import { Colors } from '../theme';
 
 import RestaurantListScreen from '../screens/restaurants/RestaurantListScreen';
 import RestaurantDetailScreen from '../screens/restaurants/RestaurantDetailScreen';
@@ -120,6 +121,21 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   AllReviews: undefined;
   Favorites: undefined;
+  RestaurantDetail: { restaurant: Restaurant; partySize?: number; selectedDate?: Date; selectedTime?: string };
+  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string };
+  BookingConfirmation: {
+    booking: {
+      restaurant: Restaurant;
+      date: Date;
+      time: string;
+      partySize: number;
+      customerName: string;
+      customerPhone: string;
+      customerEmail?: string;
+      specialRequests?: string;
+      confirmationCode: string;
+    };
+  };
   AccountSettings: undefined;
   YourDetails: undefined;
   Communications: undefined;
@@ -362,6 +378,21 @@ const ProtectedProfileStackNavigator: React.FC = () => {
           options={{headerShown: false}}
         />
         <ProfileStackNav.Screen
+          name="RestaurantDetail"
+          component={RestaurantDetailScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="BookingScreen"
+          component={BookingScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="BookingConfirmation"
+          component={BookingConfirmationScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
           name="AccountSettings"
           component={AccountSettingsScreen}
           options={{headerShown: false}}
@@ -401,13 +432,20 @@ const MainTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: Colors.white,            // White active — pops on navy
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.4)', // Dim white inactive
         headerShown: false,
         tabBarStyle: {
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          backgroundColor: Colors.primary,             // Navy — mirrors the header
+          borderTopColor: 'rgba(255,255,255,0.08)',     // Very subtle white separator
+          borderTopWidth: 1,
+          paddingBottom: 6,
+          paddingTop: 6,
+          height: 62,
+        },
+        tabBarLabelStyle: {
+          fontFamily: 'Inter_600SemiBold',
+          fontSize: 11,
         },
       }}
     >

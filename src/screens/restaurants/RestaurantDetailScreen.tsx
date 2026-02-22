@@ -4,7 +4,6 @@ import {
     SafeAreaView,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
     ActivityIndicator,
@@ -24,9 +23,13 @@ import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHand
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
+import { Colors, Radius, Shadow, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+import AppButton from '../../components/ui/AppButton';
 
-const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
-                                                                           navigation }) => {
+const { width } = Dimensions.get('window');
+
+const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, navigation }) => {
     const {
         restaurant: initialRestaurant,
         partySize: initialPartySize,
@@ -41,29 +44,19 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
     const [partySize, setPartySize] = useState(initialPartySize || 2);
     const [selectedTime, setSelectedTime] = useState(initialSelectedTime || 'ASAP');
 
-    // Image carousel state
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
-
-    // Picker modal state
     const [showPickerModal, setShowPickerModal] = useState(false);
-
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
 
-    // Fetch full restaurant details from cache (24h stale time — instant on back-navigation)
     const { data: restaurantDetails, isLoading: loading } = useRestaurantDetail(initialRestaurant.id);
 
-    // Update local restaurant state when detail data arrives from the query
     useEffect(() => {
-        if (restaurantDetails) {
-            setRestaurant(mapRestaurantDetailToRestaurant(restaurantDetails));
-        }
+        if (restaurantDetails) setRestaurant(mapRestaurantDetailToRestaurant(restaurantDetails));
     }, [restaurantDetails]);
 
-    // Format date for the streaming hook
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
-    // Availability data with automatic polling (only when authenticated)
     const {
         slots: streamedSlots,
         allSlots: streamedAllSlots,
@@ -79,21 +72,18 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
         pollingIntervalMs: 30000,
     });
 
-    // Map streamed slots
     const availableSlots = streamedSlots;
 
-    // Derive availability error from stream error or empty slots
     const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
 
     useEffect(() => {
         if (streamError) {
-            const parsedError = parseAvailabilityError(streamError);
-            setAvailabilityError(parsedError);
+            setAvailabilityError(parseAvailabilityError(streamError));
         } else if (!slotsLoading && availableSlots.length === 0) {
             setAvailabilityError({
                 type: 'no_slots',
                 title: 'No Availability',
-                message: 'No tables available for the selected date and party size. Please try a different date or time.',
+                message: 'No tables available for the selected date and party size. Try a different date or time.',
                 showContactInfo: false
             });
         } else {
@@ -101,46 +91,24 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
         }
     }, [streamError, slotsLoading, availableSlots]);
 
-    /**
-     * Convert time string (HH:MM or ASAP) to minutes since midnight
-     */
     const timeToMinutes = (timeStr: string): number => {
         if (timeStr === 'ASAP') {
             const now = new Date();
             return now.getHours() * 60 + now.getMinutes();
         }
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        return hours * 60 + minutes;
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
     };
 
-    /**
-     * Get slots closest to the selected time
-     * Returns 4 slots: 2 before and 2 after (or 4 closest)
-     */
     const getClosestSlots = (slots: AvailableSlot[], targetTime: string): AvailableSlot[] => {
-        const availableOnly = slots.filter(s => s.isAvailable);
-
-        if (availableOnly.length === 0) return [];
-        if (availableOnly.length <= 4) return availableOnly;
-
-        const targetMinutes = timeToMinutes(targetTime);
-
-        // Calculate distance from target time for each slot
-        const slotsWithDistance = availableOnly.map(slot => ({
-            slot,
-            distance: Math.abs(timeToMinutes(slot.time) - targetMinutes)
-        }));
-
-        // Sort by distance (closest first)
-        slotsWithDistance.sort((a, b) => a.distance - b.distance);
-
-        // Take the 4 closest slots
-        const closestSlots = slotsWithDistance.slice(0, 4).map(item => item.slot);
-
-        // Sort by time (chronological order)
-        closestSlots.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-
-        return closestSlots;
+        const available = slots.filter(s => s.isAvailable);
+        if (available.length <= 4) return available;
+        const target = timeToMinutes(targetTime);
+        const withDist = available.map(s => ({ s, d: Math.abs(timeToMinutes(s.time) - target) }));
+        withDist.sort((a, b) => a.d - b.d);
+        const closest = withDist.slice(0, 4).map(x => x.s);
+        closest.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+        return closest;
     };
 
     const handleCallRestaurant = () => {
@@ -148,270 +116,265 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route,
             Alert.alert('No Phone Number', 'Phone number not available for this restaurant.');
             return;
         }
-
         Alert.alert(
-          'Contact Restaurant',
-          `Phone: ${restaurant.phoneNumber}\n\nWould you like to call now?`,
-          [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                  text: 'Call',
-                  onPress: () => {
-                      const phoneUrl = `tel:${restaurant.phoneNumber.replace(/\s/g, '')}`;
-                      Linking.openURL(phoneUrl).catch(err => {
-                          console.error('Error opening phone dialer:', err);
-                          Alert.alert('Error', 'Unable to open phone dialer');
-                      });
-                  }
-              }
-          ]
+            'Contact Restaurant',
+            `Phone: ${restaurant.phoneNumber}\n\nWould you like to call now?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Call',
+                    onPress: () => {
+                        const phoneUrl = `tel:${restaurant.phoneNumber.replace(/\s/g, '')}`;
+                        Linking.openURL(phoneUrl).catch(() => Alert.alert('Error', 'Unable to open phone dialer'));
+                    }
+                }
+            ]
         );
     };
 
     const handleTimeSlotSelect = (slot: AvailableSlot) => {
-        // Close modal if open
         setShowAllSlotsModal(false);
-
-        navigation.navigate('BookingScreen', {
-            restaurant,
-            selectedDate,
-            partySize,
-            selectedTime: slot.time
-        });
+        navigation.navigate('BookingScreen', { restaurant, selectedDate, partySize, selectedTime: slot.time });
     };
 
     const handleAdvanceNoticeSlotPress = (slot: AvailableSlot) => {
         Alert.alert(
-          'Advance Notice Required',
-          `This time slot requires at least ${slot.advanceNoticeHours || 2} hours advance notice. Please select a later date or time, or call the restaurant to book.`,
-          [
-              { text: 'OK', style: 'cancel' },
-              {
-                  text: 'Call Restaurant',
-                  onPress: handleCallRestaurant
-              }
-          ]
+            'Advance Notice Required',
+            `This slot requires at least ${slot.advanceNoticeHours || 2} hours advance notice. Please select a later time or call the restaurant.`,
+            [{ text: 'OK', style: 'cancel' }, { text: 'Call Restaurant', onPress: handleCallRestaurant }]
         );
     };
 
     const renderStars = (rating: number) => {
-        const stars = [];
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 !== 0;
-
-        for (let i = 0; i < fullStars; i++) {
-            stars.push('★');
-        }
-        if (hasHalfStar) {
-            stars.push('☆');
-        }
-
-        return stars.join('');
+        const full = Math.floor(rating);
+        const half = rating % 1 !== 0;
+        return '★'.repeat(full) + (half ? '☆' : '');
     };
 
-
-    // Get the slots to display in preview (closest to selected time)
     const previewSlots = getClosestSlots(availableSlots, selectedTime);
 
-    // Prepare gallery images (cover image + gallery images)
     const galleryImages = [
         restaurant.coverImageUrl,
         ...(restaurant.galleryImages || [])
-    ].filter(Boolean); // Remove any null/undefined values
+    ].filter(Boolean) as string[];
 
     const handleScroll = (event: any) => {
         const slideSize = event.nativeEvent.layoutMeasurement.width;
         const offset = event.nativeEvent.contentOffset.x;
-        const index = Math.round(offset / slideSize);
-        setCurrentImageIndex(index);
+        setCurrentImageIndex(Math.round(offset / slideSize));
     };
 
     const renderImageItem = ({ item }: { item: string }) => (
-        <View style={styles.carouselImageContainer}>
-            <CachedImage
-                uri={item}
-                style={styles.restaurantImage}
-                fallbackColor="#e8eef4"
-            />
+        <View style={styles.carouselSlide}>
+            <CachedImage uri={item} style={styles.restaurantImage} fallbackColor={Colors.primaryLight} />
         </View>
     );
 
     return (
-      <SafeAreaView style={styles.container}>
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-              {/* Restaurant Image Carousel */}
-              <View style={styles.imageContainer}>
-                  <FlatList
-                      ref={flatListRef}
-                      data={galleryImages}
-                      renderItem={renderImageItem}
-                      keyExtractor={(item, index) => `image-${index}`}
-                      horizontal
-                      pagingEnabled
-                      showsHorizontalScrollIndicator={false}
-                      onScroll={handleScroll}
-                      scrollEventThrottle={16}
-                  />
+        <SafeAreaView style={styles.container}>
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
 
-                  {/* Image pagination dots */}
-                  {galleryImages.length > 1 && (
-                      <View style={styles.paginationContainer}>
-                          {galleryImages.map((_, index) => (
-                              <View
-                                  key={index}
-                                  style={[
-                                      styles.paginationDot,
-                                      index === currentImageIndex && styles.paginationDotActive
-                                  ]}
-                              />
-                          ))}
-                      </View>
-                  )}
+                {/* ── Image Carousel ── */}
+                <View style={styles.imageContainer}>
+                    <FlatList
+                        ref={flatListRef}
+                        data={galleryImages}
+                        renderItem={renderImageItem}
+                        keyExtractor={(_, i) => `img-${i}`}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
+                    />
 
-                  <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                  >
-                      <Text style={styles.backButtonText}>←</Text>
-                  </TouchableOpacity>
-              </View>
-
-              {/* Restaurant Information */}
-              <View style={styles.detailsContainer}>
-                  <Text style={styles.restaurantName}>{restaurant.name}</Text>
-
-                  <View style={styles.infoRow}>
-                      <Text style={styles.stars}>{renderStars(restaurant.averageRating || 4.5)}</Text>
-                      <Text style={styles.ratingText}>
-                          {(restaurant.averageRating || 4.5).toFixed(1)} ({restaurant.totalReviews || 0} reviews)
-                      </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                      <Text style={styles.infoIcon}>💰</Text>
-                      <Text style={styles.infoText}>{restaurant.priceRange}</Text>
-                      <Text style={styles.infoIcon}>🍽️</Text>
-                      <Text style={styles.infoText}>{restaurant.cuisineType}</Text>
-                  </View>
-
-                  <View style={styles.locationRow}>
-                      <Text style={styles.infoIcon}>📍</Text>
-                      <Text style={styles.locationText}>{restaurant.address}</Text>
-                  </View>
-
-                  {restaurant.description && (
-                    <Text style={styles.description}>{restaurant.description}</Text>
-                  )}
-
-                  {/* Party Size, Date & Time Selector */}
-                  <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Reservation details</Text>
-                      <TouchableOpacity
-                        style={styles.selectorButton}
-                        onPress={() => setShowPickerModal(true)}
-                      >
-                          <Text style={styles.selectorIcon}>👥</Text>
-                          <Text style={styles.selectorText}>
-                              {formatPartyDateTime(partySize, selectedDate, selectedTime)}
-                          </Text>
-                      </TouchableOpacity>
-                  </View>
-
-                  {/* Available Time Slots */}
-                  <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>
-                          {selectedTime === 'ASAP' ? 'Available times' : `Times near ${selectedTime}`}
-                      </Text>
-
-                      {slotsLoading ? (
-                        <View style={styles.centerContainer}>
-                            <ActivityIndicator size="large" color="#7C3AED" />
-                            <Text style={styles.loadingText}>Finding available times...</Text>
+                    {/* Pagination dots */}
+                    {galleryImages.length > 1 && (
+                        <View style={styles.paginationContainer}>
+                            {galleryImages.map((_, i) => (
+                                <View
+                                    key={i}
+                                    style={[styles.dot, i === currentImageIndex && styles.dotActive]}
+                                />
+                            ))}
                         </View>
-                      ) : availabilityError ? (
-                        <AvailabilityErrorDisplay
-                          error={availabilityError}
-                          onContactRestaurant={handleCallRestaurant}
-                        />
-                      ) : (
-                        <View style={styles.timeSlotsContainer}>
-                            {previewSlots.length > 0 ? (
-                              <>
-                                  <View style={styles.timeSlotsList}>
-                                      {previewSlots.map((slot, index) => (
-                                        <TimeSlotDisplay
-                                          key={index}
-                                          slot={slot}
-                                          onPress={handleTimeSlotSelect}
-                                          variant="default"
-                                        />
-                                      ))}
-                                  </View>
-                                  {(availableSlots.filter(s => s.isAvailable).length > 4 ||
-                                    availableSlots.filter(s => !s.isAvailable && s.requiresAdvanceNotice).length > 0) && (
-                                    <TouchableOpacity
-                                      style={styles.moreTimesButton}
-                                      onPress={() => setShowAllSlotsModal(true)}
-                                    >
-                                        <Text style={styles.moreTimesText}>
-                                            See all available times →
-                                        </Text>
-                                    </TouchableOpacity>
-                                  )}
-                              </>
-                            ) : (
-                              <Text style={styles.noSlotsText}>No available time slots</Text>
-                            )}
+                    )}
+
+                    {/* Back button */}
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <AppText style={styles.backArrow}>←</AppText>
+                    </TouchableOpacity>
+                </View>
+
+                {/* ── Details card ── */}
+                <View style={styles.detailsCard}>
+
+                    {/* Name + rating — below image */}
+                    <View style={styles.nameBlock}>
+                        <AppText variant="h3" color={Colors.primary} numberOfLines={2} style={styles.restaurantName}>
+                            {restaurant.name}
+                        </AppText>
+                        <View style={styles.ratingRow}>
+                            <AppText style={styles.stars}>{renderStars(restaurant.averageRating || 4.5)}</AppText>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ marginLeft: 6 }}>
+                                {(restaurant.averageRating || 4.5).toFixed(1)}
+                            </AppText>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginLeft: 4 }}>
+                                ({restaurant.totalReviews || 0} reviews)
+                            </AppText>
                         </View>
-                      )}
-                  </View>
-              </View>
-          </ScrollView>
+                    </View>
 
-          {/* Party Date Time Picker Modal */}
-          <PartyDateTimePicker
-            visible={showPickerModal}
-            onClose={() => setShowPickerModal(false)}
-            partySize={partySize}
-            selectedDate={selectedDate}
-            selectedTime={selectedTime}
-            onPartySizeChange={setPartySize}
-            onDateChange={setSelectedDate}
-            onTimeChange={setSelectedTime}
-          />
+                    {/* Quick info row */}
+                    <View style={styles.quickInfo}>
+                        <View style={styles.quickInfoItem}>
+                            <AppText style={styles.quickInfoIcon}>💰</AppText>
+                            <AppText variant="bodyMedium" color={Colors.textOnLight}>{restaurant.priceRange}</AppText>
+                        </View>
+                        <View style={styles.quickInfoDivider} />
+                        <View style={styles.quickInfoItem}>
+                            <AppText style={styles.quickInfoIcon}>🍽️</AppText>
+                            <AppText variant="bodyMedium" color={Colors.textOnLight}>{restaurant.cuisineType}</AppText>
+                        </View>
+                        <View style={styles.quickInfoDivider} />
+                        <TouchableOpacity style={styles.quickInfoItem} onPress={handleCallRestaurant}>
+                            <AppText style={styles.quickInfoIcon}>📞</AppText>
+                            <AppText variant="bodyMedium" color={Colors.accent}>Call</AppText>
+                        </TouchableOpacity>
+                    </View>
 
-          {/* All Slots Modal */}
-          <AllSlotsModal
-            visible={showAllSlotsModal}
-            onClose={() => setShowAllSlotsModal(false)}
-            slots={availableSlots}
-            allSlots={streamedAllSlots}
-            selectedTime={selectedTime}
-            onTimeSelect={(slot) => handleTimeSlotSelect(slot)}
-            onAdvanceNoticeSlotPress={handleAdvanceNoticeSlotPress}
-            headerTitle="All Available Times"
-            headerSubtitle={`${formatDateDisplay(selectedDate)} • Party of ${partySize}`}
-          />
-      </SafeAreaView>
+                    {/* Address */}
+                    <View style={styles.addressRow}>
+                        <AppText style={styles.addressIcon}>📍</AppText>
+                        <AppText variant="body" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>
+                            {restaurant.address}
+                        </AppText>
+                    </View>
+
+                    {/* Description */}
+                    {restaurant.description && (
+                        <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.description}>
+                            {restaurant.description}
+                        </AppText>
+                    )}
+
+                    {/* ── Reservation details ── */}
+                    <View style={styles.section}>
+                        <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
+                            Reservation Details
+                        </AppText>
+                        <TouchableOpacity style={styles.selectorButton} onPress={() => setShowPickerModal(true)}>
+                            <View style={styles.selectorLeft}>
+                                <AppText style={styles.selectorIcon}>👥</AppText>
+                                <AppText variant="bodyMedium" color={Colors.textOnLight}>
+                                    {formatPartyDateTime(partySize, selectedDate, selectedTime)}
+                                </AppText>
+                            </View>
+                            <AppText variant="captionMedium" color={Colors.accent}>Change →</AppText>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* ── Available times ── */}
+                    <View style={styles.section}>
+                        <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
+                            {selectedTime === 'ASAP' ? 'Available Times' : `Times near ${selectedTime}`}
+                        </AppText>
+
+                        {slotsLoading ? (
+                            <View style={styles.loadingSlots}>
+                                <ActivityIndicator size="large" color={Colors.accent} />
+                                <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginTop: Spacing['2'] }}>
+                                    Finding available times...
+                                </AppText>
+                            </View>
+                        ) : availabilityError ? (
+                            <AvailabilityErrorDisplay
+                                error={availabilityError}
+                                onContactRestaurant={handleCallRestaurant}
+                            />
+                        ) : (
+                            <View style={styles.slotsContainer}>
+                                {previewSlots.length > 0 ? (
+                                    <>
+                                        <View style={styles.slotsList}>
+                                            {previewSlots.map((slot, i) => (
+                                                <TimeSlotDisplay
+                                                    key={i}
+                                                    slot={slot}
+                                                    onPress={handleTimeSlotSelect}
+                                                    variant="default"
+                                                />
+                                            ))}
+                                        </View>
+                                        {(availableSlots.filter(s => s.isAvailable).length > 4 ||
+                                            availableSlots.filter(s => !s.isAvailable && s.requiresAdvanceNotice).length > 0) && (
+                                            <TouchableOpacity
+                                                style={styles.moreTimesButton}
+                                                onPress={() => setShowAllSlotsModal(true)}
+                                            >
+                                                <AppText variant="bodySemiBold" color={Colors.accent}>
+                                                    See all available times →
+                                                </AppText>
+                                            </TouchableOpacity>
+                                        )}
+                                    </>
+                                ) : (
+                                    <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.noSlots}>
+                                        No available time slots
+                                    </AppText>
+                                )}
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Bottom padding */}
+                    <View style={{ height: Spacing['8'] }} />
+                </View>
+            </ScrollView>
+
+            <PartyDateTimePicker
+                visible={showPickerModal}
+                onClose={() => setShowPickerModal(false)}
+                partySize={partySize}
+                selectedDate={selectedDate}
+                selectedTime={selectedTime}
+                onPartySizeChange={setPartySize}
+                onDateChange={setSelectedDate}
+                onTimeChange={setSelectedTime}
+            />
+
+            <AllSlotsModal
+                visible={showAllSlotsModal}
+                onClose={() => setShowAllSlotsModal(false)}
+                slots={availableSlots}
+                allSlots={streamedAllSlots}
+                selectedTime={selectedTime}
+                onTimeSelect={handleTimeSlotSelect}
+                onAdvanceNoticeSlotPress={handleAdvanceNoticeSlotPress}
+                headerTitle="All Available Times"
+                headerSubtitle={`${formatDateDisplay(selectedDate)} · Party of ${partySize}`}
+            />
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: Colors.appBackground,
     },
     scrollView: {
         flex: 1,
     },
+
+    // ── Carousel ──────────────────────────────────────────────────────────────
     imageContainer: {
         position: 'relative',
-        width: '100%',
-        height: 250,
+        height: 220,
     },
-    carouselImageContainer: {
-        width: Dimensions.get('window').width,
-        height: 250,
+    carouselSlide: {
+        width,
+        height: 220,
     },
     restaurantImage: {
         width: '100%',
@@ -419,211 +382,161 @@ const styles = StyleSheet.create({
     },
     paginationContainer: {
         position: 'absolute',
-        bottom: 16,
-        flexDirection: 'row',
+        bottom: Spacing['3'],
         alignSelf: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        flexDirection: 'row',
+        gap: 6,
+        backgroundColor: Colors.overlayMedium,
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: Spacing['1'],
+        borderRadius: Radius.full,
     },
-    paginationDot: {
+    dot: {
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
-        marginHorizontal: 3,
+        backgroundColor: 'rgba(255,255,255,0.4)',
     },
-    paginationDotActive: {
-        backgroundColor: '#ffffff',
+    dotActive: {
         width: 8,
         height: 8,
         borderRadius: 4,
+        backgroundColor: Colors.white,
     },
     backButton: {
         position: 'absolute',
-        top: 20,
-        left: 20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        top: Spacing['3'],
+        left: Spacing['4'],
+        width: 36,
+        height: 36,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.overlayMedium,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    backButtonText: {
-        fontSize: 24,
-        color: '#333',
+    backArrow: {
+        fontSize: 20,
+        color: Colors.white,
     },
-    detailsContainer: {
-        backgroundColor: 'white',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        marginTop: -20,
-        padding: 20,
+
+    // ── Name + rating below image ──────────────────────────────────────────────
+    nameBlock: {
+        marginBottom: Spacing['4'],
     },
     restaurantName: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: 20,
+        marginBottom: Spacing['1'],
     },
-    infoRow: {
+    ratingRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
     },
     stars: {
-        fontSize: 16,
-        color: '#FFD700',
-        marginRight: 8,
+        fontSize: 13,
+        color: Colors.star,
+        letterSpacing: 1,
     },
-    ratingText: {
-        fontSize: 14,
-        color: '#666',
+
+    // ── Details card ──────────────────────────────────────────────────────────
+    detailsCard: {
+        backgroundColor: Colors.appBackground,
+        marginTop: -Spacing['4'],
+        borderTopLeftRadius: Radius['2xl'],
+        borderTopRightRadius: Radius['2xl'],
+        paddingTop: Spacing['5'],
+        paddingHorizontal: Spacing['5'],
     },
-    infoIcon: {
-        fontSize: 16,
-        marginRight: 6,
+
+    // ── Quick info ────────────────────────────────────────────────────────────
+    quickInfo: {
+        flexDirection: 'row',
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.lg,
+        padding: Spacing['4'],
+        marginBottom: Spacing['4'],
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
     },
-    infoText: {
-        fontSize: 14,
-        color: '#666',
-        marginRight: 16,
+    quickInfoItem: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
     },
-    locationRow: {
+    quickInfoIcon: {
+        fontSize: 20,
+    },
+    quickInfoDivider: {
+        width: 1,
+        backgroundColor: Colors.cardBorder,
+        alignSelf: 'stretch',
+    },
+
+    // ── Address ───────────────────────────────────────────────────────────────
+    addressRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 12,
+        marginBottom: Spacing['4'],
+        gap: Spacing['2'],
     },
-    locationText: {
-        fontSize: 14,
-        color: '#666',
-        flex: 1,
+    addressIcon: {
+        fontSize: 15,
+        marginTop: 1,
     },
     description: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-        marginTop: 8,
-        marginBottom: 16,
+        lineHeight: 22,
+        marginBottom: Spacing['4'],
     },
+
+    // ── Section ───────────────────────────────────────────────────────────────
     section: {
-        marginTop: 24,
+        marginBottom: Spacing['5'],
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 12,
+        marginBottom: Spacing['3'],
     },
-    // Selector Button
+
+    // ── Selector button ───────────────────────────────────────────────────────
     selectorButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 12,
+        justifyContent: 'space-between',
+        backgroundColor: Colors.cardBackground,
+        paddingVertical: Spacing['3'] + 2,
+        paddingHorizontal: Spacing['4'],
+        borderRadius: Radius.lg,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: Colors.cardBorder,
+    },
+    selectorLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
     },
     selectorIcon: {
-        fontSize: 20,
-        marginRight: 10,
+        fontSize: 18,
     },
-    selectorText: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
-    },
-    // Time Slots Display
-    timeSlotsContainer: {
+
+    // ── Time slots ────────────────────────────────────────────────────────────
+    slotsContainer: {
         marginBottom: 0,
     },
-    centerContainer: {
+    loadingSlots: {
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: Spacing['5'],
     },
-    loadingText: {
-        fontSize: 14,
-        color: '#999',
-        marginTop: 8,
-    },
-    timeSlotsList: {
+    slotsList: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-    },
-    timeSlot: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: '#e8f5e8',
-        borderRadius: 12,
-        marginRight: 8,
-        marginBottom: 8,
-        minWidth: 70,
-    },
-    timeSlotText: {
-        fontSize: 14,
-        color: '#27ae60',
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-    capacityText: {
-        fontSize: 10,
-        color: '#666',
-        textAlign: 'center',
-        marginTop: 2,
-    },
-    capacityTextLow: {
-        color: '#e67e22',
-        fontWeight: '600',
+        gap: Spacing['2'],
     },
     moreTimesButton: {
-        marginTop: 4,
+        marginTop: Spacing['3'],
     },
-    moreTimesText: {
-        fontSize: 14,
-        color: '#7C3AED',
-        fontWeight: '600',
-    },
-    noSlotsText: {
-        fontSize: 14,
-        color: '#999',
+    noSlots: {
         fontStyle: 'italic',
-        marginTop: 8,
-    },
-    // Real-time streaming indicator styles
-    sectionTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    liveIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ECFDF5',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 4,
-    },
-    liveDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#10B981',
-    },
-    liveText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#059669',
-        textTransform: 'uppercase',
+        marginTop: Spacing['2'],
     },
 });
 

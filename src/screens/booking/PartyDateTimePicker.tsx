@@ -1,385 +1,489 @@
 // src/components/booking/PartyDateTimePicker.tsx
-import React, { useEffect, useState } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
 
 interface PartyDateTimePickerProps {
-  visible: boolean;
-  onClose: () => void;
-  partySize: number;
-  selectedDate: Date;
-  selectedTime: string;
-  onPartySizeChange: (size: number) => void;
-  onDateChange: (date: Date) => void;
-  onTimeChange: (time: string) => void;
+    visible: boolean;
+    onClose: () => void;
+    partySize: number;
+    selectedDate: Date;
+    selectedTime: string;
+    onPartySizeChange: (size: number) => void;
+    onDateChange: (date: Date) => void;
+    onTimeChange: (time: string) => void;
+}
+
+function parseTime(time: string): { hour: string; minute: string } {
+    if (time === 'ASAP') return { hour: '', minute: '' };
+    const [h, m] = time.split(':');
+    return { hour: h, minute: m };
 }
 
 const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
-                                                                   visible,
-                                                                   onClose,
-                                                                   partySize,
-                                                                   selectedDate,
-                                                                   selectedTime,
-                                                                   onPartySizeChange,
-                                                                   onDateChange,
-                                                                   onTimeChange,
-                                                                 }) => {
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+    visible,
+    onClose,
+    partySize,
+    selectedDate,
+    selectedTime,
+    onPartySizeChange,
+    onDateChange,
+    onTimeChange,
+}) => {
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const minuteRef = useRef<TextInput>(null);
 
-  // Effect to handle time slot availability when date changes
-  useEffect(() => {
-    const availableSlots = getAvailableTimeSlots();
+    const isAsap = selectedTime === 'ASAP';
+    const { hour: initHour, minute: initMinute } = parseTime(selectedTime);
+    const [hourInput, setHourInput] = useState(initHour);
+    const [minuteInput, setMinuteInput] = useState(initMinute);
 
-    // If selected time is not in available slots, reset to first available
-    if (!availableSlots.includes(selectedTime)) {
-      if (availableSlots.length > 0) {
-        onTimeChange(availableSlots[0]);
-      }
-    }
-  }, [selectedDate]);
+    // Sync local input state when selectedTime changes externally
+    React.useEffect(() => {
+        const { hour, minute } = parseTime(selectedTime);
+        setHourInput(hour);
+        setMinuteInput(minute);
+    }, [selectedTime]);
 
-  const handleDone = () => {
-    setShowTimePicker(false);
-    onClose();
-  };
-
-  /**
-   * Generate available time slots based on selected date
-   * - Today: ASAP + remaining slots until end of day
-   * - Future dates: All slots from 00:00 to 23:30
-   */
-  const getAvailableTimeSlots = (): string[] => {
-    const today = new Date();
-    const isToday = selectedDate.toDateString() === today.toDateString();
-
-    if (isToday) {
-      // For today: ASAP + remaining times
-      const currentHour = today.getHours();
-      const currentMinute = today.getMinutes();
-
-      // Generate all time slots
-      const allSlots: string[] = ['ASAP'];
-
-      // Add slots from current time onwards
-      for (let hour = currentHour; hour <= 23; hour++) {
-        const startMinute = hour === currentHour ? (currentMinute < 30 ? 30 : 0) : 0;
-
-        for (let minute = startMinute; minute < 60; minute += 30) {
-          if (hour === currentHour && minute === 0 && currentMinute > 0) {
-            continue; // Skip if we're past the hour mark
-          }
-
-          const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-
-          // Don't add times that have already passed
-          if (hour > currentHour || (hour === currentHour && minute > currentMinute)) {
-            allSlots.push(timeStr);
-          }
+    const commitTime = (h: string, m: string) => {
+        const hNum = parseInt(h);
+        const mNum = parseInt(m);
+        if (!isNaN(hNum) && !isNaN(mNum) && hNum >= 0 && hNum <= 23 && mNum >= 0 && mNum <= 59) {
+            onTimeChange(`${h.padStart(2, '0')}:${m.padStart(2, '0')}`);
         }
-      }
+    };
 
-      return allSlots;
-    } else {
-      // For future dates: All times from 00:00 to 23:30
-      const allSlots: string[] = [];
-
-      for (let hour = 0; hour <= 23; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-          allSlots.push(timeStr);
+    const handleHourChange = (text: string) => {
+        const clean = text.replace(/\D/g, '').slice(0, 2);
+        setHourInput(clean);
+        // Auto-jump to minutes when 2 digits entered or value > 2
+        if (clean.length === 2 || parseInt(clean) > 2) {
+            minuteRef.current?.focus();
         }
-      }
+        commitTime(clean, minuteInput);
+    };
 
-      return allSlots;
-    }
-  };
+    const handleMinuteChange = (text: string) => {
+        const clean = text.replace(/\D/g, '').slice(0, 2);
+        setMinuteInput(clean);
+        commitTime(hourInput, clean);
+    };
 
-  const timeSlots = getAvailableTimeSlots();
+    const handleHourBlur = () => {
+        const hNum = parseInt(hourInput);
+        if (!isNaN(hNum)) {
+            const clamped = Math.min(23, Math.max(0, hNum)).toString().padStart(2, '0');
+            setHourInput(clamped);
+            commitTime(clamped, minuteInput);
+        }
+    };
 
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Party Size & Time</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={styles.modalClose}>✕</Text>
-            </TouchableOpacity>
-          </View>
+    const handleMinuteBlur = () => {
+        const mNum = parseInt(minuteInput);
+        if (!isNaN(mNum)) {
+            const clamped = Math.min(59, Math.max(0, mNum)).toString().padStart(2, '0');
+            setMinuteInput(clamped);
+            commitTime(hourInput, clamped);
+        }
+    };
 
-          <ScrollView
-            style={styles.modalScrollView}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Party Size Selector */}
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Party Size</Text>
-              <View style={styles.partySizeGrid}>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[
-                      styles.partySizeButton,
-                      partySize === size && styles.partySizeButtonActive,
-                    ]}
-                    onPress={() => onPartySizeChange(size)}
-                  >
-                    <Text style={[
-                      styles.partySizeButtonText,
-                      partySize === size && styles.partySizeButtonTextActive,
-                    ]}>
-                      {size}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+    const handleAsapToggle = () => {
+        if (isAsap) {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = (now.getMinutes() < 30 ? 30 : 0).toString().padStart(2, '0');
+            const nextH = now.getMinutes() < 30 ? h : (now.getHours() + 1).toString().padStart(2, '0');
+            setHourInput(nextH);
+            setMinuteInput(m);
+            onTimeChange(`${nextH}:${m}`);
+        } else {
+            setHourInput('');
+            setMinuteInput('');
+            onTimeChange('ASAP');
+        }
+    };
 
-            {/* Date Selector */}
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Date</Text>
-              <TouchableOpacity
-                style={styles.datePickerButton}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={styles.datePickerIcon}>📅</Text>
-                <Text style={styles.datePickerText}>
-                  {selectedDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </Text>
-              </TouchableOpacity>
+    const formatDate = (d: Date) =>
+        d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
-              {showDatePicker && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  minimumDate={new Date()}
-                  onChange={(event, date) => {
-                    setShowDatePicker(Platform.OS === 'ios');
-                    if (date) onDateChange(date);
-                  }}
-                />
-              )}
-            </View>
+    const handleDone = () => {
+        setShowDatePicker(false);
+        onClose();
+    };
 
-            {/* Time Selector */}
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Time</Text>
-              <TouchableOpacity
-                style={styles.timePickerButton}
-                onPress={() => setShowTimePicker(!showTimePicker)}
-              >
-                <Text style={styles.timePickerIcon}>🕐</Text>
-                <Text style={styles.timePickerText}>{selectedTime}</Text>
-                <Text style={styles.dropdownArrow}>{showTimePicker ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
+    const summaryTime = isAsap ? 'ASAP' : selectedTime;
 
-              {showTimePicker && (
-                <ScrollView style={styles.timeDropdown} nestedScrollEnabled={true}>
-                  {timeSlots.map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      style={styles.timeDropdownItem}
-                      onPress={() => {
-                        onTimeChange(time);
-                        setShowTimePicker(false);
-                      }}
+    return (
+        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+            <View style={styles.overlay}>
+                <View style={styles.sheet}>
+
+                    {/* Handle */}
+                    <View style={styles.handle} />
+
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <AppText variant="sectionTitle" color={Colors.primary} style={styles.title}>
+                            Reservation Options
+                        </AppText>
+                        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                            <AppText style={styles.closeIcon}>✕</AppText>
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={styles.scrollContent}
                     >
-                      <Text style={[
-                        styles.timeDropdownText,
-                        selectedTime === time && styles.timeDropdownTextActive,
-                      ]}>
-                        {time}
-                      </Text>
-                      {selectedTime === time && (
-                        <Text style={styles.checkmark}>✓</Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-          </ScrollView>
+                        {/* ── Party Size ── */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionLabelRow}>
+                                <View style={styles.sectionTick} />
+                                <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                                    PARTY SIZE
+                                </AppText>
+                            </View>
+                            <View style={styles.partySizeRow}>
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => {
+                                    const active = partySize === size;
+                                    return (
+                                        <TouchableOpacity
+                                            key={size}
+                                            style={[styles.sizeBtn, active && styles.sizeBtnActive]}
+                                            onPress={() => onPartySizeChange(size)}
+                                            activeOpacity={0.75}
+                                        >
+                                            <AppText
+                                                variant="bodySemiBold"
+                                                color={active ? Colors.white : Colors.textOnLightSecondary}
+                                                style={styles.sizeBtnText}
+                                            >
+                                                {size}{size === 8 ? '+' : ''}
+                                            </AppText>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </View>
 
-          {/* Done Button */}
-          <TouchableOpacity
-            style={styles.modalDoneButton}
-            onPress={handleDone}
-          >
-            <Text style={styles.modalDoneButtonText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
+                        {/* ── Date ── */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionLabelRow}>
+                                <View style={styles.sectionTick} />
+                                <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                                    DATE
+                                </AppText>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.rowCard}
+                                onPress={() => setShowDatePicker(true)}
+                                activeOpacity={0.8}
+                            >
+                                <AppText style={styles.rowIcon}>📅</AppText>
+                                <AppText variant="bodyMedium" color={Colors.textOnLight} style={{ flex: 1 }}>
+                                    {formatDate(selectedDate)}
+                                </AppText>
+                                <AppText variant="captionMedium" color={Colors.accent}>Change</AppText>
+                            </TouchableOpacity>
+
+                            {showDatePicker && (
+                                <DateTimePicker
+                                    value={selectedDate}
+                                    mode="date"
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    minimumDate={new Date()}
+                                    onChange={(event, date) => {
+                                        setShowDatePicker(Platform.OS === 'ios');
+                                        if (date) onDateChange(date);
+                                    }}
+                                />
+                            )}
+                        </View>
+
+                        {/* ── Time ── */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionLabelRow}>
+                                <View style={styles.sectionTick} />
+                                <AppText variant="label" color={Colors.textOnLightSecondary} style={styles.sectionLabel}>
+                                    TIME
+                                </AppText>
+                            </View>
+
+                            {/* ASAP toggle */}
+                            <TouchableOpacity
+                                style={[styles.rowCard, isAsap && styles.rowCardActive]}
+                                onPress={handleAsapToggle}
+                                activeOpacity={0.8}
+                            >
+                                <AppText style={styles.rowIcon}>⚡</AppText>
+                                <AppText variant="bodyMedium" color={isAsap ? Colors.white : Colors.textOnLightSecondary}>
+                                    As soon as possible
+                                </AppText>
+                                <View style={[styles.checkCircle, isAsap && styles.checkCircleActive]}>
+                                    {isAsap && <AppText style={styles.checkMark}>✓</AppText>}
+                                </View>
+                            </TouchableOpacity>
+
+                            {/* Time input — shown when not ASAP */}
+                            {!isAsap && (
+                                <View style={styles.timeInputRow}>
+                                    {/* Hour */}
+                                    <View style={styles.timeInputWrap}>
+                                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.timeInputLabel}>
+                                            HH
+                                        </AppText>
+                                        <TextInput
+                                            style={styles.timeInput}
+                                            value={hourInput}
+                                            onChangeText={handleHourChange}
+                                            onBlur={handleHourBlur}
+                                            keyboardType="number-pad"
+                                            maxLength={2}
+                                            placeholder="00"
+                                            placeholderTextColor={Colors.textOnLightTertiary}
+                                            returnKeyType="next"
+                                            onSubmitEditing={() => minuteRef.current?.focus()}
+                                            selectTextOnFocus
+                                        />
+                                    </View>
+
+                                    <AppText style={styles.timeSeparator}>:</AppText>
+
+                                    {/* Minute */}
+                                    <View style={styles.timeInputWrap}>
+                                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.timeInputLabel}>
+                                            MM
+                                        </AppText>
+                                        <TextInput
+                                            ref={minuteRef}
+                                            style={styles.timeInput}
+                                            value={minuteInput}
+                                            onChangeText={handleMinuteChange}
+                                            onBlur={handleMinuteBlur}
+                                            keyboardType="number-pad"
+                                            maxLength={2}
+                                            placeholder="00"
+                                            placeholderTextColor={Colors.textOnLightTertiary}
+                                            returnKeyType="done"
+                                            onSubmitEditing={handleDone}
+                                            selectTextOnFocus
+                                        />
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    </ScrollView>
+
+                    {/* Done */}
+                    <View style={styles.footer}>
+                        <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85}>
+                            <AppText variant="button" color={Colors.white}>
+                                {`Confirm  —  ${summaryTime}  ·  ${partySize} guest${partySize > 1 ? 's' : ''}`}
+                            </AppText>
+                        </TouchableOpacity>
+                    </View>
+
+                </View>
+            </View>
+        </Modal>
+    );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 34,
-    maxHeight: '85%',
-  },
-  modalScrollView: {
-    maxHeight: '100%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modalClose: {
-    fontSize: 28,
-    color: '#999',
-    fontWeight: '300',
-  },
-  modalSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  modalSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  partySizeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  partySizeButton: {
-    width: 60,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-  },
-  partySizeButtonActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-  },
-  partySizeButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-  },
-  partySizeButtonTextActive: {
-    color: 'white',
-  },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  datePickerIcon: {
-    fontSize: 20,
-    marginRight: 10,
-  },
-  datePickerText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  timePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  timePickerIcon: {
-    fontSize: 20,
-    marginRight: 10,
-  },
-  timePickerText: {
-    fontSize: 16,
-    color: '#333',
-    flex: 1,
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: '#999',
-  },
-  timeDropdown: {
-    maxHeight: 200,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    backgroundColor: 'white',
-  },
-  timeDropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  timeDropdownText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  timeDropdownTextActive: {
-    color: '#7C3AED',
-    fontWeight: '600',
-  },
-  checkmark: {
-    fontSize: 18,
-    color: '#7C3AED',
-  },
-  modalDoneButton: {
-    marginHorizontal: 20,
-    marginTop: 10,
-    backgroundColor: '#7C3AED',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalDoneButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(9,31,43,0.55)',
+        justifyContent: 'flex-end',
+    },
+    sheet: {
+        backgroundColor: Colors.appBackground,
+        borderTopLeftRadius: Radius['2xl'],
+        borderTopRightRadius: Radius['2xl'],
+        paddingBottom: 34,
+        maxHeight: '90%',
+    },
+    handle: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: Colors.cardBorder,
+        alignSelf: 'center',
+        marginTop: Spacing['3'],
+        marginBottom: Spacing['2'],
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing['5'],
+        paddingVertical: Spacing['3'],
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.cardBorder,
+    },
+    title: { fontSize: FontSize.lg },
+    closeBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.cardBackground,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeIcon: {
+        fontSize: 12,
+        color: Colors.textOnLightSecondary,
+        fontFamily: FontFamily.semiBold,
+    },
+    scrollContent: { paddingBottom: Spacing['4'] },
+
+    // ── Section ────────────────────────────────────────────────────────────────
+    section: {
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['4'],
+        paddingBottom: Spacing['4'],
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.cardBorder,
+    },
+    sectionLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['3'],
+    },
+    sectionTick: {
+        width: 3,
+        height: 14,
+        backgroundColor: Colors.primary,
+        borderRadius: 2,
+    },
+    sectionLabel: { letterSpacing: 1 },
+
+    // ── Party size ─────────────────────────────────────────────────────────────
+    partySizeRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing['2'],
+    },
+    sizeBtn: {
+        width: 56,
+        height: 48,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+    },
+    sizeBtnActive: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    sizeBtnText: { fontSize: FontSize.lg },
+
+    // ── Row card (date / asap) ──────────────────────────────────────────────────
+    rowCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['3'],
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        paddingVertical: Spacing['3'],
+        paddingHorizontal: Spacing['4'],
+    },
+    rowCardActive: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    rowIcon: { fontSize: 16 },
+
+    // ── ASAP check ─────────────────────────────────────────────────────────────
+    checkCircle: {
+        marginLeft: 'auto',
+        width: 22,
+        height: 22,
+        borderRadius: Radius.full,
+        borderWidth: 1.5,
+        borderColor: Colors.cardBorder,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    checkCircleActive: {
+        backgroundColor: Colors.success,
+        borderColor: Colors.success,
+    },
+    checkMark: {
+        fontSize: 11,
+        color: Colors.white,
+        fontFamily: FontFamily.bold,
+    },
+
+    // ── Time inputs ────────────────────────────────────────────────────────────
+    timeInputRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        gap: Spacing['2'],
+        marginTop: Spacing['3'],
+    },
+    timeInputWrap: {
+        alignItems: 'center',
+        gap: Spacing['1'],
+    },
+    timeInputLabel: {
+        letterSpacing: 1,
+    },
+    timeInput: {
+        width: 88,
+        height: 72,
+        borderRadius: Radius.lg,
+        borderWidth: 1.5,
+        borderColor: Colors.primary,
+        backgroundColor: Colors.cardBackground,
+        textAlign: 'center',
+        fontSize: FontSize['4xl'],
+        fontFamily: FontFamily.bold,
+        color: Colors.primary,
+    },
+    timeSeparator: {
+        fontSize: FontSize['4xl'],
+        fontFamily: FontFamily.bold,
+        color: Colors.primary,
+        paddingBottom: Spacing['2'],
+    },
+
+    // ── Footer ─────────────────────────────────────────────────────────────────
+    footer: {
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['3'],
+        borderTopWidth: 1,
+        borderTopColor: Colors.cardBorder,
+    },
+    doneBtn: {
+        backgroundColor: Colors.accent,
+        paddingVertical: Spacing['3'] + 2,
+        borderRadius: Radius.lg,
+        alignItems: 'center',
+        shadowColor: Colors.accent,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 4,
+    },
 });
 
 export default PartyDateTimePicker;
