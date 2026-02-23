@@ -3,9 +3,10 @@ import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
 import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Text} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {navigationRef} from '../utils/navigationHelper';
 import { Colors } from '../theme';
+import { useUpdates } from '../context/UpdatesContext';
 
 import RestaurantListScreen from '../screens/restaurants/RestaurantListScreen';
 import RestaurantDetailScreen from '../screens/restaurants/RestaurantDetailScreen';
@@ -427,6 +428,44 @@ const ProtectedProfileStackNavigator: React.FC = () => {
   );
 };
 
+// Badge-aware Updates tab icon
+const UpdatesTabIcon: React.FC<{ color: string }> = ({ color }) => {
+  const { unreadCount } = useUpdates();
+  return (
+    <View>
+      <Text style={{ color, fontSize: 20 }}>🔔</Text>
+      {unreadCount > 0 && (
+        <View style={tabBadgeStyles.badge}>
+          <Text style={tabBadgeStyles.badgeText}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const tabBadgeStyles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 12,
+  },
+});
+
 // Main Tab Navigator
 const MainTabNavigator: React.FC = () => {
   return (
@@ -473,9 +512,7 @@ const MainTabNavigator: React.FC = () => {
         name="Updates"
         component={ProtectedUpdatesStackNavigator}
         options={{
-          tabBarIcon: ({color}) => (
-            <Text style={{color, fontSize: 20}}>🔔</Text>
-          ),
+          tabBarIcon: ({color}) => <UpdatesTabIcon color={color} />,
           tabBarLabel: 'Updates',
         }}
       />

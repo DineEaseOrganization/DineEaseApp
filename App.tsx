@@ -13,6 +13,7 @@ import { CACHE_CONFIG } from './src/config/cache.config';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider } from './src/context/AuthContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
+import { UpdatesProvider } from './src/context/UpdatesContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { Colors } from './src/theme';
 
@@ -47,9 +48,11 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
             <ErrorBoundary>
                 <AuthProvider>
-                    <FavoritesProvider>
-                        <AppNavigator />
-                    </FavoritesProvider>
+                    <UpdatesProvider>
+                        <FavoritesProvider>
+                            <AppNavigator />
+                        </FavoritesProvider>
+                    </UpdatesProvider>
                 </AuthProvider>
             </ErrorBoundary>
         </QueryClientProvider>

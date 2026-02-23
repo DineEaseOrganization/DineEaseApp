@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { updatesService, MobileUpdate, processingService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useUpdates } from '../../context/UpdatesContext';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { UpdatesStackParamList } from '../../navigation/AppNavigator';
@@ -58,11 +59,11 @@ const mapFilterKeyToCategory = (filterKey: string): string | undefined => {
 
 const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
     const { user } = useAuth();
+    const { unreadCount, setUnreadCount } = useUpdates();
     const [updates, setUpdates] = useState<MobileUpdate[]>([]);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
-    const [unreadCount, setUnreadCount] = useState<number>(0);
     const [error, setError] = useState<string | null>(null);
 
     const filterOptions: FilterOption[] = [
