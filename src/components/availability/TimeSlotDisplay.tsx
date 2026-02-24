@@ -21,7 +21,7 @@ export const TimeSlotDisplay: React.FC<TimeSlotDisplayProps> = ({
   // Fall back to availableTables.length for any older API responses during rollout.
   const tableCount = slot.availableTableCount ?? slot.availableTables?.length ?? 0;
   const isLowCapacity = tableCount <= 1;
-  const tableLabel = tableCount === 1 ? 'table' : 'tables';
+  const availabilityLabel = 'available';
 
   const containerStyle = [
     styles.slot,
@@ -44,8 +44,8 @@ export const TimeSlotDisplay: React.FC<TimeSlotDisplayProps> = ({
         style={styles.capacity}
       >
         {variant === 'modal'
-          ? `${tableCount} ${tableLabel} available`
-          : `${tableCount} ${tableLabel}`}
+          ? `${tableCount} ${availabilityLabel}`
+          : `${tableCount} ${availabilityLabel}`}
       </AppText>
     </TouchableOpacity>
   );

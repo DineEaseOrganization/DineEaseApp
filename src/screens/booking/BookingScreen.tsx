@@ -1,5 +1,5 @@
 // src/screens/booking/BookingScreen.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Alert,
     SafeAreaView,
@@ -58,6 +58,16 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [availableTags, setAvailableTags] = useState<ReservationTag[]>([]);
     const [selectedTags, setSelectedTags] = useState<ReservationTagRequest[]>([]);
 
+    const slotScrollRef = useRef<ScrollView>(null);
+    const slotPositions = useRef<Record<string, number>>({});
+
+    const scrollToSelectedSlot = (time: string) => {
+        const x = slotPositions.current[time];
+        if (typeof x === 'number') {
+            slotScrollRef.current?.scrollTo({ x: Math.max(0, x - Spacing['4']), animated: true });
+        }
+    };
+
     useEffect(() => {
         if (user) {
             const fullName = `${user.firstName} ${user.lastName}`.trim();
@@ -111,6 +121,12 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             setAvailabilityError(null);
         }
     }, [streamError, slotsLoading, availableSlots]);
+
+    useEffect(() => {
+        if (selectedTime) {
+            scrollToSelectedSlot(selectedTime);
+        }
+    }, [selectedTime, availableSlots]);
 
     const formatDate = (date: Date) =>
         date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -282,15 +298,29 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                     ) : availabilityError ? (
                         <AvailabilityErrorDisplay error={availabilityError} onContactRestaurant={handleCallRestaurant} />
                     ) : availableSlots.filter(s => s.isAvailable).length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.slotScroll}>
+                        <ScrollView
+                            ref={slotScrollRef}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.slotScroll}
+                        >
                             {getVisibleSlots().map((slot, i) => (
-                                <TimeSlotDisplay
+                                <View
                                     key={i}
-                                    slot={slot}
-                                    onPress={() => setSelectedTime(slot.time)}
-                                    variant="modal"
-                                    isSelected={selectedTime === slot.time}
-                                />
+                                    onLayout={(e) => {
+                                        slotPositions.current[slot.time] = e.nativeEvent.layout.x;
+                                        if (selectedTime === slot.time) {
+                                            scrollToSelectedSlot(slot.time);
+                                        }
+                                    }}
+                                >
+                                    <TimeSlotDisplay
+                                        slot={slot}
+                                        onPress={() => setSelectedTime(slot.time)}
+                                        variant="modal"
+                                        isSelected={selectedTime === slot.time}
+                                    />
+                                </View>
                             ))}
                         </ScrollView>
                     ) : (
