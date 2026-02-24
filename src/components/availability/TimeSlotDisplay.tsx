@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AvailableSlot } from '../../types/api.types';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { Colors, Radius, Spacing } from '../../theme';
 import AppText from '../ui/AppText';
 
 export interface TimeSlotDisplayProps {
@@ -17,7 +17,11 @@ export const TimeSlotDisplay: React.FC<TimeSlotDisplayProps> = ({
   variant = 'default',
   isSelected = false,
 }) => {
-  const isLowCapacity = slot.availableCapacity !== undefined && slot.availableCapacity <= 3;
+  // Use availableTableCount (best-fit filtered table count) for display.
+  // Fall back to availableTables.length for any older API responses during rollout.
+  const tableCount = slot.availableTableCount ?? slot.availableTables?.length ?? 0;
+  const isLowCapacity = tableCount <= 1;
+  const tableLabel = tableCount === 1 ? 'table' : 'tables';
 
   const containerStyle = [
     styles.slot,
@@ -34,17 +38,15 @@ export const TimeSlotDisplay: React.FC<TimeSlotDisplayProps> = ({
       >
         {slot.time}
       </AppText>
-      {slot.availableCapacity !== undefined && (
-        <AppText
-          variant="caption"
-          color={isSelected ? 'rgba(255,255,255,0.75)' : isLowCapacity ? Colors.capacityLow : Colors.textOnLightSecondary}
-          style={styles.capacity}
-        >
-          {variant === 'modal'
-            ? `${slot.availableCapacity} available`
-            : `${slot.availableCapacity} avail.`}
-        </AppText>
-      )}
+      <AppText
+        variant="caption"
+        color={isSelected ? 'rgba(255,255,255,0.75)' : isLowCapacity ? Colors.capacityLow : Colors.textOnLightSecondary}
+        style={styles.capacity}
+      >
+        {variant === 'modal'
+          ? `${tableCount} ${tableLabel} available`
+          : `${tableCount} ${tableLabel}`}
+      </AppText>
     </TouchableOpacity>
   );
 };

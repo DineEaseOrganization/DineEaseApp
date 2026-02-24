@@ -335,10 +335,11 @@ export interface AvailableSlot {
   duration: number; // in minutes
   availableCapacity: number;
   totalCapacity: number;
-  availableTables: string[]; // table numbers like ["T1", "T5"]
+  availableTables: string[]; // table numbers that can seat the requested party size (best-fit filtered)
+  availableTableCount: number; // explicit count of tables eligible for this party — use this for display
   isAvailable: boolean;
-  requiresAdvanceNotice?: boolean; // NEW: true if slot fails advance notice check
-  advanceNoticeHours?: number; // NEW: how many hours of notice required
+  requiresAdvanceNotice?: boolean; // true if slot fails advance notice check
+  advanceNoticeHours?: number; // how many hours of notice required
 }
 
 export interface AvailabilitySlotsResponse {
