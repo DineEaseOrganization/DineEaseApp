@@ -1,5 +1,6 @@
 // src/screens/booking/BookingScreen.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
 import {
     Alert,
     SafeAreaView,
@@ -128,8 +129,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         }
     }, [selectedTime, availableSlots]);
 
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const formatDate = (date: Date) => formatDateWeekdayLongDayMonthYear(date);
 
     const handleLogin = () => {
         setShowAuthPrompt(false);

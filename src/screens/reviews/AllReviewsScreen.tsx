@@ -1,5 +1,6 @@
 // src/screens/reviews/AllReviewsScreen.tsx
 import React, { useCallback, useState } from 'react';
+import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
 import {
     ActivityIndicator,
     Alert,
@@ -38,7 +39,7 @@ const getCategoryDisplayName = (name: string) => {
 
 const formatDate = (dateStr: string) => {
     try {
-        return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return formatDateDayMonthYear(new Date(dateStr));
     } catch { return dateStr; }
 };
 

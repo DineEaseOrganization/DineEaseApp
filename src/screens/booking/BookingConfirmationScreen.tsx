@@ -1,5 +1,6 @@
 // src/screens/booking/BookingConfirmationScreen.tsx
 import React from 'react';
+import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
 import {
     Linking,
     Alert,
@@ -18,8 +19,7 @@ import AppText from '../../components/ui/AppText';
 const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ route, navigation }) => {
     const { booking } = route.params;
 
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const formatDate = (date: Date) => formatDateWeekdayLongDayMonthYear(date);
 
     const handleShare = async () => {
         try {

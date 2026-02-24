@@ -1,5 +1,6 @@
 // src/screens/reviews/ReviewScreen.tsx
 import React, { useEffect, useState } from 'react';
+import { formatDateDayMonthYearLong } from '../../utils/Datetimeutils';
 import {
     Alert,
     SafeAreaView,
@@ -136,9 +137,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
         </View>
     );
 
-    const visitDate = new Date(reservation.date).toLocaleDateString('en-GB', {
-        day: 'numeric', month: 'long', year: 'numeric',
-    });
+    const visitDate = formatDateDayMonthYearLong(new Date(reservation.date));
 
     return (
         <SafeAreaView style={styles.container}>

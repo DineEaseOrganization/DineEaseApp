@@ -1,5 +1,6 @@
 // src/screens/profile/DevicesScreen.tsx
 import React, { useEffect, useState } from 'react';
+import { formatDateDayMonth } from '../../utils/Datetimeutils';
 import {
     ActivityIndicator,
     Alert,
@@ -132,7 +133,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
         if (mins < 60) return `${mins}m ago`;
         if (hrs < 24) return `${hrs}h ago`;
         if (days < 7) return `${days}d ago`;
-        return new Date(lastSeenAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        return formatDateDayMonth(new Date(lastSeenAt));
     };
 
     if (loading) {

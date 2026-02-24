@@ -1,5 +1,6 @@
 // src/components/booking/BookingCard.tsx
 import React, { useEffect, useState } from 'react';
+import { formatDateWeekdayShortDayMonth } from '../../utils/Datetimeutils';
 import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { processingService } from '../../services/api';
 import { AvailableSlot } from '../../types/api.types';
@@ -66,7 +67,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         tomorrow.setDate(today.getDate() + 1);
         if (date.toDateString() === today.toDateString()) return 'Today';
         if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-        return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        return formatDateWeekdayShortDayMonth(date);
     };
 
     const handleTimeSelect = (time: string) => {

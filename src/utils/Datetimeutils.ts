@@ -1,5 +1,62 @@
 // src/utils/dateTimeUtils.ts
 
+const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_LONG = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const getDateParts = (date: Date) => ({
+  day: date.getDate(),
+  monthShort: MONTHS_SHORT[date.getMonth()],
+  monthLong: MONTHS_LONG[date.getMonth()],
+  weekdayShort: WEEKDAYS_SHORT[date.getDay()],
+  weekdayLong: WEEKDAYS_LONG[date.getDay()],
+  year: date.getFullYear(),
+});
+
+export const formatDateDayMonth = (date: Date): string => {
+  const { day, monthShort } = getDateParts(date);
+  return `${day} ${monthShort}`;
+};
+
+export const formatDateDayMonthYear = (date: Date): string => {
+  const { day, monthShort, year } = getDateParts(date);
+  return `${day} ${monthShort} ${year}`;
+};
+
+export const formatDateDayMonthYearLong = (date: Date): string => {
+  const { day, monthLong, year } = getDateParts(date);
+  return `${day} ${monthLong} ${year}`;
+};
+
+export const formatDateWeekdayShortDayMonth = (date: Date): string => {
+  const { weekdayShort, day, monthShort } = getDateParts(date);
+  return `${weekdayShort}, ${day} ${monthShort}`;
+};
+
+export const formatDateWeekdayShortDayMonthYear = (date: Date): string => {
+  const { weekdayShort, day, monthShort, year } = getDateParts(date);
+  return `${weekdayShort}, ${day} ${monthShort} ${year}`;
+};
+
+export const formatDateWeekdayLongDayMonthYear = (date: Date): string => {
+  const { weekdayLong, day, monthLong, year } = getDateParts(date);
+  return `${weekdayLong}, ${day} ${monthLong} ${year}`;
+};
+
 /**
  * Formats party size, date, and time into a display string
  * Examples:
@@ -25,10 +82,8 @@ export const formatPartyDateTime = (
     tomorrow.setDate(tomorrow.getDate() + 1);
     const isTomorrow = selectedDate.toDateString() === tomorrow.toDateString();
 
-    const dateStr = isTomorrow
-      ? 'Tomorrow'
-      : selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    return `${partySize} • ${dateStr} ${selectedTime}`;
+    const dateStr = isTomorrow ? 'Tomorrow' : formatDateDayMonth(selectedDate);
+    return `${partySize} • ${dateStr} • ${selectedTime}`;
   }
 };
 
@@ -49,10 +104,6 @@ export const formatDateDisplay = (date: Date): string => {
   } else if (date.toDateString() === tomorrow.toDateString()) {
     return 'Tomorrow';
   } else {
-    return date.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    });
+    return formatDateWeekdayShortDayMonth(date);
   }
 };

@@ -1,5 +1,6 @@
 // src/screens/booking/BookingsScreen.tsx
 import React, { useCallback, useState } from 'react';
+import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
 import {
     Alert,
     SafeAreaView,
@@ -23,7 +24,7 @@ const NAVY = Colors.primary;
 
 const formatReservationDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDateDayMonthYear(date);
 };
 
 const isReservationPast = (date: string, time: string): boolean => {

@@ -10,6 +10,7 @@ import {
     View,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { formatDateWeekdayShortDayMonthYear } from '../../utils/Datetimeutils';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import AppText from '../../components/ui/AppText';
 
@@ -113,8 +114,7 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
         }
     };
 
-    const formatDate = (d: Date) =>
-        d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const formatDate = (d: Date) => formatDateWeekdayShortDayMonthYear(d);
 
     const handleDone = () => {
         setShowDatePicker(false);
