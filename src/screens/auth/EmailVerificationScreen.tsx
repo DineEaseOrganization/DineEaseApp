@@ -1,17 +1,9 @@
-// src/screens/auth/EmailVerificationScreen.tsx
 import React, {useEffect, useState} from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {useAuth} from '../../context/AuthContext';
+import { FontSize, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 
 interface EmailVerificationScreenProps {
   navigation: any;
@@ -52,7 +44,6 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
 
     // Auto-focus next input
     if (text && index < 5) {
-      const nextInput = index + 1;
       // Focus next input (you'd need refs for this in production)
     }
 
@@ -65,7 +56,6 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
   const handleKeyPress = (key: string, index: number) => {
     if (key === 'Backspace' && !code[index] && index > 0) {
       // Focus previous input on backspace
-      const prevInput = index - 1;
       // Focus prev input (you'd need refs for this in production)
     }
   };
@@ -94,8 +84,7 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
                 // Navigate to main app - user is already logged in
                 navigation.reset({
                   index: 0,
-                  routes: [{name: 'MainTabs'}],
-                });
+                  routes: [{name: 'MainTabs'}] });
               }
             }
           ]
@@ -238,120 +227,101 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
+    backgroundColor: '#f8f9fa' },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   content: {
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
+    paddingHorizontal: Spacing['6'],
+    paddingVertical: Spacing['10'] },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
-  },
+    marginBottom: Spacing['10'] },
   backButton: {
     alignSelf: 'flex-start',
-    marginBottom: 20,
-    paddingVertical: 10,
-  },
+    marginBottom: Spacing['5'],
+    paddingVertical: r(10) },
   backButtonText: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#007AFF',
-    fontWeight: '500',
-  },
+    fontWeight: '500' },
   icon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
+    fontSize: rf(64),
+    marginBottom: Spacing['4'] },
   title: {
-    fontSize: 28,
+    fontSize: FontSize['4xl'],
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
+    marginBottom: Spacing['3'],
+    textAlign: 'center' },
   subtitle: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 24,
-  },
+    lineHeight: r(24) },
   email: {
     fontWeight: '600',
-    color: '#007AFF',
-  },
+    color: '#007AFF' },
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
-    paddingHorizontal: 8,
-  },
+    marginBottom: Spacing['8'],
+    paddingHorizontal: Spacing['2'] },
   codeInput: {
-    width: 48,
-    height: 56,
+    width: r(48),
+    height: r(56),
     borderWidth: 2,
     borderColor: '#ddd',
-    borderRadius: 12,
-    fontSize: 24,
+    borderRadius: r(12),
+    fontSize: FontSize['3xl'],
     fontWeight: 'bold',
     textAlign: 'center',
     backgroundColor: 'white',
-    color: '#333',
-  },
+    color: '#333' },
   codeInputFilled: {
-    borderColor: '#007AFF',
-  },
+    borderColor: '#007AFF' },
   verifyButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: Spacing['4'],
+    borderRadius: r(12),
     alignItems: 'center',
-    marginBottom: 24,
-  },
+    marginBottom: Spacing['6'] },
   verifyButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
+    backgroundColor: '#ccc' },
   verifyButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    fontSize: FontSize.lg,
+    fontWeight: 'bold' },
   resendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
-  },
+    marginBottom: Spacing['8'] },
   resendText: {
-    fontSize: 14,
-    color: '#666',
-  },
+    fontSize: FontSize.base,
+    color: '#666' },
   resendLink: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#007AFF',
-    fontWeight: '500',
-  },
+    fontWeight: '500' },
   cooldownText: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#999',
-    fontWeight: '500',
-  },
+    fontWeight: '500' },
   infoContainer: {
     backgroundColor: '#e3f2fd',
-    padding: 16,
-    borderRadius: 12,
+    padding: Spacing['4'],
+    borderRadius: r(12),
     borderWidth: 1,
-    borderColor: '#bbdefb',
-  },
+    borderColor: '#bbdefb' },
   infoText: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#1976d2',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-});
+    lineHeight: r(20),
+    marginBottom: Spacing['2'] } });
 
 export default EmailVerificationScreen;
+
+
+
+

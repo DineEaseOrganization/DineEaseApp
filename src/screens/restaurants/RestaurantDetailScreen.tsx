@@ -1,16 +1,7 @@
+
+    
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {
-    Dimensions,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ActivityIndicator,
-    Alert,
-    Linking,
-    FlatList,
-} from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert, Linking, FlatList, SafeAreaView } from 'react-native';
 import { CachedImage } from '../../components/CachedImage';
 import { useIsFocused } from '@react-navigation/native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
@@ -23,11 +14,14 @@ import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHand
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
-import { Colors, Radius, Shadow, Spacing } from '../../theme';
+import { Colors, Radius, Spacing } from '../../theme';
 import AppText from '../../components/ui/AppText';
-import AppButton from '../../components/ui/AppButton';
 
 const { width } = Dimensions.get('window');
+const heroHeight = Math.round(width * 0.5);
+const detailScale = Math.min(1, width / 412);
+const d = (value: number) => Math.round(value * detailScale);
+const df = (value: number) => Math.round(value * detailScale);
 
 const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, navigation }) => {
     const {
@@ -49,7 +43,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     const [showPickerModal, setShowPickerModal] = useState(false);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
 
-    const { data: restaurantDetails, isLoading: loading } = useRestaurantDetail(initialRestaurant.id);
+    const { data: restaurantDetails } = useRestaurantDetail(initialRestaurant.id);
 
     useEffect(() => {
         if (restaurantDetails) setRestaurant(mapRestaurantDetailToRestaurant(restaurantDetails));
@@ -61,16 +55,14 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
         slots: streamedSlots,
         allSlots: streamedAllSlots,
         isLoading: slotsLoading,
-        error: streamError,
-    } = useAvailabilityStream({
+        error: streamError } = useAvailabilityStream({
         restaurantId: restaurant.id,
         date: dateStr,
         partySize,
         enabled: true,
         isFocused,
         isAuthenticated,
-        pollingIntervalMs: 30000,
-    });
+        pollingIntervalMs: 30000 });
 
     const availableSlots = streamedSlots;
 
@@ -361,25 +353,20 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
     scrollView: {
-        flex: 1,
-    },
+        flex: 1 },
 
     // ── Carousel ──────────────────────────────────────────────────────────────
     imageContainer: {
         position: 'relative',
-        height: 220,
-    },
+        height: heroHeight },
     carouselSlide: {
         width,
-        height: 220,
-    },
+        height: heroHeight },
     restaurantImage: {
         width: '100%',
-        height: '100%',
-    },
+        height: '100%' },
     paginationContainer: {
         position: 'absolute',
         bottom: Spacing['3'],
@@ -389,20 +376,17 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.overlayMedium,
         paddingHorizontal: Spacing['2'],
         paddingVertical: Spacing['1'],
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
     dot: {
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-    },
+        backgroundColor: 'rgba(255,255,255,0.4)' },
     dotActive: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: Colors.white,
-    },
+        backgroundColor: Colors.white },
     backButton: {
         position: 'absolute',
         top: Spacing['3'],
@@ -414,88 +398,72 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-    },
+        borderColor: 'rgba(255,255,255,0.2)' },
     backArrow: {
         fontSize: 20,
-        color: Colors.white,
-    },
+        color: Colors.white },
 
     // ── Name + rating below image ──────────────────────────────────────────────
     nameBlock: {
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: d(Spacing['4']) },
     restaurantName: {
-        fontSize: 20,
-        marginBottom: Spacing['1'],
-    },
+        fontSize: df(20),
+        marginBottom: d(Spacing['1']) },
     ratingRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     stars: {
-        fontSize: 13,
+        fontSize: df(13),
         color: Colors.star,
-        letterSpacing: 1,
-    },
+        letterSpacing: 1 },
 
     // ── Details card ──────────────────────────────────────────────────────────
     detailsCard: {
         backgroundColor: Colors.appBackground,
-        marginTop: -Spacing['4'],
+        marginTop: -d(Spacing['4']),
         borderTopLeftRadius: Radius['2xl'],
         borderTopRightRadius: Radius['2xl'],
-        paddingTop: Spacing['5'],
-        paddingHorizontal: Spacing['5'],
-    },
+        paddingTop: d(Spacing['5']),
+        paddingHorizontal: d(Spacing['5']) },
 
     // ── Quick info ────────────────────────────────────────────────────────────
     quickInfo: {
         flexDirection: 'row',
         backgroundColor: Colors.cardBackground,
         borderRadius: Radius.lg,
-        padding: Spacing['4'],
-        marginBottom: Spacing['4'],
+        padding: d(Spacing['4']),
+        marginBottom: d(Spacing['4']),
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     quickInfoItem: {
         flex: 1,
         alignItems: 'center',
-        gap: 4,
-    },
+        gap: 4 },
     quickInfoIcon: {
-        fontSize: 20,
-    },
+        fontSize: df(18) },
     quickInfoDivider: {
         width: 1,
         backgroundColor: Colors.cardBorder,
-        alignSelf: 'stretch',
-    },
+        alignSelf: 'stretch' },
 
     // ── Address ───────────────────────────────────────────────────────────────
     addressRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: Spacing['4'],
-        gap: Spacing['2'],
-    },
+        marginBottom: d(Spacing['4']),
+        gap: d(Spacing['2']) },
     addressIcon: {
-        fontSize: 15,
-        marginTop: 1,
-    },
+        fontSize: df(14),
+        marginTop: 1 },
     description: {
-        lineHeight: 22,
-        marginBottom: Spacing['4'],
-    },
+        lineHeight: df(22),
+        marginBottom: d(Spacing['4']) },
 
     // ── Section ───────────────────────────────────────────────────────────────
     section: {
-        marginBottom: Spacing['5'],
-    },
+        marginBottom: d(Spacing['5']) },
     sectionTitle: {
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: d(Spacing['3']) },
 
     // ── Selector button ───────────────────────────────────────────────────────
     selectorButton: {
@@ -503,41 +471,36 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: Colors.cardBackground,
-        paddingVertical: Spacing['3'] + 2,
-        paddingHorizontal: Spacing['4'],
+        paddingVertical: d(Spacing['3']) + 2,
+        paddingHorizontal: d(Spacing['4']),
         borderRadius: Radius.lg,
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     selectorLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['2'],
-    },
+        gap: d(Spacing['2']) },
     selectorIcon: {
-        fontSize: 18,
-    },
+        fontSize: df(16) },
 
     // ── Time slots ────────────────────────────────────────────────────────────
     slotsContainer: {
-        marginBottom: 0,
-    },
+        marginBottom: 0 },
     loadingSlots: {
         alignItems: 'center',
-        paddingVertical: Spacing['5'],
-    },
+        paddingVertical: Spacing['5'] },
     slotsList: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     moreTimesButton: {
-        marginTop: Spacing['3'],
-    },
+        marginTop: Spacing['3'] },
     noSlots: {
         fontStyle: 'italic',
-        marginTop: Spacing['2'],
-    },
-});
+        marginTop: Spacing['2'] } });
 
 export default RestaurantDetailScreen;
+
+
+
+

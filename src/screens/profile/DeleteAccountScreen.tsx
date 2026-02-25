@@ -1,15 +1,7 @@
 // src/screens/profile/DeleteAccountScreen.tsx
 import React, { useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { profileService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -59,8 +51,7 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
                                         onPress: async () => {
                                             await logout();
                                             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-                                        },
-                                    }]
+                                        } }]
                                 );
                             } else {
                                 Alert.alert('Error', response.message);
@@ -70,8 +61,7 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
                         } finally {
                             setIsLoading(false);
                         }
-                    },
-                },
+                    } },
             ]
         );
     };
@@ -241,8 +231,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -250,8 +239,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
 
     scroll: { flex: 1 },
@@ -266,15 +254,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.error,
         padding: Spacing['3'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     sectionTick: { width: 3, height: 14, borderRadius: 2 },
     sectionLabel: { letterSpacing: 0.8 },
 
@@ -285,31 +271,27 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: Colors.cardBorder,
         padding: Spacing['4'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     actionCardSelectedDeactivate: { borderColor: NAVY, backgroundColor: 'rgba(15,51,70,0.04)' },
     actionCardSelectedDelete: { borderColor: Colors.error, backgroundColor: Colors.errorFaded },
     actionCardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        marginBottom: 6,
-    },
+        marginBottom: 6 },
     radio: {
         width: 20, height: 20,
         borderRadius: 10,
         borderWidth: 2,
         borderColor: Colors.cardBorder,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     radioDeactivate: { borderColor: NAVY },
     radioDelete: { borderColor: Colors.error },
     radioInner: {
         width: 10, height: 10,
         borderRadius: 5,
-        backgroundColor: Colors.error,
-    },
+        backgroundColor: Colors.error },
     actionDesc: { marginLeft: 32, lineHeight: 18 },
 
     // Form card
@@ -325,8 +307,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     divider: { height: 1, backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
     fieldGroup: { paddingTop: Spacing['3'] },
     fieldLabel: { letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase', fontSize: 11 },
@@ -341,8 +322,7 @@ const styles = StyleSheet.create({
         paddingRight: 44,
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
-        color: Colors.textOnLight,
-    },
+        color: Colors.textOnLight },
     eyeBtn: { position: 'absolute', right: 12, top: 11, padding: 2 },
     textArea: {
         backgroundColor: Colors.cardBackground,
@@ -354,8 +334,7 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        minHeight: 80,
-    },
+        minHeight: 80 },
 
     dangerBox: {
         flexDirection: 'row',
@@ -366,8 +345,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.error,
         padding: Spacing['3'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     deleteBtn: {
         backgroundColor: Colors.error,
@@ -379,17 +357,17 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.3,
         shadowRadius: 6,
-        elevation: 4,
-    },
+        elevation: 4 },
     deleteBtnDisabled: {
         backgroundColor: Colors.textOnLightTertiary,
         shadowOpacity: 0,
-        elevation: 0,
-    },
+        elevation: 0 },
     cancelBtn: {
         paddingVertical: Spacing['3'],
-        alignItems: 'center',
-    },
-});
+        alignItems: 'center' } });
 
 export default DeleteAccountScreen;
+
+
+
+

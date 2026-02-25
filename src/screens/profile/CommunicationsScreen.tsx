@@ -1,14 +1,7 @@
 // src/screens/profile/CommunicationsScreen.tsx
 import React, { useState } from 'react';
-import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
 import AppText from '../../components/ui/AppText';
@@ -20,11 +13,11 @@ interface CommunicationsScreenProps {
 }
 
 const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation }) => {
-    const [reservationEmail, setReservationEmail] = useState(true);
-    const [reservationPush, setReservationPush] = useState(false);
-    const [waitlistEmail, setWaitlistEmail] = useState(false);
-    const [waitlistPush, setWaitlistPush] = useState(false);
-    const [marketingEmail, setMarketingEmail] = useState(false);
+    const [reservationEmail, _setReservationEmail] = useState(true);
+    const [reservationPush, _setReservationPush] = useState(false);
+    const [waitlistEmail, _setWaitlistEmail] = useState(false);
+    const [waitlistPush, _setWaitlistPush] = useState(false);
+    const [marketingEmail, _setMarketingEmail] = useState(false);
 
     const showComingSoon = () =>
         Alert.alert('Coming Soon', 'This preference will be available in an upcoming release.', [{ text: 'OK' }]);
@@ -37,8 +30,7 @@ const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation 
             items: [
                 { icon: 'mail-outline' as const, label: 'Email', value: reservationEmail, onChange: () => showComingSoon() },
                 { icon: 'notifications-outline' as const, label: 'Push notifications', value: reservationPush, onChange: () => showComingSoon() },
-            ],
-        },
+            ] },
         {
             emoji: '⏳',
             title: 'Waitlist Updates',
@@ -46,16 +38,14 @@ const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation 
             items: [
                 { icon: 'mail-outline' as const, label: 'Email', value: waitlistEmail, onChange: () => showComingSoon() },
                 { icon: 'notifications-outline' as const, label: 'Push notifications', value: waitlistPush, onChange: () => showComingSoon() },
-            ],
-        },
+            ] },
         {
             emoji: '✨',
             title: 'Marketing',
             description: 'Trending restaurants, top picks & must-try spots.',
             items: [
                 { icon: 'mail-outline' as const, label: 'Email', value: marketingEmail, onChange: () => showComingSoon() },
-            ],
-        },
+            ] },
     ];
 
     return (
@@ -85,7 +75,7 @@ const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation 
                     </AppText>
                 </View>
 
-                {sections.map((section, si) => (
+                {sections.map((section) => (
                     <View key={section.title} style={{ marginBottom: Spacing['3'] }}>
                         <View style={styles.sectionLabelRow}>
                             <View style={styles.sectionTick} />
@@ -136,8 +126,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -145,8 +134,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
 
     scroll: { flex: 1 },
@@ -161,25 +149,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.10)',
         padding: Spacing['3'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: 4,
-    },
+        marginBottom: 4 },
     sectionTick: {
         width: 3, height: 14,
         backgroundColor: NAVY,
-        borderRadius: 2,
-    },
+        borderRadius: 2 },
     sectionLabel: { letterSpacing: 0.8 },
     sectionDesc: {
         marginBottom: Spacing['2'],
-        paddingLeft: Spacing['2'] + 3,
-    },
+        paddingLeft: Spacing['2'] + 3 },
 
     card: {
         backgroundColor: Colors.white,
@@ -191,27 +175,22 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     divider: { height: 1, backgroundColor: Colors.cardBorder },
     prefRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     prefLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
     iconWrap: {
         width: 32, height: 32,
         borderRadius: Radius.sm,
         backgroundColor: 'rgba(15,51,70,0.07)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-});
+        alignItems: 'center' } });
 
 export default CommunicationsScreen;

@@ -1,19 +1,12 @@
 // src/screens/reviews/AllReviewsScreen.tsx
 import React, { useCallback, useState } from 'react';
 import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
-import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AllReviewsScreenProps } from '../../navigation/AppNavigator';
 import { processingService, ReviewResponse } from '../../services/api/processingService';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
 import AppText from '../../components/ui/AppText';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -80,8 +73,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
                         } catch {
                             Alert.alert('Error', 'Failed to delete review. Please try again.');
                         }
-                    },
-                },
+                    } },
             ]
         );
     };
@@ -220,8 +212,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -229,8 +220,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg, flex: 1, marginLeft: Spacing['3'] },
     countBadge: {
         backgroundColor: Colors.accent,
@@ -238,8 +228,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['2'] + 2,
         paddingVertical: 4,
         minWidth: 28,
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
 
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
 
@@ -247,8 +236,7 @@ const styles = StyleSheet.create({
     list: {
         paddingHorizontal: Spacing['4'],
         paddingTop: Spacing['4'],
-        paddingBottom: Spacing['8'],
-    },
+        paddingBottom: Spacing['8'] },
     emptyContainer: { flex: 1 },
 
     // ── Card ───────────────────────────────────────────────────────────────────
@@ -265,8 +253,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -274,8 +261,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingTop: Spacing['3'],
         paddingBottom: Spacing['2'],
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     restaurantName: { flex: 1, fontSize: FontSize.md },
 
     // Overall stars
@@ -283,8 +269,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing['4'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     verifiedPill: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -295,8 +280,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['2'],
         paddingVertical: 3,
         borderWidth: 1,
-        borderColor: Colors.success,
-    },
+        borderColor: Colors.success },
 
     // Review text
     reviewTextBox: {
@@ -307,8 +291,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['2'],
         backgroundColor: Colors.cardBackground,
         borderRadius: Radius.md,
-        padding: Spacing['3'],
-    },
+        padding: Spacing['3'] },
     quoteIcon: { fontSize: 16, color: Colors.cardBorder, marginTop: -2 },
 
     // Category grid
@@ -320,15 +303,13 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing['2'],
         borderTopWidth: 1,
         borderTopColor: Colors.cardBorder,
-        flexWrap: 'wrap',
-    },
+        flexWrap: 'wrap' },
     categoryItem: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
         flex: 1,
-        minWidth: '30%',
-    },
+        minWidth: '30%' },
     categoryEmoji: { fontSize: 18 },
     categoryLabel: { letterSpacing: 0.5, fontSize: 10, marginBottom: 2 },
 
@@ -339,8 +320,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['2'],
         borderTopWidth: 1,
-        borderTopColor: Colors.cardBorder,
-    },
+        borderTopColor: Colors.cardBorder },
     deleteBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -350,8 +330,7 @@ const styles = StyleSheet.create({
         borderRadius: Radius.md,
         backgroundColor: Colors.errorFaded,
         borderWidth: 1,
-        borderColor: Colors.error,
-    },
+        borderColor: Colors.error },
 
     // Empty state
     empty: {
@@ -359,9 +338,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: Spacing['10'],
-        paddingHorizontal: Spacing['5'],
-    },
-    emptyIcon: { fontSize: 48, marginBottom: Spacing['4'] },
-});
+        paddingHorizontal: Spacing['5'] },
+    emptyIcon: { fontSize: 48, marginBottom: Spacing['4'] } });
 
 export default AllReviewsScreen;

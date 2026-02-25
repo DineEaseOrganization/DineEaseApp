@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
+import { r, rf } from '../theme/responsive';
 
 interface FavoriteButtonProps {
   restaurantId: number;
@@ -88,33 +89,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 50,
+    borderRadius: r(50),
   },
   buttonSmall: {
-    width: 28,
-    height: 28,
+    width: r(28),
+    height: r(28),
   },
   buttonMedium: {
-    width: 36,
-    height: 36,
+    width: r(36),
+    height: r(36),
   },
   buttonLarge: {
-    width: 44,
-    height: 44,
+    width: r(44),
+    height: r(44),
   },
   buttonActive: {
     backgroundColor: '#fff0f0',
   },
   iconSmall: {
-    fontSize: 14,
+    fontSize: rf(14),
     color: '#999',
   },
   iconMedium: {
-    fontSize: 18,
+    fontSize: rf(18),
     color: '#999',
   },
   iconLarge: {
-    fontSize: 22,
+    fontSize: rf(22),
     color: '#999',
   },
   iconActive: {

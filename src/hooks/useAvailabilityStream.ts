@@ -67,7 +67,7 @@ export function useAvailabilityStream(
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const subscriptionRef = useRef<AvailabilitySubscription | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
   const hasInitialDataRef = useRef(false);
   const sseFailedRef = useRef(false);

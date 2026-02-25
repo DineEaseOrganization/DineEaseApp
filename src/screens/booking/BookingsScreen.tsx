@@ -1,15 +1,8 @@
 // src/screens/booking/BookingsScreen.tsx
 import React, { useCallback, useState } from 'react';
 import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
-import {
-    Alert,
-    SafeAreaView,
-    FlatList,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ActivityIndicator,
-} from 'react-native';
+import { Alert, FlatList, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Reservation } from '../../types';
 import { BookingsScreenProps } from '../../navigation/AppNavigator';
 import { useReservations } from '../../hooks/useReservations';
@@ -53,7 +46,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         useCallback(() => {
             processingService.getCustomerReviews()
                 .then(reviews => setReviewedReservationIds(new Set(reviews.map(r => r.reservationId))))
-                .catch(() => {});
+                .catch(() => { });
         }, [])
     );
 
@@ -73,8 +66,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
                     } catch {
                         Alert.alert('Error', 'Failed to cancel reservation. Please try again.');
                     }
-                },
-            },
+                } },
         ]);
     };
 
@@ -87,8 +79,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         pending:   { badge: styles.statusPending,   textColor: Colors.warning,  label: 'PENDING'   },
         completed: { badge: styles.statusCompleted, textColor: NAVY,            label: 'COMPLETED' },
         cancelled: { badge: styles.statusCancelled, textColor: Colors.error,    label: 'CANCELLED' },
-        no_show:   { badge: styles.statusNoShow,    textColor: Colors.warning,  label: 'NO SHOW'   },
-    };
+        no_show:   { badge: styles.statusNoShow,    textColor: Colors.warning,  label: 'NO SHOW'   } };
 
     // ── Status accent colour (left strip + header tint) ───────────────────────
     const statusAccent: Record<string, string> = {
@@ -96,8 +87,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         pending:   Colors.warning,
         completed: NAVY,
         cancelled: Colors.error,
-        no_show:   Colors.warning,
-    };
+        no_show:   Colors.warning };
 
     // ── Booking card ──────────────────────────────────────────────────────────
     const renderBookingCard = (reservation: Reservation) => {
@@ -289,47 +279,39 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
 
     // ── Header ─────────────────────────────────────────────────────────────────
     header: {
         backgroundColor: NAVY,
         paddingHorizontal: Spacing['5'],
         paddingTop: Spacing['3'],
-        paddingBottom: Spacing['3'],
-    },
+        paddingBottom: Spacing['3'] },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     headerTitle: {
-        fontSize: FontSize['2xl'],
-    },
+        fontSize: FontSize['2xl'] },
     filterRow: {
         flexDirection: 'row',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     filterChip: {
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['1'] + 2,
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.25)',
-        backgroundColor: 'rgba(255,255,255,0.10)',
-    },
+        backgroundColor: 'rgba(255,255,255,0.10)' },
     filterChipActive: {
         backgroundColor: Colors.white,
-        borderColor: Colors.white,
-    },
+        borderColor: Colors.white },
 
     // ── List ───────────────────────────────────────────────────────────────────
     list: {
         paddingHorizontal: Spacing['4'],
         paddingTop: Spacing['4'],
-        paddingBottom: Spacing['8'],
-    },
+        paddingBottom: Spacing['8'] },
 
     // ── Card ───────────────────────────────────────────────────────────────────
     card: {
@@ -345,8 +327,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 6,
         elevation: 2,
-        overflow: 'hidden',
-    },
+        overflow: 'hidden' },
 
     // Card header row
     cardHeader: {
@@ -354,12 +335,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: Spacing['2'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     restaurantName: {
         flex: 1,
-        fontSize: FontSize.md,
-    },
+        fontSize: FontSize.md },
 
     // Status badge
     statusBadge: {
@@ -367,8 +346,7 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
         borderRadius: Radius.full,
         borderWidth: 1,
-        flexShrink: 0,
-    },
+        flexShrink: 0 },
     statusText: { letterSpacing: 0.5, fontSize: FontSize.xs },
     statusConfirmed: { backgroundColor: Colors.successFaded,  borderColor: Colors.success },
     statusPending:   { backgroundColor: Colors.warningFaded,  borderColor: Colors.warning },
@@ -382,45 +360,38 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
-        flexWrap: 'wrap',
-    },
+        flexWrap: 'wrap' },
     pill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-    },
+        gap: 4 },
     pillIcon: { fontSize: 12 },
     pillDot: {
         width: 3,
         height: 3,
         borderRadius: 2,
-        backgroundColor: Colors.cardBorder,
-    },
+        backgroundColor: Colors.cardBorder },
 
     // Confirmation code
     codeRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     codeLabel: {
         letterSpacing: 1,
-        fontSize: FontSize.xs,
-    },
+        fontSize: FontSize.xs },
     code: {
         fontFamily: FontFamily.bold,
         letterSpacing: 1,
-        fontSize: FontSize.sm,
-    },
+        fontSize: FontSize.sm },
 
     // Tags
     tagsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 6,
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     tagPill: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -430,8 +401,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15,51,70,0.05)',
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.10)',
-        gap: 4,
-    },
+        gap: 4 },
     tagIcon: { fontSize: 11 },
 
     // Special requests
@@ -443,8 +413,7 @@ const styles = StyleSheet.create({
         borderRadius: Radius.md,
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['2'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     requestIcon: { fontSize: 13, marginTop: 1 },
 
     // Actions
@@ -455,28 +424,24 @@ const styles = StyleSheet.create({
         paddingTop: Spacing['2'],
         marginTop: Spacing['1'],
         borderTopWidth: 1,
-        borderTopColor: Colors.cardBorder,
-    },
+        borderTopColor: Colors.cardBorder },
     cancelBtn: {
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['1'] + 2,
         borderRadius: Radius.md,
         backgroundColor: Colors.errorFaded,
         borderWidth: 1,
-        borderColor: Colors.error,
-    },
+        borderColor: Colors.error },
     reviewBtn: {
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['1'] + 2,
         borderRadius: Radius.md,
-        backgroundColor: Colors.accent,
-    },
+        backgroundColor: Colors.accent },
 
     // States
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
     empty: { alignItems: 'center', paddingVertical: Spacing['10'], paddingHorizontal: Spacing['5'] },
     emptyIcon: { fontSize: 44, marginBottom: Spacing['4'] },
-    loadMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing['6'] },
-});
+    loadMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing['6'] } });
 
 export default BookingsScreen;

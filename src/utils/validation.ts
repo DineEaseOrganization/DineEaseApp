@@ -13,7 +13,7 @@ export const ValidationUtils = {
    * Validate phone number format
    */
   isValidPhone(phone: string): boolean {
-    const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,}$/;
+    const phoneRegex = /^[+]?[\d\s-()]{8,}$/;
     return phoneRegex.test(phone);
   },
 

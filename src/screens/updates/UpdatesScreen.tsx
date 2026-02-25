@@ -1,17 +1,6 @@
 import React, { JSX, useCallback, useState } from 'react';
-import {
-    Alert,
-    FlatList,
-    Image,
-    ListRenderItem,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ActivityIndicator,
-} from 'react-native';
+import { Alert, FlatList, Image, ListRenderItem, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { updatesService, MobileUpdate, processingService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -42,8 +31,7 @@ const mapCategoryToFilterKey = (category: string): string => {
         'REVIEW': 'review',
         'RESTAURANT_NEWS': 'restaurant_news',
         'APP_UPDATE': 'update',
-        'SYSTEM': 'update',
-    };
+        'SYSTEM': 'update' };
     return mapping[category] || category.toLowerCase();
 };
 
@@ -52,8 +40,7 @@ const mapFilterKeyToCategory = (filterKey: string): string | undefined => {
         'reservation': 'RESERVATION',
         'review': 'REVIEW',
         'restaurant_news': 'RESTAURANT_NEWS',
-        'update': 'APP_UPDATE',
-    };
+        'update': 'APP_UPDATE' };
     return mapping[filterKey];
 };
 
@@ -163,8 +150,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                     reservation,
                     restaurantId: params.restaurantId,
                     reservationId: params.reservationId,
-                    updateId: update.updateId ?? undefined,
-                });
+                    updateId: update.updateId ?? undefined });
             }
         } catch {
             Alert.alert('Error', 'Failed to load reservation details.');
@@ -384,30 +370,25 @@ export default UpdatesScreen;
 const styles = StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: NAVY,
-    },
+        backgroundColor: NAVY },
 
     // ── Header ────────────────────────────────────────────────────────────────
     header: {
         backgroundColor: NAVY,
         paddingTop: Spacing['3'],
         paddingHorizontal: Spacing['4'],
-        paddingBottom: Spacing['3'],
-    },
+        paddingBottom: Spacing['3'] },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     headerTitle: {
-        fontSize: 22,
-    },
+        fontSize: 22 },
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     unreadBadge: {
         backgroundColor: Colors.accent,
         minWidth: 22,
@@ -415,21 +396,18 @@ const styles = StyleSheet.create({
         borderRadius: Radius.full,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 6,
-    },
+        paddingHorizontal: 6 },
     markAllBtn: {
         backgroundColor: 'rgba(255,255,255,0.15)',
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['1'] + 2,
         borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-    },
+        borderColor: 'rgba(255,255,255,0.2)' },
     filtersContent: {
         flexDirection: 'row',
         gap: Spacing['2'],
-        paddingBottom: Spacing['1'],
-    },
+        paddingBottom: Spacing['1'] },
     filterChip: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -438,12 +416,10 @@ const styles = StyleSheet.create({
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.25)',
-        backgroundColor: 'rgba(255,255,255,0.10)',
-    },
+        backgroundColor: 'rgba(255,255,255,0.10)' },
     filterChipActive: {
         backgroundColor: Colors.white,
-        borderColor: Colors.white,
-    },
+        borderColor: Colors.white },
 
     // ── Center fill ───────────────────────────────────────────────────────────
     centerFill: {
@@ -451,18 +427,15 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.appBackground,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: Spacing['5'],
-    },
+        padding: Spacing['5'] },
 
     // ── List ──────────────────────────────────────────────────────────────────
     list: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
     listContent: {
         paddingTop: Spacing['3'],
-        paddingBottom: Spacing['8'],
-    },
+        paddingBottom: Spacing['8'] },
 
     // ── Notification item ─────────────────────────────────────────────────────
     notificationItem: {
@@ -477,11 +450,9 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 8,
-        elevation: 2,
-    },
+        elevation: 2 },
     unreadNotification: {
-        borderColor: `${NAVY}25`,
-    },
+        borderColor: `${NAVY}25` },
     unreadAccent: {
         position: 'absolute',
         left: 0,
@@ -489,15 +460,13 @@ const styles = StyleSheet.create({
         bottom: 0,
         width: 3,
         borderTopLeftRadius: Radius.xl,
-        borderBottomLeftRadius: Radius.xl,
-    },
+        borderBottomLeftRadius: Radius.xl },
     notificationInner: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         padding: Spacing['3'],
         paddingLeft: Spacing['4'],
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
 
     // ── Icon ─────────────────────────────────────────────────────────────────
     iconWrap: {
@@ -508,16 +477,13 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15,51,70,0.06)',
         justifyContent: 'center',
         alignItems: 'center',
-        flexShrink: 0,
-    },
+        flexShrink: 0 },
     restaurantIcon: {
         width: 44,
         height: 44,
-        borderRadius: Radius.lg,
-    },
+        borderRadius: Radius.lg },
     notificationIcon: {
-        fontSize: 22,
-    },
+        fontSize: 22 },
     priorityDot: {
         position: 'absolute',
         top: -3,
@@ -526,24 +492,20 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: 5,
         borderWidth: 2,
-        borderColor: Colors.cardBackground,
-    },
+        borderColor: Colors.cardBackground },
 
     // ── Text block ────────────────────────────────────────────────────────────
     notificationText: {
         flex: 1,
-        minWidth: 0,
-    },
+        minWidth: 0 },
     titleRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: 3,
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     notificationTitle: {
-        flex: 1,
-    },
+        flex: 1 },
 
     // ── Action button ─────────────────────────────────────────────────────────
     actionButton: {
@@ -557,20 +519,16 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: Radius.md,
         borderWidth: 1,
-        borderColor: 'rgba(122,0,0,0.12)',
-    },
+        borderColor: 'rgba(122,0,0,0.12)' },
 
     // ── Delete button ─────────────────────────────────────────────────────────
     deleteButton: {
         padding: 4,
-        flexShrink: 0,
-    },
+        flexShrink: 0 },
 
     // ── Empty state ───────────────────────────────────────────────────────────
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: Spacing['10'],
-        paddingHorizontal: Spacing['8'],
-    },
-});
+        paddingHorizontal: Spacing['8'] } });

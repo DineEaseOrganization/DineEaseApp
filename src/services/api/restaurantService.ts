@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
 import {
-  AvailabilitySlotsResponse,
   CuisineStat,
   NearbyRestaurantsResponse,
   ReservationTag,
@@ -203,8 +202,7 @@ class RestaurantService {
       );
       // Filter to only active tags for customer-facing app
       return (allTags || []).filter(tag => tag.active);
-    } catch (error) {
-      // Tags feature may not be deployed yet - return empty array
+    } catch {
       console.log('Reservation tags not available');
       return [];
     }

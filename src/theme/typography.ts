@@ -1,11 +1,13 @@
 /**
- * DineEase Design System — Typography
+ * DineEase Design System â€” Typography
  *
  * All text: Inter (sans-serif, readable, compact)
  */
 
+import { rf } from './responsive';
+
 export const FontFamily = {
-  // Display / Headings — Inter Bold for strong hierarchy
+  // Display / Headings â€” Inter Bold for strong hierarchy
   displayRegular: 'Inter_400Regular',
   displayBold: 'Inter_700Bold',
   displayItalic: 'Inter_400Regular',
@@ -19,17 +21,17 @@ export const FontFamily = {
 } as const;
 
 export const FontSize = {
-  xs: 11,
-  sm: 12,
-  base: 14,
-  md: 15,
-  lg: 16,
-  xl: 18,
-  '2xl': 20,
-  '3xl': 24,
-  '4xl': 28,
-  '5xl': 32,
-  '6xl': 38,
+  xs: rf(11),
+  sm: rf(12),
+  base: rf(14),
+  md: rf(15),
+  lg: rf(16),
+  xl: rf(18),
+  '2xl': rf(20),
+  '3xl': rf(24),
+  '4xl': rf(28),
+  '5xl': rf(32),
+  '6xl': rf(38),
 } as const;
 
 export const LineHeight = {
@@ -47,10 +49,10 @@ export const LetterSpacing = {
 } as const;
 
 /**
- * Pre-composed text styles — use these directly in StyleSheet.create()
+ * Pre-composed text styles â€” use these directly in StyleSheet.create()
  */
 export const TextStyles = {
-  // Display (Merriweather) ──────────────────────────────────────────────────
+  // Display (Merriweather) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   hero: {
     fontFamily: FontFamily.displayBold,
     fontSize: FontSize['6xl'],
@@ -87,7 +89,7 @@ export const TextStyles = {
     letterSpacing: LetterSpacing.tight,
   },
 
-  // Body (Inter) ────────────────────────────────────────────────────────────
+  // Body (Inter) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   bodyLarge: {
     fontFamily: FontFamily.regular,
     fontSize: FontSize.lg,

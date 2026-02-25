@@ -1,16 +1,8 @@
 // src/screens/reviews/ReviewScreen.tsx
 import React, { useEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDateDayMonthYearLong } from '../../utils/Datetimeutils';
-import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-    ActivityIndicator,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ReviewScreenProps } from '../../navigation/AppNavigator';
 import { processingService, RatingCategory } from '../../services/api/processingService';
 import { updatesService } from '../../services/api';
@@ -23,7 +15,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
     const { reservation, updateId } = route.params;
 
     const [overallRating, setOverallRating] = useState(5);
-    const [categoryRatings, setCategoryRatings] = useState<Record<number, number>>({});
+    const [categoryRatings, setCategoryRatings] = useState<Record<number, number>>({ });
     const [categories, setCategories] = useState<RatingCategory[]>([]);
     const [reviewText, setReviewText] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +24,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
         processingService.getRatingCategories(reservation.restaurant.id)
             .then((cats) => {
                 setCategories(cats);
-                const initial: Record<number, number> = {};
+                const initial: Record<number, number> = { };
                 cats.forEach(c => { initial[c.categoryId] = 5; });
                 setCategoryRatings(initial);
             })
@@ -49,12 +41,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
                 reviewText: reviewText.trim() || undefined,
                 categoryRatings: categories.map(c => ({
                     categoryId: c.categoryId,
-                    score: categoryRatings[c.categoryId] || 5,
-                })),
-            });
+                    score: categoryRatings[c.categoryId] || 5 })) });
 
             if (updateId) {
-                updatesService.deleteUpdate(updateId).catch(() => {});
+                updatesService.deleteUpdate(updateId).catch(() => { });
             }
 
             Alert.alert(
@@ -65,8 +55,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
                     onPress: () => {
                         reservation.canReview = false;
                         navigation.goBack();
-                    },
-                }]
+                    } }]
             );
         } catch (error: any) {
             Alert.alert('Error', error?.message || 'Failed to submit review. Please try again.');
@@ -275,8 +264,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
 
     // ── Header ─────────────────────────────────────────────────────────────────
     header: {
@@ -285,8 +273,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36,
         height: 36,
@@ -295,24 +282,20 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     backIcon: {
         fontSize: 16,
         color: Colors.white,
-        fontFamily: 'Inter-SemiBold',
-    },
+        fontFamily: 'Inter-SemiBold' },
     headerTitle: {
         fontSize: FontSize.lg,
-        color: Colors.white,
-    },
+        color: Colors.white },
 
     // ── Scroll ─────────────────────────────────────────────────────────────────
     scroll: { flex: 1 },
     scrollContent: {
         paddingHorizontal: Spacing['4'],
-        paddingTop: Spacing['4'],
-    },
+        paddingTop: Spacing['4'] },
 
     // ── Restaurant banner ──────────────────────────────────────────────────────
     restaurantBanner: {
@@ -328,18 +311,15 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     bannerAccent: {
         width: 4,
         alignSelf: 'stretch',
-        backgroundColor: NAVY,
-    },
+        backgroundColor: NAVY },
     bannerText: {
         flex: 1,
         paddingHorizontal: Spacing['3'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
 
     // ── Card ───────────────────────────────────────────────────────────────────
     card: {
@@ -353,22 +333,19 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
 
     // Section label
     sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     sectionTick: {
         width: 3,
         height: 14,
         backgroundColor: NAVY,
-        borderRadius: 2,
-    },
+        borderRadius: 2 },
     sectionLabel: { letterSpacing: 1 },
 
     // ── Rating row ─────────────────────────────────────────────────────────────
@@ -376,38 +353,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: Spacing['2'],
-    },
+        paddingVertical: Spacing['2'] },
     ratingRowOverall: {
-        paddingVertical: Spacing['1'],
-    },
+        paddingVertical: Spacing['1'] },
     ratingMeta: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        flex: 1,
-    },
+        flex: 1 },
     ratingEmoji: { fontSize: 16 },
     starsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 3,
-    },
+        gap: 3 },
     star: {
-        fontSize: 26,
-    },
+        fontSize: 26 },
     starLarge: {
-        fontSize: 34,
-    },
+        fontSize: 34 },
     ratingNum: {
         marginLeft: Spacing['2'],
-        minWidth: 28,
-    },
+        minWidth: 28 },
     divider: {
         height: 1,
         backgroundColor: Colors.cardBorder,
-        marginVertical: Spacing['1'],
-    },
+        marginVertical: Spacing['1'] },
 
     // ── Review text ────────────────────────────────────────────────────────────
     reviewInput: {
@@ -419,12 +388,10 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        minHeight: 110,
-    },
+        minHeight: 110 },
     charCount: {
         textAlign: 'right',
-        marginTop: Spacing['2'],
-    },
+        marginTop: Spacing['2'] },
 
     // ── Tips ───────────────────────────────────────────────────────────────────
     tipsCard: {
@@ -435,8 +402,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.08)',
         padding: Spacing['3'],
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     tipsIcon: { fontSize: 18, marginTop: 1 },
     tipLine: { lineHeight: 20 },
 
@@ -446,8 +412,7 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing['3'],
         borderTopWidth: 1,
         borderTopColor: Colors.cardBorder,
-        backgroundColor: Colors.white,
-    },
+        backgroundColor: Colors.white },
     submitBtn: {
         backgroundColor: Colors.accent,
         paddingVertical: Spacing['3'] + 2,
@@ -457,13 +422,10 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.3,
         shadowRadius: 6,
-        elevation: 4,
-    },
+        elevation: 4 },
     submitBtnDisabled: {
         backgroundColor: Colors.textOnLightTertiary,
         shadowOpacity: 0,
-        elevation: 0,
-    },
-});
+        elevation: 0 } });
 
 export default ReviewScreen;

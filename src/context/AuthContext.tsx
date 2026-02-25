@@ -17,11 +17,11 @@ interface User {
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
-    login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+    login: (_email: string, _password: string) => Promise<{ success: boolean; message: string }>;
     logout: () => Promise<void>;
-    register: (userData: RegisterData) => Promise<{ success: boolean; message: string }>;
-    verifyEmail: (code: string) => Promise<{ success: boolean; message: string }>;
-    resendVerificationCode: (email: string) => Promise<{ success: boolean; message: string; cooldownSeconds?: number }>;
+    register: (_userData: RegisterData) => Promise<{ success: boolean; message: string }>;
+    verifyEmail: (_code: string) => Promise<{ success: boolean; message: string }>;
+    resendVerificationCode: (_email: string) => Promise<{ success: boolean; message: string; cooldownSeconds?: number }>;
     checkVerificationStatus: () => Promise<VerificationStatus>;
     loading: boolean;
     refreshUserData: () => Promise<void>;

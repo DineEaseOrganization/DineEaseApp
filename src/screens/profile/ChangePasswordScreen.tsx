@@ -1,15 +1,7 @@
 // src/screens/profile/ChangePasswordScreen.tsx
 import React, { useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { passwordService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -107,8 +99,7 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
     const canSubmit = !!currentPassword && !!newPassword && !!confirmPassword && !isLoading;
 
     const PasswordField = ({
-        label, value, onChange, show, onToggle, placeholder,
-    }: {
+        label, value, onChange, show, onToggle, placeholder }: {
         label: string; value: string; onChange: (v: string) => void;
         show: boolean; onToggle: () => void; placeholder: string;
     }) => (
@@ -193,8 +184,7 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
                                     styles.strengthBarFill,
                                     {
                                         width: passwordStrength ? strengthWidth(passwordStrength.strength) : '0%',
-                                        backgroundColor: passwordStrength ? strengthColor(passwordStrength.strength) : Colors.cardBorder,
-                                    },
+                                        backgroundColor: passwordStrength ? strengthColor(passwordStrength.strength) : Colors.cardBorder },
                                 ]} />
                             </View>
                             {checkingStrength ? (
@@ -287,8 +277,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -296,8 +285,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
 
     scroll: { flex: 1 },
@@ -308,8 +296,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
-        marginTop: Spacing['1'],
-    },
+        marginTop: Spacing['1'] },
     sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
     sectionLabel: { letterSpacing: 0.8 },
 
@@ -325,8 +312,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     divider: { height: 1, backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
 
     fieldGroup: { paddingTop: Spacing['3'] },
@@ -334,8 +320,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.8,
         marginBottom: 6,
         textTransform: 'uppercase',
-        fontSize: 11,
-    },
+        fontSize: 11 },
     passwordWrap: { position: 'relative' },
     passwordInput: {
         backgroundColor: Colors.cardBackground,
@@ -347,28 +332,24 @@ const styles = StyleSheet.create({
         paddingRight: 44,
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
-        color: Colors.textOnLight,
-    },
+        color: Colors.textOnLight },
     eyeBtn: {
         position: 'absolute',
         right: 12,
         top: 11,
-        padding: 2,
-    },
+        padding: 2 },
 
     strengthSection: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        marginTop: Spacing['2'],
-    },
+        marginTop: Spacing['2'] },
     strengthBarBg: {
         flex: 1,
         height: 4,
         backgroundColor: Colors.cardBorder,
         borderRadius: 2,
-        overflow: 'hidden',
-    },
+        overflow: 'hidden' },
     strengthBarFill: { height: '100%', borderRadius: 2 },
 
     violationsBox: {
@@ -377,14 +358,12 @@ const styles = StyleSheet.create({
         borderRadius: Radius.md,
         borderWidth: 1,
         borderColor: Colors.error,
-        padding: Spacing['3'],
-    },
+        padding: Spacing['3'] },
     checkRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: Spacing['1'] + 2,
-        marginBottom: 3,
-    },
+        marginBottom: 3 },
 
     infoBanner: {
         flexDirection: 'row',
@@ -395,8 +374,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.10)',
         padding: Spacing['3'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     submitBtn: {
         backgroundColor: Colors.accent,
@@ -407,13 +385,10 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.3,
         shadowRadius: 6,
-        elevation: 4,
-    },
+        elevation: 4 },
     submitBtnDisabled: {
         backgroundColor: Colors.textOnLightTertiary,
         shadowOpacity: 0,
-        elevation: 0,
-    },
-});
+        elevation: 0 } });
 
 export default ChangePasswordScreen;

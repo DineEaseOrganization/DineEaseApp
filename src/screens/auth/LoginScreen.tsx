@@ -1,16 +1,6 @@
 import React, {useState} from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {useAuth} from '../../context/AuthContext';
 import {ApiError} from '../../services/api';
 import { Colors, Radius, Spacing } from '../../theme';
@@ -180,8 +170,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 5,
-  },
+    elevation: 5 },
   brandEmoji: { fontSize: 30 },
 
   title: { textAlign: 'center', marginBottom: Spacing['1'] },
@@ -199,8 +188,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 3,
-  },
+    elevation: 3 },
   inputGroup: { marginBottom: Spacing['4'] },
   label: { marginBottom: Spacing['2'], letterSpacing: 0.3 },
   input: {
@@ -212,8 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: Colors.appBackground,
     color: Colors.textOnLight,
-    fontFamily: 'Inter_400Regular',
-  },
+    fontFamily: 'Inter_400Regular' },
 
   forgotBtn: { alignSelf: 'flex-end', marginBottom: Spacing['5'] },
 
@@ -221,8 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     paddingVertical: Spacing['4'],
     borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   loginBtnDisabled: { backgroundColor: Colors.textOnLightTertiary },
 
   // ── Divider ───────────────────────────────────────────────────────────────
@@ -239,10 +225,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
+    borderColor: Colors.cardBorder },
 
-  signUpRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-});
+  signUpRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' } });
 
 export default LoginScreen;
+
+
+
+

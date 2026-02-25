@@ -1,6 +1,6 @@
 // App.tsx
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text, StyleSheet, Dimensions } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useFonts,
@@ -15,7 +15,8 @@ import { AuthProvider } from './src/context/AuthContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
 import { UpdatesProvider } from './src/context/UpdatesContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import { Colors } from './src/theme';
+import { Colors, Spacing, Radius, FontSize } from './src/theme';
+import { scale, fontScale, r } from './src/theme/responsive';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -44,13 +45,24 @@ const App = () => {
         );
     }
 
+    const { width, height } = Dimensions.get('window');
+
     return (
         <QueryClientProvider client={queryClient}>
             <ErrorBoundary>
                 <AuthProvider>
                     <UpdatesProvider>
                         <FavoritesProvider>
-                            <AppNavigator />
+                            <View style={styles.appRoot}>
+                                <AppNavigator />
+                                {__DEV__ && (
+                                    <View style={styles.debugBadge}>
+                                        <Text style={styles.debugText}>
+                                            {`w:${Math.round(width)} h:${Math.round(height)} s:${scale.toFixed(2)} fs:${fontScale.toFixed(2)}`}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
                         </FavoritesProvider>
                     </UpdatesProvider>
                 </AuthProvider>
@@ -60,3 +72,22 @@ const App = () => {
 };
 
 export default App;
+
+const styles = StyleSheet.create({
+    appRoot: {
+        flex: 1,
+    },
+    debugBadge: {
+        position: 'absolute',
+        right: Spacing['2'],
+        bottom: Spacing['2'],
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        paddingHorizontal: r(6),
+        paddingVertical: Spacing['1'],
+        borderRadius: Radius.sm,
+    },
+    debugText: {
+        color: '#fff',
+        fontSize: FontSize.xs,
+    },
+});

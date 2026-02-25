@@ -1,15 +1,7 @@
 // src/screens/profile/YourDetailsScreen.tsx
 import React, { useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/api';
@@ -48,7 +40,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
 
         setIsSaving(true);
         try {
-            const updateData: any = {};
+            const updateData: any = { };
             if (firstName !== user?.firstName) updateData.firstName = firstName;
             if (lastName !== user?.lastName) updateData.lastName = lastName;
             if (phone !== user?.phone) updateData.phone = phone;
@@ -298,8 +290,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -307,8 +298,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
     headerSideBtn: { minWidth: 52, alignItems: 'flex-end' },
 
@@ -320,8 +310,7 @@ const styles = StyleSheet.create({
     avatarBlock: {
         alignItems: 'center',
         paddingVertical: Spacing['5'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     avatarRing: {
         width: 80, height: 80,
         borderRadius: Radius.full,
@@ -330,20 +319,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: Spacing['3'],
-        backgroundColor: Colors.cardBackground,
-    },
+        backgroundColor: Colors.cardBackground },
     avatar: {
         width: 68, height: 68,
         borderRadius: Radius.full,
         backgroundColor: NAVY,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     initials: {
         fontSize: 24,
         fontFamily: 'Inter_700Bold',
-        color: Colors.white,
-    },
+        color: Colors.white },
 
     // ── Section labels ────────────────────────────────────────────────────────
     sectionLabelRow: {
@@ -351,8 +337,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
-        marginTop: Spacing['1'],
-    },
+        marginTop: Spacing['1'] },
     sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
     sectionLabel: { letterSpacing: 0.8 },
 
@@ -368,8 +353,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     divider: { height: 1, backgroundColor: Colors.cardBorder },
 
     // ── Field rows ────────────────────────────────────────────────────────────
@@ -377,22 +361,18 @@ const styles = StyleSheet.create({
     fieldLabel: {
         letterSpacing: 0.8,
         fontSize: 10,
-        marginBottom: 5,
-    },
+        marginBottom: 5 },
     fieldValueRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     fieldInput: {
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        paddingVertical: 4,
-    },
+        paddingVertical: 4 },
     fieldInputReadOnly: {
-        color: Colors.textOnLightSecondary,
-    },
+        color: Colors.textOnLightSecondary },
     helperText: { marginTop: 4 },
 
     // Verified / verify pills
@@ -403,14 +383,12 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.successFaded,
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 4,
-    },
+        paddingVertical: 4 },
     verifyBtn: {
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
         paddingVertical: 4,
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
 
     // Phone row
     phoneRow: { flexDirection: 'row', gap: Spacing['2'] },
@@ -420,15 +398,13 @@ const styles = StyleSheet.create({
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
         paddingVertical: 4,
-        textAlign: 'center',
-    },
+        textAlign: 'center' },
     phoneInput: {
         flex: 1,
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        paddingVertical: 4,
-    },
+        paddingVertical: 4 },
     phoneVerifiedPill: {
         position: 'absolute',
         right: 0,
@@ -439,8 +415,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.successFaded,
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 4,
-    },
+        paddingVertical: 4 },
     phoneVerifyBtn: {
         position: 'absolute',
         right: 0,
@@ -448,23 +423,19 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
         paddingVertical: 4,
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
 
     // Menu rows (Security / Danger Zone)
     menuRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     menuIconWrap: {
         width: 34, height: 34,
         borderRadius: Radius.sm,
         backgroundColor: 'rgba(15,51,70,0.07)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-});
+        alignItems: 'center' } });
 
 export default YourDetailsScreen;

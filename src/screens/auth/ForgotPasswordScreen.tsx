@@ -1,15 +1,11 @@
+
+    
 import React, {useEffect, useState} from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {ApiError, passwordService} from '../../services/api';
+import { FontSize, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 
 interface ForgotPasswordScreenProps {
   navigation: any;
@@ -52,8 +48,7 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({navigation})
             text: 'OK',
             onPress: () => {
               navigation.navigate('ResetPassword', {email});
-            },
-          },
+            } },
         ]);
       } else {
         Alert.alert('Error', response.message);
@@ -151,84 +146,72 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({navigation})
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
+    backgroundColor: '#f8f9fa' },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
+    paddingHorizontal: Spacing['6'],
+    paddingTop: Spacing['5'] },
   backButton: {
     alignSelf: 'flex-start',
-    marginBottom: 20,
-    paddingVertical: 10,
-  },
+    marginBottom: Spacing['5'],
+    paddingVertical: r(10) },
   backButtonText: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#007AFF',
-    fontWeight: '500',
-  },
+    fontWeight: '500' },
   icon: {
-    fontSize: 64,
+    fontSize: rf(64),
     textAlign: 'center',
-    marginBottom: 16,
-  },
+    marginBottom: Spacing['4'] },
   title: {
-    fontSize: 28,
+    fontSize: FontSize['4xl'],
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 12,
-  },
+    marginBottom: Spacing['3'] },
   subtitle: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
-    paddingHorizontal: 20,
-  },
+    lineHeight: r(24),
+    marginBottom: Spacing['10'],
+    paddingHorizontal: Spacing['5'] },
   form: {
-    marginBottom: 32,
-  },
+    marginBottom: Spacing['8'] },
   inputContainer: {
-    marginBottom: 24,
-  },
+    marginBottom: Spacing['6'] },
   inputLabel: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     fontWeight: '500',
     color: '#333',
-    marginBottom: 8,
-  },
+    marginBottom: Spacing['2'] },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    backgroundColor: 'white',
-  },
+    borderRadius: r(12),
+    paddingHorizontal: Spacing['4'],
+    paddingVertical: r(14),
+    fontSize: FontSize.lg,
+    backgroundColor: 'white' },
   submitButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+    paddingVertical: Spacing['4'],
+    borderRadius: r(12),
+    alignItems: 'center' },
   submitButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
+    backgroundColor: '#ccc' },
   submitButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    fontSize: FontSize.lg,
+    fontWeight: 'bold' },
   cooldownText: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: Spacing['3'],
+    fontSize: FontSize.base,
     color: '#666',
-    textAlign: 'center',
-  },
-});
+    textAlign: 'center' } });
 
 export default ForgotPasswordScreen;
+
+
+
+

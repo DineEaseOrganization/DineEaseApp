@@ -1,13 +1,7 @@
 // src/screens/profile/ProfileScreen.tsx
 import React, { useCallback, useState } from 'react';
-import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -48,8 +42,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 onPress: async () => {
                     try { await logout(); }
                     catch { Alert.alert('Error', 'Failed to sign out. Please try again.'); }
-                },
-            },
+                } },
         ]);
     };
 
@@ -170,8 +163,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: Spacing['6'],
         paddingBottom: Spacing['8'],
-        paddingHorizontal: Spacing['5'],
-    },
+        paddingHorizontal: Spacing['5'] },
     avatarRing: {
         width: 96,
         height: 96,
@@ -180,35 +172,29 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.25)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     avatar: {
         width: 84,
         height: 84,
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     initials: {
         fontSize: 30,
         fontFamily: 'Inter_700Bold',
         color: Colors.white,
-        letterSpacing: 1,
-    },
+        letterSpacing: 1 },
     heroName: {
         fontSize: FontSize.xl,
-        marginBottom: 4,
-    },
+        marginBottom: 4 },
     heroEmail: {
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     badgeRow: {
         flexDirection: 'row',
         gap: Spacing['2'],
         flexWrap: 'wrap',
-        justifyContent: 'center',
-    },
+        justifyContent: 'center' },
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -217,8 +203,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         borderRadius: Radius.full,
         borderWidth: 1,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-    },
+        backgroundColor: 'rgba(255,255,255,0.08)' },
     badgeVerified: { borderColor: Colors.success },
     badgePending:  { borderColor: Colors.warning },
 
@@ -237,19 +222,16 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.10,
         shadowRadius: 12,
         elevation: 4,
-        marginBottom: Spacing['5'],
-    },
+        marginBottom: Spacing['5'] },
     statItem: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: Spacing['4'],
-    },
+        paddingVertical: Spacing['4'] },
     statValue: {
         fontSize: FontSize['2xl'],
         fontFamily: 'Inter_700Bold',
         color: NAVY,
-        marginBottom: 3,
-    },
+        marginBottom: 3 },
     statDivider: { width: 1, backgroundColor: Colors.cardBorder },
 
     // ── Menu ──────────────────────────────────────────────────────────────────
@@ -265,15 +247,13 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 8,
-        elevation: 2,
-    },
+        elevation: 2 },
     menuRow: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['3'] + 2,
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
     menuRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
     menuIconWrap: {
         width: 38,
@@ -281,15 +261,13 @@ const styles = StyleSheet.create({
         borderRadius: Radius.md,
         backgroundColor: 'rgba(15,51,70,0.07)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     menuText: { flex: 1, gap: 2 },
 
     // ── Sign out ──────────────────────────────────────────────────────────────
     signOutWrap: {
         paddingHorizontal: Spacing['4'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     signOutBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -302,8 +280,6 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.25,
         shadowRadius: 6,
-        elevation: 3,
-    },
-});
+        elevation: 3 } });
 
 export default ProfileScreen;

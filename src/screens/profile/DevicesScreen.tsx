@@ -1,17 +1,10 @@
+
 // src/screens/profile/DevicesScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { formatDateDayMonth } from '../../utils/Datetimeutils';
-import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeviceDTO } from '../../types/api.types';
 import { ApiError, deviceService } from '../../services/api';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
@@ -72,8 +65,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
                         } catch (error) {
                             Alert.alert('Error', error instanceof ApiError ? error.message : 'Failed to remove device.');
                         }
-                    },
-                },
+                    } },
             ]
         );
     };
@@ -109,8 +101,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
                         } catch {
                             Alert.alert('Error', 'Failed to remove some devices.');
                         }
-                    },
-                },
+                    } },
             ]
         );
     };
@@ -311,8 +302,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -320,8 +310,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
 
     scroll: { flex: 1 },
@@ -336,16 +325,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.10)',
         padding: Spacing['3'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
-        marginTop: Spacing['1'],
-    },
+        marginTop: Spacing['1'] },
     sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
     sectionLabel: { flex: 1, letterSpacing: 0.8 },
 
@@ -360,8 +347,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     divider: { height: 1, backgroundColor: Colors.cardBorder },
     emptyCard: {
         backgroundColor: Colors.white,
@@ -370,45 +356,38 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         padding: Spacing['8'],
         alignItems: 'center',
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     deviceRow: {
         flexDirection: 'row',
         gap: Spacing['3'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     deviceIconWrap: {
         width: 42, height: 42,
         borderRadius: Radius.md,
         backgroundColor: 'rgba(15,51,70,0.08)',
         justifyContent: 'center',
         alignItems: 'center',
-        flexShrink: 0,
-    },
+        flexShrink: 0 },
     deviceIconWrapCurrent: {
-        backgroundColor: NAVY,
-    },
+        backgroundColor: NAVY },
     deviceInfo: { flex: 1 },
     deviceNameRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: 3,
-    },
+        marginBottom: 3 },
     currentBadge: {
         backgroundColor: Colors.successFaded,
         paddingHorizontal: Spacing['2'],
         paddingVertical: 2,
         borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: Colors.success,
-    },
+        borderColor: Colors.success },
     deviceActions: {
         flexDirection: 'row',
         gap: Spacing['2'],
-        marginTop: Spacing['2'],
-    },
+        marginTop: Spacing['2'] },
     actionPill: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -416,19 +395,16 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15,51,70,0.07)',
         paddingHorizontal: Spacing['2'] + 2,
         paddingVertical: 4,
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
     actionPillTrusted: {
-        backgroundColor: Colors.successFaded,
-    },
+        backgroundColor: Colors.successFaded },
     removePill: {
         paddingHorizontal: Spacing['2'] + 2,
         paddingVertical: 4,
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: Colors.error,
-        backgroundColor: Colors.errorFaded,
-    },
+        backgroundColor: Colors.errorFaded },
 
     tipsCard: {
         backgroundColor: Colors.white,
@@ -437,13 +413,10 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         padding: Spacing['4'],
         gap: Spacing['2'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     tipRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: Spacing['2'],
-    },
-});
+        gap: Spacing['2'] } });
 
 export default DevicesScreen;

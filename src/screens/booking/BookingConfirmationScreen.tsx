@@ -1,19 +1,12 @@
 // src/screens/booking/BookingConfirmationScreen.tsx
 import React from 'react';
 import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
-import {
-    Linking,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    Share,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Linking, Alert, ScrollView, Share, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
 import { BookingConfirmationScreenProps } from '../../navigation/AppNavigator';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ route, navigation }) => {
@@ -31,8 +24,7 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ r
                     `Time: ${booking.time}\n` +
                     `Party Size: ${booking.partySize} guests\n` +
                     `Confirmation: ${booking.confirmationCode}`,
-                title: 'Restaurant Reservation',
-            });
+                title: 'Restaurant Reservation' });
         } catch (error) {
             console.error('Share error:', error);
         }
@@ -219,8 +211,7 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ r
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
     scroll: { flex: 1 },
     scrollContent: { paddingBottom: Spacing['6'] },
 
@@ -230,39 +221,33 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: Spacing['8'],
         paddingBottom: Spacing['8'] + Spacing['5'],
-        paddingHorizontal: Spacing['5'],
-    },
+        paddingHorizontal: Spacing['5'] },
     successRing: {
-        width: 88,
-        height: 88,
+        width: r(88),
+        height: r(88),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.12)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     successCircle: {
-        width: 68,
-        height: 68,
+        width: r(68),
+        height: r(68),
         borderRadius: Radius.full,
         backgroundColor: Colors.success,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     checkmark: {
-        fontSize: 32,
+        fontSize: FontSize['5xl'],
         color: Colors.white,
-        fontFamily: FontFamily.bold,
-    },
+        fontFamily: FontFamily.bold },
     heroTitle: {
         textAlign: 'center',
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     heroSub: {
         textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: Spacing['5'],
-    },
+        lineHeight: r(22),
+        marginBottom: Spacing['5'] },
     codePill: {
         backgroundColor: 'rgba(255,255,255,0.12)',
         borderWidth: 1,
@@ -270,16 +255,13 @@ const styles = StyleSheet.create({
         borderRadius: Radius.lg,
         paddingHorizontal: Spacing['5'],
         paddingVertical: Spacing['3'],
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     codeLabel: {
         letterSpacing: 1.2,
-        marginBottom: 3,
-    },
+        marginBottom: r(3) },
     codeValue: {
         fontSize: FontSize.xl,
-        letterSpacing: 1,
-    },
+        letterSpacing: 1 },
 
     // ── Ticket card ────────────────────────────────────────────────────────────
     ticketCard: {
@@ -290,36 +272,33 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: r(0), height: r(4) },
         shadowOpacity: 0.1,
-        shadowRadius: 16,
-        elevation: 6,
+        shadowRadius: r(16),
+        elevation: r(6),
         overflow: 'visible',
-        paddingBottom: Spacing['4'],
-    },
+        paddingBottom: Spacing['4'] },
     // Circular notch cutouts on the sides
     notchLeft: {
         position: 'absolute',
-        left: -14,
+        left: r(-14),
         top: '45%',
-        width: 28,
-        height: 28,
+        width: r(28),
+        height: r(28),
         borderRadius: Radius.full,
         backgroundColor: Colors.appBackground,
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     notchRight: {
         position: 'absolute',
-        right: -14,
+        right: r(-14),
         top: '45%',
-        width: 28,
-        height: 28,
+        width: r(28),
+        height: r(28),
         borderRadius: Radius.full,
         backgroundColor: Colors.appBackground,
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     ticketTop: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -327,21 +306,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['5'],
         paddingTop: Spacing['5'],
         paddingBottom: Spacing['4'],
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
     ticketRestaurantName: {
         flex: 1,
-        fontSize: FontSize.lg,
-    },
+        fontSize: FontSize.lg },
     cuisinePill: {
         backgroundColor: Colors.cardBackground,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         borderRadius: Radius.full,
-        paddingHorizontal: Spacing['2'] + 2,
-        paddingVertical: 4,
-        flexShrink: 0,
-    },
+        paddingHorizontal: r(10),
+        paddingVertical: Spacing['1'],
+        flexShrink: 0 },
 
     // Dashed perforation line
     perforationRow: {
@@ -349,40 +325,33 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: Spacing['4'],
-        gap: 4,
-    },
+        gap: Spacing['1'] },
     dash: {
-        width: 6,
-        height: 1.5,
+        width: r(6),
+        height: r(1.5),
         backgroundColor: Colors.cardBorder,
-        borderRadius: 1,
-    },
+        borderRadius: r(1) },
 
     // Detail grid — 2 columns
     detailGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         paddingHorizontal: Spacing['5'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     detailCell: {
         width: '50%',
         marginBottom: Spacing['4'],
-        paddingRight: Spacing['3'],
-    },
+        paddingRight: Spacing['3'] },
     detailCellRight: {
         paddingRight: 0,
         paddingLeft: Spacing['3'],
         borderLeftWidth: 1,
-        borderLeftColor: Colors.cardBorder,
-    },
+        borderLeftColor: Colors.cardBorder },
     cellLabel: {
         letterSpacing: 0.8,
-        marginBottom: 4,
-    },
+        marginBottom: Spacing['1'] },
     cellValue: {
-        lineHeight: 20,
-    },
+        lineHeight: r(20) },
 
     // Address + requests
     addressRow: {
@@ -390,59 +359,51 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         paddingHorizontal: Spacing['5'],
         gap: Spacing['2'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     requestsRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         paddingHorizontal: Spacing['5'],
-        gap: Spacing['2'],
-    },
-    addressPin: { fontSize: 14, marginTop: 1 },
-    addressText: { flex: 1, lineHeight: 20 },
+        gap: Spacing['2'] },
+    addressPin: { fontSize: FontSize.base, marginTop: r(1) },
+    addressText: { flex: 1, lineHeight: r(20) },
 
     // ── Info section ───────────────────────────────────────────────────────────
     infoSection: {
         paddingHorizontal: Spacing['5'],
-        paddingTop: Spacing['6'],
-    },
+        paddingTop: Spacing['6'] },
     sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     sectionTick: {
-        width: 3,
-        height: 18,
+        width: r(3),
+        height: r(18),
         backgroundColor: Colors.primary,
-        borderRadius: 2,
-    },
+        borderRadius: r(2) },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         marginBottom: Spacing['3'],
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
     infoIconWrap: {
-        width: 36,
-        height: 36,
+        width: r(36),
+        height: r(36),
         borderRadius: Radius.md,
         backgroundColor: Colors.cardBackground,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         justifyContent: 'center',
         alignItems: 'center',
-        flexShrink: 0,
-    },
-    infoIcon: { fontSize: 16 },
-    infoText: { flex: 1, lineHeight: 20, marginTop: 8 },
+        flexShrink: 0 },
+    infoIcon: { fontSize: FontSize.lg },
+    infoText: { flex: 1, lineHeight: r(20), marginTop: Spacing['2'] },
 
     // ── Call section ───────────────────────────────────────────────────────────
     callSection: {
         paddingHorizontal: Spacing['5'],
-        paddingTop: Spacing['5'],
-    },
+        paddingTop: Spacing['5'] },
     callBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -452,9 +413,8 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         borderRadius: Radius.lg,
         paddingVertical: Spacing['3'],
-        paddingHorizontal: Spacing['4'],
-    },
-    callIcon: { fontSize: 18 },
+        paddingHorizontal: Spacing['4'] },
+    callIcon: { fontSize: FontSize.xl },
     callNumber: { marginLeft: 'auto' },
 
     // ── Footer ─────────────────────────────────────────────────────────────────
@@ -469,8 +429,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['5'],
         paddingVertical: Spacing['3'],
         flexDirection: 'row',
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
     shareBtn: {
         flex: 1,
         flexDirection: 'row',
@@ -481,26 +440,26 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         borderRadius: Radius.lg,
-        paddingVertical: Spacing['3'] + 2,
-    },
+        paddingVertical: r(14) },
     shareBtnIcon: {
-        fontSize: 16,
+        fontSize: FontSize.lg,
         color: Colors.textOnLight,
-        fontFamily: FontFamily.semiBold,
-    },
+        fontFamily: FontFamily.semiBold },
     doneBtn: {
         flex: 2,
         backgroundColor: Colors.accent,
         borderRadius: Radius.lg,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: r(14),
         shadowColor: Colors.accent,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.25,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-});
+        shadowRadius: r(6),
+        elevation: r(4) } });
 
 export default BookingConfirmationScreen;
+
+
+
+

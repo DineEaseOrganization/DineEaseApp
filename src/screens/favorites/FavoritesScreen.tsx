@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFavorites } from '../../context/FavoritesContext';
 import { Restaurant } from '../../types';
 import { FavoritesScreenProps } from '../../navigation/AppNavigator';
@@ -150,8 +143,7 @@ const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) => {
     };
 
     const handleExplore = () => profileNavigation.dispatch(CommonActions.navigate({
-        name: 'Discover', params: { screen: 'RestaurantList' },
-    }));
+        name: 'Discover', params: { screen: 'RestaurantList' } }));
 
     const Header = () => (
         <View style={styles.header}>
@@ -268,8 +260,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
         width: 36, height: 36,
         borderRadius: Radius.full,
@@ -277,8 +268,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
     countBadge: {
         backgroundColor: Colors.accent,
@@ -286,21 +276,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['2'] + 2,
         paddingVertical: 4,
         minWidth: 28,
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
 
     // ── List ───────────────────────────────────────────────────────────────────
     listContent: {
         paddingHorizontal: Spacing['4'],
-        paddingBottom: Spacing['8'],
-    },
+        paddingBottom: Spacing['8'] },
     listHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
         paddingTop: Spacing['4'],
-        paddingBottom: Spacing['3'],
-    },
+        paddingBottom: Spacing['3'] },
     sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
 
     // ── Card ───────────────────────────────────────────────────────────────────
@@ -314,20 +301,17 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.08,
         shadowRadius: 10,
-        elevation: 3,
-    },
+        elevation: 3 },
 
     // Image section
     imageWrap: {
         position: 'relative',
         width: '100%',
         height: 160,
-        backgroundColor: '#cdd8e0',
-    },
+        backgroundColor: '#cdd8e0' },
     cardImage: {
         width: '100%',
-        height: 160,
-    },
+        height: 160 },
     heartBtn: {
         position: 'absolute',
         top: Spacing['3'],
@@ -341,8 +325,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 3,
-        elevation: 2,
-    },
+        elevation: 2 },
     pricePill: {
         position: 'absolute',
         bottom: Spacing['2'],
@@ -350,50 +333,41 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15,51,70,0.75)',
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'] + 2,
-        paddingVertical: 4,
-    },
+        paddingVertical: 4 },
 
     // Info body
     cardBody: {
-        padding: Spacing['3'],
-    },
+        padding: Spacing['3'] },
     cardName: {
         fontSize: FontSize.md,
-        marginBottom: 2,
-    },
+        marginBottom: 2 },
     cuisine: {
         marginBottom: Spacing['2'],
         textTransform: 'uppercase',
         letterSpacing: 0.5,
-        fontSize: 11,
-    },
+        fontSize: 11 },
     metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: Spacing['1'],
-    },
+        marginBottom: Spacing['1'] },
     starsRow: {
         flexDirection: 'row',
-        gap: 1,
-    },
+        gap: 1 },
     starGlyph: {
         fontSize: 13,
-        fontFamily: FontFamily.regular,
-    },
+        fontFamily: FontFamily.regular },
     addressRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
 
     // Footer CTA
     cardFooter: {
         borderTopWidth: 1,
         borderTopColor: Colors.cardBorder,
         paddingTop: Spacing['2'],
-        alignItems: 'flex-end',
-    },
+        alignItems: 'flex-end' },
     bookBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -401,8 +375,7 @@ const styles = StyleSheet.create({
         backgroundColor: NAVY,
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['1'] + 2,
-        borderRadius: Radius.md,
-    },
+        borderRadius: Radius.md },
 
     // ── Skeleton ───────────────────────────────────────────────────────────────
     skelLine: { height: 13, backgroundColor: '#dde5ea', borderRadius: Radius.sm },
@@ -412,8 +385,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: Spacing['6'],
-    },
+        padding: Spacing['6'] },
     emptyIconCircle: {
         width: 80, height: 80,
         borderRadius: Radius.full,
@@ -422,8 +394,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     tipBox: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -433,8 +404,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.08)',
         padding: Spacing['3'],
-        marginTop: Spacing['5'],
-    },
-});
+        marginTop: Spacing['5'] } });
 
 export default FavoritesScreen;

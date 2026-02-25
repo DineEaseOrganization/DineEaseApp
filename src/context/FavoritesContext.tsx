@@ -43,10 +43,10 @@ interface FavoritesContextType {
   favoriteIds: Set<number>;
   isLoading: boolean;
   error: string | null;
-  isFavorite: (restaurantId: number) => boolean;
-  toggleFavorite: (restaurantId: number) => Promise<{ success: boolean; message: string }>;
-  addToFavorites: (restaurantId: number) => Promise<{ success: boolean; message: string }>;
-  removeFromFavorites: (restaurantId: number) => Promise<{ success: boolean; message: string }>;
+  isFavorite: (_restaurantId: number) => boolean;
+  toggleFavorite: (_restaurantId: number) => Promise<{ success: boolean; message: string }>;
+  addToFavorites: (_restaurantId: number) => Promise<{ success: boolean; message: string }>;
+  removeFromFavorites: (_restaurantId: number) => Promise<{ success: boolean; message: string }>;
   refreshFavorites: () => Promise<void>;
 }
 

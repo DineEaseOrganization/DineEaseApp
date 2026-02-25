@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AvailableSlot } from '../../types/api.types';
 import { Colors, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../ui/AppText';
 
 export interface TimeSlotDisplayProps {
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    minWidth: 72,
+    minWidth: r(72),
     alignItems: 'center',
   },
   slotSelected: {
@@ -69,7 +70,7 @@ const styles = StyleSheet.create({
   slotModal: {
     paddingHorizontal: Spacing['4'],
     paddingVertical: Spacing['3'],
-    minWidth: 84,
+    minWidth: r(84),
   },
   slotHorizontal: {
     paddingVertical: Spacing['3'],
@@ -78,10 +79,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    minWidth: 84,
+    minWidth: r(84),
   },
   capacity: {
-    marginTop: 2,
+    marginTop: r(2),
   },
 });
 

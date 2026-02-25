@@ -1,14 +1,7 @@
 // src/screens/restaurants/CuisineRestaurantsScreen.tsx
 import React, {useState, useEffect} from 'react';
-import {
-    View,
-    FlatList,
-    StyleSheet,
-    ActivityIndicator,
-    SafeAreaView,
-    TouchableOpacity,
-    Alert,
-} from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {RouteProp} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {DiscoverStackParamList} from '../../navigation/AppNavigator';
@@ -212,8 +205,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['5'],
         paddingTop: Spacing['3'],
-        paddingBottom: Spacing['3'],
-    },
+        paddingBottom: Spacing['3'] },
     // Inline header used inside FlatList ListHeaderComponent
     headerInline: {
         backgroundColor: NAVY,
@@ -224,8 +216,7 @@ const styles = StyleSheet.create({
         paddingTop: Spacing['3'],
         paddingBottom: Spacing['3'],
         marginHorizontal: -Spacing['4'],  // counteract list padding
-        marginTop: -Spacing['4'],
-    },
+        marginTop: -Spacing['4'] },
     backBtn: { width: 32, justifyContent: 'center' },
 
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
@@ -246,14 +237,13 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.08,
         shadowRadius: 10,
-        elevation: 3,
-    },
+        elevation: 3 },
     image: { width: 108, height: 108 },
     info: { flex: 1, padding: Spacing['3'], justifyContent: 'center', gap: 4 },
     name: { fontSize: 15 },
     ratingRow: { flexDirection: 'row', alignItems: 'center' },
     star: { color: Colors.star, fontSize: 12 },
-    address: {},
+    address: { },
     metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 2 },
     dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.cardBorder, marginHorizontal: 5 },
     pricePill: {
@@ -262,9 +252,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(15,51,70,0.12)',
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 2,
-    },
-    footer: { paddingVertical: Spacing['5'], alignItems: 'center' },
-});
+        paddingVertical: 2 },
+    footer: { paddingVertical: Spacing['5'], alignItems: 'center' } });
 
 export default CuisineRestaurantsScreen;

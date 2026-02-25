@@ -1,17 +1,8 @@
 // src/screens/booking/BookingScreen.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
-import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-    Modal,
-    ActivityIndicator,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Modal, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useIsFocused } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +12,7 @@ import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHand
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import { processingService, restaurantService } from '../../services/api';
 import { Colors, Radius, Spacing, FontFamily, FontSize } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
@@ -33,16 +25,14 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const {
         slots: streamedSlots,
         isLoading: slotsLoading,
-        error: streamError,
-    } = useAvailabilityStream({
+        error: streamError } = useAvailabilityStream({
         restaurantId: restaurant.id,
         date: dateStr,
         partySize,
         enabled: isAuthenticated,
         isFocused,
         isAuthenticated,
-        pollingIntervalMs: 30000,
-    });
+        pollingIntervalMs: 30000 });
 
     const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
@@ -60,7 +50,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [selectedTags, setSelectedTags] = useState<ReservationTagRequest[]>([]);
 
     const slotScrollRef = useRef<ScrollView>(null);
-    const slotPositions = useRef<Record<string, number>>({});
+    const slotPositions = useRef<Record<string, number>>({ });
 
     const scrollToSelectedSlot = (time: string) => {
         const x = slotPositions.current[time];
@@ -116,8 +106,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 type: 'no_slots',
                 title: 'No Availability',
                 message: 'No tables available for the selected date and party size. Please try a different date or time.',
-                showContactInfo: true,
-            });
+                showContactInfo: true });
         } else {
             setAvailabilityError(null);
         }
@@ -193,15 +182,13 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 restaurantId: restaurant.id,
                 state: 'CONFIRMED',
                 comments: specialRequests || undefined,
-                tagRequests: selectedTags.length > 0 ? selectedTags : undefined,
-            };
+                tagRequests: selectedTags.length > 0 ? selectedTags : undefined };
 
             const response = await processingService.createReservation(reservation);
             const confirmationCode = response.reservationId ? `RES${response.reservationId}` : 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
             setIsLoading(false);
             navigation.navigate('BookingConfirmation', {
-                booking: { restaurant, date: selectedDate, time: selectedTime, partySize, customerName, customerPhone, customerEmail, specialRequests, confirmationCode },
-            });
+                booking: { restaurant, date: selectedDate, time: selectedTime, partySize, customerName, customerPhone, customerEmail, specialRequests, confirmationCode } });
         } catch (error: any) {
             setIsLoading(false);
             Alert.alert('Booking Failed', error.message || 'Unable to create reservation. Please try again.', [{ text: 'OK' }]);
@@ -486,8 +473,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
 
     // ── Header ─────────────────────────────────────────────────────────────────
     header: {
@@ -496,29 +482,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: Spacing['5'],
         paddingVertical: Spacing['3'],
-        gap: Spacing['3'],
-    },
+        gap: Spacing['3'] },
     backBtn: {
-        width: 34,
-        height: 34,
+        width: r(34),
+        height: r(34),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     backArrow: {
-        fontSize: 18,
-        color: Colors.white,
-    },
+        fontSize: FontSize.xl,
+        color: Colors.white },
     headerTitle: {
-        fontSize: FontSize.lg,
-    },
+        fontSize: FontSize.lg },
 
     // ── Scroll ─────────────────────────────────────────────────────────────────
     scroll: { flex: 1 },
     scrollContent: {
-        paddingBottom: Spacing['6'],
-    },
+        paddingBottom: Spacing['6'] },
 
     // ── Restaurant block ───────────────────────────────────────────────────────
     restaurantBlock: {
@@ -526,12 +507,10 @@ const styles = StyleSheet.create({
         paddingTop: Spacing['5'],
         paddingBottom: Spacing['4'],
         borderBottomWidth: 1,
-        borderBottomColor: Colors.cardBorder,
-    },
+        borderBottomColor: Colors.cardBorder },
     restaurantName: {
         fontSize: FontSize['2xl'],
-        marginBottom: Spacing['1'],
-    },
+        marginBottom: Spacing['1'] },
 
     // ── Section ────────────────────────────────────────────────────────────────
     section: {
@@ -539,43 +518,35 @@ const styles = StyleSheet.create({
         paddingTop: Spacing['5'],
         paddingBottom: Spacing['2'],
         borderBottomWidth: 1,
-        borderBottomColor: Colors.cardBorder,
-    },
+        borderBottomColor: Colors.cardBorder },
     sectionLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     sectionTick: {
-        width: 3,
-        height: 18,
+        width: r(3),
+        height: r(18),
         backgroundColor: Colors.primary,
-        borderRadius: 2,
-    },
+        borderRadius: r(2) },
     viewAllBtn: {
-        marginLeft: 'auto',
-    },
+        marginLeft: 'auto' },
 
     // ── Time slots ─────────────────────────────────────────────────────────────
     slotScroll: {
         gap: Spacing['2'],
-        paddingBottom: Spacing['3'],
-    },
+        paddingBottom: Spacing['3'] },
     loadingRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
 
     // ── Form inputs ────────────────────────────────────────────────────────────
     inputGroup: {
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     inputLabel: {
-        marginBottom: Spacing['1'] + 2,
-        letterSpacing: 0.8,
-    },
+        marginBottom: r(6),
+        letterSpacing: 0.8 },
     input: {
         borderWidth: 1,
         borderColor: Colors.cardBorder,
@@ -585,40 +556,34 @@ const styles = StyleSheet.create({
         fontSize: FontSize.base,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        backgroundColor: Colors.cardBackground,
-    },
+        backgroundColor: Colors.cardBackground },
     textArea: {
-        height: 90,
-        paddingTop: Spacing['3'],
-    },
+        height: r(90),
+        paddingTop: Spacing['3'] },
 
     // ── Tags ───────────────────────────────────────────────────────────────────
     tagSubtitle: {
         marginTop: -Spacing['2'],
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     tagsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: Spacing['2'],
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     tagPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
+        gap: r(5),
         paddingVertical: Spacing['2'],
         paddingHorizontal: Spacing['3'],
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
-        backgroundColor: Colors.cardBackground,
-    },
+        backgroundColor: Colors.cardBackground },
     tagPillSelected: {
         backgroundColor: Colors.primary,
-        borderColor: Colors.primary,
-    },
-    tagIcon: { fontSize: 14 },
+        borderColor: Colors.primary },
+    tagIcon: { fontSize: FontSize.base },
     tagNotes: { marginTop: Spacing['2'] },
 
     // ── Confirm button ─────────────────────────────────────────────────────────
@@ -630,16 +595,14 @@ const styles = StyleSheet.create({
         borderRadius: Radius.lg,
         alignItems: 'center',
         shadowColor: Colors.accent,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: r(0), height: r(4) },
         shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
-    },
+        shadowRadius: r(8),
+        elevation: r(5) },
     confirmBtnDisabled: {
         backgroundColor: Colors.cardBorder,
         shadowOpacity: 0,
-        elevation: 0,
-    },
+        elevation: 0 },
 
     // ── Auth prompt modal ──────────────────────────────────────────────────────
     modalOverlay: {
@@ -647,8 +610,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(9,31,43,0.7)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: Spacing['5'],
-    },
+        padding: Spacing['5'] },
     authCard: {
         backgroundColor: Colors.appBackground,
         borderRadius: Radius['2xl'],
@@ -657,54 +619,50 @@ const styles = StyleSheet.create({
         maxWidth: 400,
         alignItems: 'center',
         shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 8 },
+        shadowOffset: { width: r(0), height: r(8) },
         shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 10,
-    },
+        shadowRadius: r(20),
+        elevation: r(10) },
     authIconCircle: {
-        width: 72,
-        height: 72,
+        width: r(72),
+        height: r(72),
         borderRadius: Radius.full,
         backgroundColor: Colors.cardBackground,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: Spacing['4'],
-    },
-    authEmoji: { fontSize: 34 },
+        marginBottom: Spacing['4'] },
+    authEmoji: { fontSize: rf(34) },
     authTitle: {
         marginBottom: Spacing['2'],
-        textAlign: 'center',
-    },
+        textAlign: 'center' },
     authMessage: {
         textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: Spacing['5'],
-    },
+        lineHeight: r(22),
+        marginBottom: Spacing['5'] },
     btnPrimary: {
         width: '100%',
         backgroundColor: Colors.accent,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: r(14),
         borderRadius: Radius.lg,
         alignItems: 'center',
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     btnSecondary: {
         width: '100%',
         backgroundColor: Colors.appBackground,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: r(14),
         borderRadius: Radius.lg,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: Colors.primary,
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     btnGhost: {
         paddingVertical: Spacing['2'],
-        alignItems: 'center',
-    },
-});
+        alignItems: 'center' } });
 
 export default BookingScreen;
+
+
+
+

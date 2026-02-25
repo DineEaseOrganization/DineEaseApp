@@ -93,7 +93,7 @@ async function refreshAccessToken(): Promise<string | null> {
 class AvailabilityStreamService {
   private readonly BASE_URL = `${API_CONFIG.PROCESSING_SERVICE_URL}/mobile/availability-stream`;
   private readonly API_KEY = 'dineease-mobile-2024-secret';
-  private reconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private reconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private reconnectAttempts: Map<string, number> = new Map();
   private activeXHRs: Map<string, XMLHttpRequest> = new Map();
   private intentionalClosures: Set<string> = new Set();
@@ -118,8 +118,8 @@ class AvailabilityStreamService {
     const subscriptionKey = this.getSubscriptionKey(restaurantId, date, partySize);
 
     // Apply configuration overrides
-    const maxReconnectAttempts = config?.maxReconnectAttempts ?? this.MAX_RECONNECT_ATTEMPTS;
-    const reconnectDelayMs = config?.reconnectDelayMs ?? this.RECONNECT_DELAY_MS;
+    const _maxReconnectAttempts = config?.maxReconnectAttempts ?? this.MAX_RECONNECT_ATTEMPTS;
+    const _reconnectDelayMs = config?.reconnectDelayMs ?? this.RECONNECT_DELAY_MS;
     const connectionTimeoutMs = config?.connectionTimeoutMs ?? 3600000; // 1 hour default
 
     // Close existing connection if any
@@ -199,7 +199,7 @@ class AvailabilityStreamService {
               console.log('[AvailabilityStream] Token refreshed, reconnecting SSE...');
               // Reconnect with new token
               this.subscribe(restaurantId, date, partySize, callbacks, config)
-                .then(subscription => {
+                .then(_subscription => {
                   // Update the subscription reference in the parent hook
                   // (The hook will handle this via the onConnected callback)
                   console.log('[AvailabilityStream] Successfully reconnected with new token');
@@ -253,7 +253,7 @@ class AvailabilityStreamService {
             console.log('[AvailabilityStream] Token refreshed in onerror, reconnecting SSE...');
             // Reconnect with new token
             this.subscribe(restaurantId, date, partySize, callbacks, config)
-              .then(subscription => {
+              .then(_subscription => {
                 console.log('[AvailabilityStream] Successfully reconnected with new token after onerror');
               })
               .catch(err => {

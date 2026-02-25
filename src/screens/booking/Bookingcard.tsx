@@ -6,20 +6,21 @@ import { processingService } from '../../services/api';
 import { AvailableSlot } from '../../types/api.types';
 import { AvailabilityError, parseAvailabilityError } from '../../utils/errorHandlers';
 import { Colors, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 interface BookingCardProps {
     restaurantId: number;
     restaurantName?: string;
     restaurantPhone?: string;
-    onTimeSelected?: (date: Date, partySize: number, time: string) => void;
+    onTimeSelected?: (_date: Date, _partySize: number, _time: string) => void;
     initialDate?: Date;
     initialPartySize?: number;
 }
 
 export const BookingCard: React.FC<BookingCardProps> = ({
     restaurantId,
-    restaurantName,
+    restaurantName: _restaurantName,
     restaurantPhone,
     onTimeSelected,
     initialDate,
@@ -156,7 +157,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     </View>
                 ) : error ? (
                     <View style={styles.errorBox}>
-                        <AppText variant="bodyMedium" color={Colors.textOnLight} style={{ marginBottom: 4 }}>{error.title}</AppText>
+                        <AppText variant="bodyMedium" color={Colors.textOnLight} style={styles.errorTitle}>
+                            {error.title}
+                        </AppText>
                         <AppText variant="caption" color={Colors.textOnLightSecondary}>{error.message}</AppText>
                         {error.showContactInfo && restaurantPhone && (
                             <TouchableOpacity style={styles.callBtn}>
@@ -227,18 +230,18 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['3'],
     },
     sectionTick: {
-        width: 3,
-        height: 14,
+        width: r(3),
+        height: r(14),
         backgroundColor: Colors.primary,
-        borderRadius: 2,
+        borderRadius: r(2),
     },
     sectionLabel: { letterSpacing: 1 },
 
     // Party size
     partySizeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing['2'] },
     sizeBtn: {
-        width: 48,
-        height: 40,
+        width: r(48),
+        height: r(40),
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: Colors.cardBackground,
@@ -249,7 +252,7 @@ const styles = StyleSheet.create({
     sizeBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
 
     // Date scroll
-    dateScroll: { gap: Spacing['2'], paddingBottom: 2 },
+    dateScroll: { gap: Spacing['2'], paddingBottom: r(2) },
     dateChip: {
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['2'],
@@ -269,6 +272,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
     },
+    errorTitle: {
+        marginBottom: Spacing['1'],
+    },
     callBtn: { marginTop: Spacing['2'] },
 
     // Time slots
@@ -282,7 +288,7 @@ const styles = StyleSheet.create({
         borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
-        minWidth: 72,
+        minWidth: r(72),
         alignItems: 'center',
     },
     slotBtnActive: { backgroundColor: Colors.accent, borderColor: Colors.accentDark },

@@ -1,28 +1,28 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    FlatList,
+    Keyboard,
+    ListRenderItemInfo,
+    StyleSheet,
     TextInput,
     TouchableOpacity,
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Dimensions,
-    Animated,
-    Easing,
-    Keyboard,
-    Alert,
-    ListRenderItemInfo,
-    SafeAreaView,
-} from "react-native";
-import MapView, { Marker, Region } from "react-native-maps";
-import { restaurantService } from "../../services/api";
-import { mapRestaurantDetailToRestaurant, Restaurant } from "../../types";
-import { useNavigation } from "@react-navigation/native";
-import { useLocation } from "../../hooks/useLocation";
-import { SearchScreenNavigationProp } from "../../navigation/AppNavigator";
-import { Colors, Radius, Spacing } from "../../theme";
-import AppText from "../../components/ui/AppText";
-import { CachedImage } from "../../components/CachedImage";
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MapView, { Marker, Region } from 'react-native-maps';
+import { restaurantService } from '../../services/api';
+import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
+import { useNavigation } from '@react-navigation/native';
+import { useLocation } from '../../hooks/useLocation';
+import { SearchScreenNavigationProp } from '../../navigation/AppNavigator';
+import { Colors, Radius, Spacing } from '../../theme';
+import AppText from '../../components/ui/AppText';
+import { CachedImage } from '../../components/CachedImage';
 
 const { height } = Dimensions.get("window");
 const NAVY = Colors.primary;
@@ -51,15 +51,14 @@ const RestaurantSearchScreen = () => {
 
     const mapRef = useRef<MapView | null>(null);
     const slideAnim = useRef(new Animated.Value(0)).current;
-    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const showPreview = () => {
         Animated.timing(slideAnim, {
             toValue: 1,
             duration: 280,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-        }).start();
+            useNativeDriver: true }).start();
     };
 
     const hidePreview = () => {
@@ -67,8 +66,7 @@ const RestaurantSearchScreen = () => {
             toValue: 0,
             duration: 220,
             easing: Easing.in(Easing.cubic),
-            useNativeDriver: true,
-        }).start(() => setSelectedRestaurant(null));
+            useNativeDriver: true }).start(() => setSelectedRestaurant(null));
     };
 
     const searchLocation = async (query: string) => {
@@ -148,8 +146,7 @@ const RestaurantSearchScreen = () => {
                 ...mapRestaurantDetailToRestaurant(r),
                 distance: calculateDistance(lat, lng, r.latitude, r.longitude),
                 openNow: r.isActive,
-                mapCoordinate: { latitude: r.latitude || 0, longitude: r.longitude || 0 },
-            }));
+                mapCoordinate: { latitude: r.latitude || 0, longitude: r.longitude || 0 } }));
             setRestaurants(mapped);
         } catch {
             Alert.alert('Error', 'Failed to load restaurants. Please try again.');
@@ -481,18 +478,15 @@ export default RestaurantSearchScreen;
 const styles = StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: NAVY,
-    },
+        backgroundColor: NAVY },
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
     center: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        padding: Spacing['5'],
-    },
+        padding: Spacing['5'] },
 
     // ── Navy header ───────────────────────────────────────────────────────────
     header: {
@@ -500,11 +494,9 @@ const styles = StyleSheet.create({
         paddingTop: Spacing['3'],
         paddingHorizontal: Spacing['4'],
         paddingBottom: Spacing['3'],
-        zIndex: 20,
-    },
+        zIndex: 20 },
     headerRow: {
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     searchInputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -514,44 +506,36 @@ const styles = StyleSheet.create({
         height: 44,
         marginBottom: Spacing['2'],
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-    },
+        borderColor: 'rgba(255,255,255,0.2)' },
     searchIcon: {
         fontSize: 15,
-        marginRight: Spacing['2'],
-    },
+        marginRight: Spacing['2'] },
     searchInput: {
         flex: 1,
         fontSize: 15,
         color: Colors.white,
-        fontFamily: 'Inter_400Regular',
-    },
+        fontFamily: 'Inter_400Regular' },
     clearButton: {
         padding: Spacing['1'],
-        marginLeft: Spacing['1'],
-    },
+        marginLeft: Spacing['1'] },
     locationButton: {
         marginLeft: Spacing['2'],
-        padding: Spacing['1'],
-    },
+        padding: Spacing['1'] },
 
     // ── Radius row ────────────────────────────────────────────────────────────
     radiusRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     radiusChip: {
         paddingVertical: 4,
         paddingHorizontal: Spacing['2'] + 2,
         borderRadius: Radius.full,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
-    },
+        borderColor: 'rgba(255,255,255,0.3)' },
     radiusChipActive: {
         backgroundColor: Colors.white,
-        borderColor: Colors.white,
-    },
+        borderColor: Colors.white },
 
     // ── Dropdown ──────────────────────────────────────────────────────────────
     dropdown: {
@@ -563,25 +547,21 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 12,
         elevation: 8,
-        maxHeight: 280,
-    },
+        maxHeight: 280 },
     dropdownItem: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: Spacing['3'],
         borderBottomWidth: 1,
         borderBottomColor: Colors.cardBorder,
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     dropdownPin: {
-        fontSize: 16,
-    },
+        fontSize: 16 },
 
     // ── Map ────────────────────────────────────────────────────────────────────
     map: {
         height: height * 0.35,
-        width: "100%",
-    },
+        width: "100%" },
 
     // ── Home button ───────────────────────────────────────────────────────────
     homeButton: {
@@ -599,8 +579,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.35,
         shadowRadius: 6,
-        elevation: 5,
-    },
+        elevation: 5 },
 
     // ── Instruction bar ───────────────────────────────────────────────────────
     instructionBar: {
@@ -608,47 +587,40 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing['2'],
         paddingHorizontal: Spacing['4'],
         borderBottomWidth: 1,
-        borderBottomColor: Colors.cardBorder,
-    },
+        borderBottomColor: Colors.cardBorder },
 
     // ── List container ────────────────────────────────────────────────────────
     listContainer: {
         flex: 1,
         backgroundColor: Colors.appBackground,
         paddingHorizontal: Spacing['4'],
-        paddingTop: Spacing['3'],
-    },
+        paddingTop: Spacing['3'] },
     listHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     sectionTick: {
         width: 3,
         height: 14,
         backgroundColor: NAVY,
-        borderRadius: 2,
-    },
+        borderRadius: 2 },
     refreshButton: {
         marginLeft: 'auto',
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['1'] + 2,
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
 
     // ── Empty state ───────────────────────────────────────────────────────────
     emptyState: {
         alignItems: 'center',
-        paddingTop: Spacing['10'],
-    },
+        paddingTop: Spacing['10'] },
     goHomeButton: {
         backgroundColor: NAVY,
         paddingHorizontal: Spacing['5'],
         paddingVertical: Spacing['3'],
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
 
     // ── Map markers ───────────────────────────────────────────────────────────
     marker: {
@@ -662,15 +634,12 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 3,
-        elevation: 3,
-    },
+        elevation: 3 },
     markerSelected: {
         backgroundColor: Colors.accent,
-        borderColor: Colors.accent,
-    },
+        borderColor: Colors.accent },
     searchPinMarker: {
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
 
     // ── Restaurant card ────────────────────────────────────────────────────────
     card: {
@@ -685,53 +654,42 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.08,
         shadowRadius: 10,
-        elevation: 3,
-    },
+        elevation: 3 },
     cardImage: {
         width: 108,
-        height: 108,
-    },
+        height: 108 },
     cardContent: {
         flex: 1,
         padding: Spacing['3'],
         justifyContent: 'center',
-        gap: 4,
-    },
+        gap: 4 },
     cardName: {
-        fontSize: 15,
-    },
+        fontSize: 15 },
     cardMeta: {
         flexDirection: "row",
-        alignItems: "center",
-    },
+        alignItems: "center" },
     ratingStar: {
         color: Colors.star,
-        fontSize: 12,
-    },
+        fontSize: 12 },
     dot: {
         width: 3,
         height: 3,
         borderRadius: 2,
         backgroundColor: Colors.cardBorder,
-        marginHorizontal: 5,
-    },
+        marginHorizontal: 5 },
     cardFooter: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 2,
-    },
+        marginTop: 2 },
     statusBadge: {
         paddingHorizontal: Spacing['2'],
         paddingVertical: 2,
-        borderRadius: Radius.md,
-    },
+        borderRadius: Radius.md },
     openBadge: {
-        backgroundColor: Colors.successFaded,
-    },
+        backgroundColor: Colors.successFaded },
     closedBadge: {
-        backgroundColor: Colors.errorFaded,
-    },
+        backgroundColor: Colors.errorFaded },
 
     // ── Preview panel ─────────────────────────────────────────────────────────
     previewPanel: {
@@ -749,8 +707,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.10,
         shadowRadius: 16,
-        elevation: 10,
-    },
+        elevation: 10 },
     closeButton: {
         position: "absolute",
         top: Spacing['4'],
@@ -764,22 +721,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     previewImage: {
         width: "100%",
         height: 140,
         borderRadius: Radius.lg,
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
     previewContent: {
-        paddingHorizontal: Spacing['1'],
-    },
+        paddingHorizontal: Spacing['1'] },
     previewButton: {
         marginTop: Spacing['4'],
         backgroundColor: Colors.accent,
         padding: Spacing['4'],
         borderRadius: Radius.lg,
-        alignItems: "center",
-    },
-});
+        alignItems: "center" } });
