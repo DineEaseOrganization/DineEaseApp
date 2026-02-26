@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {useAuth} from '../../context/AuthContext';
@@ -21,6 +21,7 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
   const [isResending, setIsResending] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const {verifyEmail, resendVerificationCode} = useAuth();
+  const codeInputs = useRef<Array<TextInput | null>>([]);
 
   // Handle cooldown timer
   useEffect(() => {
@@ -39,12 +40,28 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
     }
 
     const newCode = [...code];
+
+    // Handle paste: user copied the full 6-digit code
+    if (text.length > 1) {
+      const digits = text.replace(/\D/g, '').slice(0, code.length - index).split('');
+      digits.forEach((char, i) => {
+        newCode[index + i] = char;
+      });
+      setCode(newCode);
+      const nextIndex = Math.min(index + digits.length, code.length - 1);
+      codeInputs.current[nextIndex]?.focus();
+      if (newCode.every(digit => digit !== '')) {
+        handleVerify(newCode.join(''));
+      }
+      return;
+    }
+
     newCode[index] = text;
     setCode(newCode);
 
     // Auto-focus next input
-    if (text && index < 5) {
-      // Focus next input (you'd need refs for this in production)
+    if (text && index < code.length - 1) {
+      codeInputs.current[index + 1]?.focus();
     }
 
     // Auto-submit when all fields are filled
@@ -55,8 +72,8 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
 
   const handleKeyPress = (key: string, index: number) => {
     if (key === 'Backspace' && !code[index] && index > 0) {
-      // Focus previous input on backspace
-      // Focus prev input (you'd need refs for this in production)
+      // Move focus back to previous box on backspace
+      codeInputs.current[index - 1]?.focus();
     }
   };
 
@@ -157,6 +174,7 @@ const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({naviga
             {code.map((digit, index) => (
               <TextInput
                 key={index}
+                ref={(ref) => { codeInputs.current[index] = ref; }}
                 style={[
                   styles.codeInput,
                   digit && styles.codeInputFilled
