@@ -20,7 +20,8 @@ import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
 import { useNavigation } from '@react-navigation/native';
 import { useLocation } from '../../hooks/useLocation';
 import { SearchScreenNavigationProp } from '../../navigation/AppNavigator';
-import { Colors, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import { CachedImage } from '../../components/CachedImage';
 
@@ -279,13 +280,13 @@ const RestaurantSearchScreen = () => {
                                 }
                             }}
                         >
-                            <AppText style={{ fontSize: 16 }}>📍</AppText>
+                            <AppText style={styles.locationIcon}>📍</AppText>
                         </TouchableOpacity>
                     </View>
 
                     {/* Radius row */}
                     <View style={styles.radiusRow}>
-                        <AppText variant="captionMedium" color="rgba(255,255,255,0.65)" style={{ marginRight: Spacing['2'] }}>
+                        <AppText variant="captionMedium" color="rgba(255,255,255,0.65)" style={styles.radiusLabel}>
                             Radius:
                         </AppText>
                         {[5, 10, 20, 50].map((r) => (
@@ -317,7 +318,7 @@ const RestaurantSearchScreen = () => {
                                 renderItem={({ item }) => (
                                     <TouchableOpacity style={styles.dropdownItem} onPress={() => handleSearchResultSelect(item)}>
                                         <AppText style={styles.dropdownPin}>📍</AppText>
-                                        <View style={{ flex: 1 }}>
+                                        <View style={styles.dropdownText}>
                                             <AppText variant="bodyMedium" color={Colors.textOnLight} numberOfLines={1}>
                                                 {item.display_name.split(',')[0]}
                                             </AppText>
@@ -327,7 +328,7 @@ const RestaurantSearchScreen = () => {
                                         </View>
                                     </TouchableOpacity>
                                 )}
-                                style={{ maxHeight: 260, borderRadius: Radius.lg }}
+                                style={styles.dropdownList}
                             />
                         </View>
                     )}
@@ -348,7 +349,7 @@ const RestaurantSearchScreen = () => {
                         {searchPin && (
                             <Marker coordinate={searchPin} title="Search Location">
                                 <View style={styles.searchPinMarker}>
-                                    <AppText style={{ fontSize: 22 }}>📍</AppText>
+                                    <AppText style={styles.searchPinIcon}>📍</AppText>
                                 </View>
                             </Marker>
                         )}
@@ -370,12 +371,12 @@ const RestaurantSearchScreen = () => {
 
                 {/* ── Home button ── */}
                 <TouchableOpacity style={styles.homeButton} onPress={goToCurrentLocation}>
-                    <AppText style={{ fontSize: 20 }}>🏠</AppText>
+                    <AppText style={styles.homeIcon}>🏠</AppText>
                 </TouchableOpacity>
 
                 {/* ── Instruction bar ── */}
                 <View style={styles.instructionBar}>
-                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ textAlign: 'center' }}>
+                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.instructionText}>
                         Long press map to drop pin · Radius: {searchRadius}km
                     </AppText>
                 </View>
@@ -406,9 +407,9 @@ const RestaurantSearchScreen = () => {
                         </View>
                     ) : restaurants.length === 0 ? (
                         <View style={styles.emptyState}>
-                            <AppText style={{ fontSize: 40, marginBottom: Spacing['3'] }}>🍽️</AppText>
-                            <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>No restaurants found</AppText>
-                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ textAlign: 'center', marginBottom: Spacing['5'] }}>
+                            <AppText style={styles.emptyIcon}>🍽️</AppText>
+                            <AppText variant="sectionTitle" color={NAVY} style={styles.emptyTitle}>No restaurants found</AppText>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.emptySubtitle}>
                                 Try increasing the radius or searching a different location
                             </AppText>
                             <TouchableOpacity style={styles.goHomeButton} onPress={goToCurrentLocation}>
@@ -421,7 +422,7 @@ const RestaurantSearchScreen = () => {
                             renderItem={renderRestaurantItem}
                             keyExtractor={(item) => item.id.toString()}
                             showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: 220 }}
+                            contentContainerStyle={styles.listContent}
                         />
                     )}
                 </View>
@@ -449,7 +450,7 @@ const RestaurantSearchScreen = () => {
                         />
 
                         <View style={styles.previewContent}>
-                            <AppText variant="cardTitle" color={NAVY} style={{ marginBottom: 4 }}>
+                            <AppText variant="cardTitle" color={NAVY} style={styles.previewTitle}>
                                 {selectedRestaurant.name}
                             </AppText>
                             <AppText variant="caption" color={Colors.textOnLightSecondary}>
@@ -503,16 +504,16 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderRadius: Radius.lg,
         paddingHorizontal: Spacing['3'],
-        height: 44,
+        height: r(44),
         marginBottom: Spacing['2'],
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)' },
     searchIcon: {
-        fontSize: 15,
+        fontSize: FontSize.md,
         marginRight: Spacing['2'] },
     searchInput: {
         flex: 1,
-        fontSize: 15,
+        fontSize: FontSize.md,
         color: Colors.white,
         fontFamily: 'Inter_400Regular' },
     clearButton: {
@@ -527,9 +528,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'] },
+    radiusLabel: {
+        marginRight: Spacing['2'],
+    },
     radiusChip: {
-        paddingVertical: 4,
-        paddingHorizontal: Spacing['2'] + 2,
+        paddingVertical: Spacing['1'],
+        paddingHorizontal: r(10),
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.3)' },
@@ -543,11 +547,11 @@ const styles = StyleSheet.create({
         marginTop: Spacing['2'],
         borderRadius: Radius.lg,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: r(0), height: r(4) },
         shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 8,
-        maxHeight: 280 },
+        shadowRadius: r(12),
+        elevation: r(8),
+        maxHeight: r(280) },
     dropdownItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -556,7 +560,14 @@ const styles = StyleSheet.create({
         borderBottomColor: Colors.cardBorder,
         gap: Spacing['2'] },
     dropdownPin: {
-        fontSize: 16 },
+        fontSize: FontSize.lg },
+    dropdownText: {
+        flex: 1,
+    },
+    dropdownList: {
+        maxHeight: r(260),
+        borderRadius: Radius.lg,
+    },
 
     // ── Map ────────────────────────────────────────────────────────────────────
     map: {
@@ -567,19 +578,19 @@ const styles = StyleSheet.create({
     homeButton: {
         position: 'absolute',
         right: Spacing['4'],
-        top: (height * 0.35) + 110,
+        top: (height * 0.35) + r(110),
         backgroundColor: Colors.accent,
-        width: 48,
-        height: 48,
+        width: r(48),
+        height: r(48),
         borderRadius: Radius.full,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 10,
         shadowColor: Colors.accent,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.35,
-        shadowRadius: 6,
-        elevation: 5 },
+        shadowRadius: r(6),
+        elevation: r(5) },
 
     // ── Instruction bar ───────────────────────────────────────────────────────
     instructionBar: {
@@ -601,15 +612,15 @@ const styles = StyleSheet.create({
         gap: Spacing['2'],
         marginBottom: Spacing['3'] },
     sectionTick: {
-        width: 3,
-        height: 14,
+        width: r(3),
+        height: r(14),
         backgroundColor: NAVY,
-        borderRadius: 2 },
+        borderRadius: r(2) },
     refreshButton: {
         marginLeft: 'auto',
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
-        paddingVertical: Spacing['1'] + 2,
+        paddingVertical: Spacing['1'] + r(2),
         borderRadius: Radius.full },
 
     // ── Empty state ───────────────────────────────────────────────────────────
@@ -631,10 +642,10 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: NAVY,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: r(0), height: r(1) },
         shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 3 },
+        shadowRadius: r(3),
+        elevation: r(3) },
     markerSelected: {
         backgroundColor: Colors.accent,
         borderColor: Colors.accent },
@@ -651,40 +662,40 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.08,
-        shadowRadius: 10,
-        elevation: 3 },
+        shadowRadius: r(10),
+        elevation: r(3) },
     cardImage: {
-        width: 108,
-        height: 108 },
+        width: r(108),
+        height: r(108) },
     cardContent: {
         flex: 1,
         padding: Spacing['3'],
         justifyContent: 'center',
-        gap: 4 },
+        gap: Spacing['1'] },
     cardName: {
-        fontSize: 15 },
+        fontSize: FontSize.md },
     cardMeta: {
         flexDirection: "row",
         alignItems: "center" },
     ratingStar: {
         color: Colors.star,
-        fontSize: 12 },
+        fontSize: FontSize.sm },
     dot: {
-        width: 3,
-        height: 3,
-        borderRadius: 2,
+        width: r(3),
+        height: r(3),
+        borderRadius: r(2),
         backgroundColor: Colors.cardBorder,
-        marginHorizontal: 5 },
+        marginHorizontal: r(5) },
     cardFooter: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 2 },
+        marginTop: Spacing['1'] },
     statusBadge: {
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 2,
+        paddingVertical: r(2),
         borderRadius: Radius.md },
     openBadge: {
         backgroundColor: Colors.successFaded },
@@ -694,9 +705,9 @@ const styles = StyleSheet.create({
     // ── Preview panel ─────────────────────────────────────────────────────────
     previewPanel: {
         position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
+        bottom: Spacing['0'],
+        left: Spacing['0'],
+        right: Spacing['0'],
         backgroundColor: Colors.cardBackground,
         borderTopLeftRadius: Radius['2xl'],
         borderTopRightRadius: Radius['2xl'],
@@ -704,10 +715,10 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: Colors.cardBorder,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
+        shadowOffset: { width: r(0), height: r(-4) },
         shadowOpacity: 0.10,
-        shadowRadius: 16,
-        elevation: 10 },
+        shadowRadius: r(16),
+        elevation: r(10) },
     closeButton: {
         position: "absolute",
         top: Spacing['4'],
@@ -716,15 +727,15 @@ const styles = StyleSheet.create({
         zIndex: 10,
         padding: Spacing['2'],
         borderRadius: Radius.full,
-        width: 34,
-        height: 34,
+        width: r(34),
+        height: r(34),
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
         borderColor: Colors.cardBorder },
     previewImage: {
         width: "100%",
-        height: 140,
+        height: r(140),
         borderRadius: Radius.lg,
         marginBottom: Spacing['3'] },
     previewContent: {
@@ -734,4 +745,33 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.accent,
         padding: Spacing['4'],
         borderRadius: Radius.lg,
-        alignItems: "center" } });
+        alignItems: "center" },
+    locationIcon: {
+        fontSize: FontSize.lg,
+    },
+    searchPinIcon: {
+        fontSize: rf(22),
+    },
+    homeIcon: {
+        fontSize: FontSize.xl,
+    },
+    instructionText: {
+        textAlign: 'center',
+    },
+    emptyIcon: {
+        fontSize: rf(40),
+        marginBottom: Spacing['3'],
+    },
+    emptyTitle: {
+        marginBottom: Spacing['2'],
+    },
+    emptySubtitle: {
+        textAlign: 'center',
+        marginBottom: Spacing['5'],
+    },
+    listContent: {
+        paddingBottom: r(220),
+    },
+    previewTitle: {
+        marginBottom: Spacing['1'],
+    } });

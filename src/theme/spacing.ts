@@ -31,28 +31,28 @@ export const Shadow = {
   // For elements on dark navy backgrounds
   subtle: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: r(0), height: r(2) },
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 3,
   },
   card: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: r(0), height: r(4) },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
   },
   strong: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: r(0), height: r(8) },
     shadowOpacity: 0.45,
     shadowRadius: 20,
     elevation: 10,
   },
   inset: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: { width: r(0), height: r(-2) },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,

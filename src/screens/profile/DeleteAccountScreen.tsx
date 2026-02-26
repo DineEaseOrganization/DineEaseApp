@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { profileService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -97,10 +98,10 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
             {/* ── Navy header ── */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                 </TouchableOpacity>
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Delete Account</AppText>
-                <View style={{ width: 36 }} />
+                <View style={{ width: r(36) }} />
             </View>
 
             <ScrollView
@@ -111,7 +112,7 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
             >
                 {/* Warning banner */}
                 <View style={styles.warningBanner}>
-                    <Ionicons name="warning-outline" size={22} color={Colors.error} />
+                    <Ionicons name="warning-outline" size={rf(22)} color={Colors.error} />
                     <AppText variant="captionMedium" color={Colors.error} style={{ flex: 1 }}>
                         This section contains sensitive account actions. Please read carefully.
                     </AppText>
@@ -160,7 +161,7 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
                                 autoCorrect={false}
                             />
                             <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)} activeOpacity={0.7}>
-                                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={Colors.textOnLightSecondary} />
+                                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={rf(19)} color={Colors.textOnLightSecondary} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -181,7 +182,7 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
                             textAlignVertical="top"
                             maxLength={500}
                         />
-                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ textAlign: 'right', marginTop: 4 }}>
+                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ textAlign: 'right', marginTop: r(4) }}>
                             {reason.length}/500
                         </AppText>
                     </View>
@@ -189,7 +190,7 @@ const DeleteAccountScreen: React.FC<DeleteAccountScreenProps> = ({ navigation })
 
                 {/* Dynamic warning */}
                 <View style={styles.dangerBox}>
-                    <Ionicons name="alert-circle-outline" size={18} color={Colors.error} />
+                    <Ionicons name="alert-circle-outline" size={rf(18)} color={Colors.error} />
                     <AppText variant="caption" color={Colors.error} style={{ flex: 1 }}>
                         {action === 'DELETE'
                             ? 'Permanent deletion cannot be undone. All your reservations, reviews, and preferences will be lost forever.'
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'] },
-    sectionTick: { width: 3, height: 14, borderRadius: 2 },
+    sectionTick: { width: r(3), height: r(14), borderRadius: r(2) },
     sectionLabel: { letterSpacing: 0.8 },
 
     // Action option cards
@@ -278,10 +279,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        marginBottom: 6 },
+        marginBottom: r(6) },
     radio: {
-        width: 20, height: 20,
-        borderRadius: 10,
+        width: r(20), height: r(20),
+        borderRadius: r(10),
         borderWidth: 2,
         borderColor: Colors.cardBorder,
         justifyContent: 'center',
@@ -289,10 +290,10 @@ const styles = StyleSheet.create({
     radioDeactivate: { borderColor: NAVY },
     radioDelete: { borderColor: Colors.error },
     radioInner: {
-        width: 10, height: 10,
-        borderRadius: 5,
+        width: r(10), height: r(10),
+        borderRadius: r(5),
         backgroundColor: Colors.error },
-    actionDesc: { marginLeft: 32, lineHeight: 18 },
+    actionDesc: { marginLeft: r(32), lineHeight: r(18) },
 
     // Form card
     card: {
@@ -304,13 +305,13 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing['2'],
         marginBottom: Spacing['3'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
         elevation: 2 },
-    divider: { height: 1, backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
+    divider: { height: r(1), backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
     fieldGroup: { paddingTop: Spacing['3'] },
-    fieldLabel: { letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase', fontSize: 11 },
+    fieldLabel: { letterSpacing: 0.8, marginBottom: r(6), textTransform: 'uppercase', fontSize: FontSize.xs },
     passwordWrap: { position: 'relative' },
     passwordInput: {
         backgroundColor: Colors.cardBackground,
@@ -318,12 +319,12 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         borderRadius: Radius.md,
         paddingHorizontal: Spacing['3'],
-        paddingVertical: 11,
-        paddingRight: 44,
+        paddingVertical: r(11),
+        paddingRight: r(44),
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight },
-    eyeBtn: { position: 'absolute', right: 12, top: 11, padding: 2 },
+    eyeBtn: { position: 'absolute', right: r(12), top: r(11), padding: r(2) },
     textArea: {
         backgroundColor: Colors.cardBackground,
         borderWidth: 1,
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        minHeight: 80 },
+        minHeight: r(80) },
 
     dangerBox: {
         flexDirection: 'row',
@@ -349,12 +350,12 @@ const styles = StyleSheet.create({
 
     deleteBtn: {
         backgroundColor: Colors.error,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: Spacing['3'] + r(2),
         borderRadius: Radius.lg,
         alignItems: 'center',
         marginBottom: Spacing['2'],
         shadowColor: Colors.error,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 4 },

@@ -9,6 +9,7 @@ import { useFavorites } from '../../context/FavoritesContext';
 import { processingService } from '../../services/api/processingService';
 import { ProfileScreenNavigationProp } from '../../navigation/AppNavigator';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -86,7 +87,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                         <View style={[styles.badge, user.emailVerified ? styles.badgeVerified : styles.badgePending]}>
                             <Ionicons
                                 name={user.emailVerified ? 'checkmark-circle' : 'alert-circle'}
-                                size={12}
+                                size={rf(12)}
                                 color={user.emailVerified ? Colors.success : Colors.warning}
                             />
                             <AppText variant="captionMedium" color={user.emailVerified ? Colors.success : Colors.warning}>
@@ -96,7 +97,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                         <View style={[styles.badge, user.phoneVerified ? styles.badgeVerified : styles.badgePending]}>
                             <Ionicons
                                 name={user.phoneVerified ? 'checkmark-circle' : 'alert-circle'}
-                                size={12}
+                                size={rf(12)}
                                 color={user.phoneVerified ? Colors.success : Colors.warning}
                             />
                             <AppText variant="captionMedium" color={user.phoneVerified ? Colors.success : Colors.warning}>
@@ -129,13 +130,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                             activeOpacity={0.7}
                         >
                             <View style={styles.menuIconWrap}>
-                                <Ionicons name={item.icon} size={19} color={NAVY} />
+                                <Ionicons name={item.icon} size={rf(19)} color={NAVY} />
                             </View>
                             <View style={styles.menuText}>
                                 <AppText variant="bodyMedium" color={Colors.textOnLight}>{item.label}</AppText>
                                 <AppText variant="caption" color={Colors.textOnLightTertiary}>{item.sub}</AppText>
                             </View>
-                            <Ionicons name="chevron-forward" size={17} color={Colors.textOnLightTertiary} />
+                            <Ionicons name="chevron-forward" size={rf(17)} color={Colors.textOnLightTertiary} />
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -143,7 +144,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 {/* ── Sign out ── */}
                 <View style={styles.signOutWrap}>
                     <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout} activeOpacity={0.85}>
-                        <Ionicons name="log-out-outline" size={18} color={Colors.white} />
+                        <Ionicons name="log-out-outline" size={rf(18)} color={Colors.white} />
                         <AppText variant="button" color={Colors.white}>Sign Out</AppText>
                     </TouchableOpacity>
                 </View>
@@ -165,8 +166,8 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing['8'],
         paddingHorizontal: Spacing['5'] },
     avatarRing: {
-        width: 96,
-        height: 96,
+        width: r(96),
+        height: r(96),
         borderRadius: Radius.full,
         borderWidth: 3,
         borderColor: 'rgba(255,255,255,0.25)',
@@ -174,20 +175,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: Spacing['3'] },
     avatar: {
-        width: 84,
-        height: 84,
+        width: r(84),
+        height: r(84),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
         alignItems: 'center' },
     initials: {
-        fontSize: 30,
+        fontSize: rf(30),
         fontFamily: 'Inter_700Bold',
         color: Colors.white,
         letterSpacing: 1 },
     heroName: {
         fontSize: FontSize.xl,
-        marginBottom: 4 },
+        marginBottom: r(4) },
     heroEmail: {
         marginBottom: Spacing['3'] },
     badgeRow: {
@@ -198,9 +199,9 @@ const styles = StyleSheet.create({
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
+        gap: r(5),
         paddingHorizontal: Spacing['3'],
-        paddingVertical: 5,
+        paddingVertical: r(5),
         borderRadius: Radius.full,
         borderWidth: 1,
         backgroundColor: 'rgba(255,255,255,0.08)' },
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         overflow: 'hidden',
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: r(0), height: r(4) },
         shadowOpacity: 0.10,
         shadowRadius: 12,
         elevation: 4,
@@ -231,8 +232,8 @@ const styles = StyleSheet.create({
         fontSize: FontSize['2xl'],
         fontFamily: 'Inter_700Bold',
         color: NAVY,
-        marginBottom: 3 },
-    statDivider: { width: 1, backgroundColor: Colors.cardBorder },
+        marginBottom: r(3) },
+    statDivider: { width: r(1), backgroundColor: Colors.cardBorder },
 
     // ── Menu ──────────────────────────────────────────────────────────────────
     menuCard: {
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         overflow: 'hidden',
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.06,
         shadowRadius: 8,
         elevation: 2 },
@@ -252,17 +253,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: Spacing['3'] + r(2),
         gap: Spacing['3'] },
     menuRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
     menuIconWrap: {
-        width: 38,
-        height: 38,
+        width: r(38),
+        height: r(38),
         borderRadius: Radius.md,
         backgroundColor: 'rgba(15,51,70,0.07)',
         justifyContent: 'center',
         alignItems: 'center' },
-    menuText: { flex: 1, gap: 2 },
+    menuText: { flex: 1, gap: r(2) },
 
     // ── Sign out ──────────────────────────────────────────────────────────────
     signOutWrap: {
@@ -274,10 +275,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: Spacing['2'],
         backgroundColor: Colors.error,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: Spacing['3'] + r(2),
         borderRadius: Radius.lg,
         shadowColor: Colors.error,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.25,
         shadowRadius: 6,
         elevation: 3 } });

@@ -4,6 +4,7 @@ import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -54,12 +55,12 @@ const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation 
             {/* ── Navy header ── */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                 </TouchableOpacity>
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>
                     Communications
                 </AppText>
-                <View style={{ width: 36 }} />
+                <View style={{ width: r(36) }} />
             </View>
 
             <ScrollView
@@ -69,7 +70,7 @@ const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation 
             >
                 {/* Info banner */}
                 <View style={styles.infoBanner}>
-                    <Ionicons name="information-circle-outline" size={18} color={NAVY} />
+                    <Ionicons name="information-circle-outline" size={rf(18)} color={NAVY} />
                     <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>
                         Push notification support is coming soon. Email preferences are active.
                     </AppText>
@@ -93,7 +94,7 @@ const CommunicationsScreen: React.FC<CommunicationsScreenProps> = ({ navigation 
                                     <View style={styles.prefRow}>
                                         <View style={styles.prefLeft}>
                                             <View style={styles.iconWrap}>
-                                                <Ionicons name={item.icon} size={17} color={NAVY} />
+                                                <Ionicons name={item.icon} size={rf(17)} color={NAVY} />
                                             </View>
                                             <AppText variant="bodyMedium" color={Colors.textOnLight}>{item.label}</AppText>
                                         </View>
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
@@ -155,15 +156,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: 4 },
+        marginBottom: r(4) },
     sectionTick: {
-        width: 3, height: 14,
+        width: r(3), height: r(14),
         backgroundColor: NAVY,
-        borderRadius: 2 },
+        borderRadius: r(2) },
     sectionLabel: { letterSpacing: 0.8 },
     sectionDesc: {
         marginBottom: Spacing['2'],
-        paddingLeft: Spacing['2'] + 3 },
+        paddingLeft: Spacing['2'] + r(3) },
 
     card: {
         backgroundColor: Colors.white,
@@ -172,11 +173,11 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         paddingHorizontal: Spacing['4'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
         elevation: 2 },
-    divider: { height: 1, backgroundColor: Colors.cardBorder },
+    divider: { height: r(1), backgroundColor: Colors.cardBorder },
     prefRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['3'] },
     iconWrap: {
-        width: 32, height: 32,
+        width: r(32), height: r(32),
         borderRadius: Radius.sm,
         backgroundColor: 'rgba(15,51,70,0.07)',
         justifyContent: 'center',

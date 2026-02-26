@@ -2,6 +2,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AvailabilityError } from '../../utils/errorHandlers';
+import { FontSize, Radius, Spacing } from '../../theme';
+import { rf } from '../../theme/responsive';
 
 export interface AvailabilityErrorDisplayProps {
   error: AvailabilityError;
@@ -42,11 +44,11 @@ export const AvailabilityErrorDisplay: React.FC<AvailabilityErrorDisplayProps> =
 
 const styles = StyleSheet.create({
   errorContainer: {
-    paddingVertical: 12,
+    paddingVertical: Spacing['3'],
   },
   errorBadge: {
-    padding: 16,
-    borderRadius: 12,
+    padding: Spacing['4'],
+    borderRadius: Radius.lg,
     borderWidth: 1,
   },
   errorBadgeInfo: {
@@ -66,27 +68,27 @@ const styles = StyleSheet.create({
     borderColor: '#FCD34D',
   },
   errorTitle: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: Spacing['2'],
   },
   errorMessage: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#666',
-    lineHeight: 20,
+    lineHeight: rf(20),
   },
   contactButton: {
-    marginTop: 12,
+    marginTop: Spacing['3'],
     backgroundColor: '#7C3AED',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: Spacing['2'],
+    paddingHorizontal: Spacing['4'],
+    borderRadius: Radius.md,
     alignSelf: 'flex-start',
   },
   contactButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: FontSize.base,
     fontWeight: '600',
   },
 });

@@ -2,11 +2,12 @@
     
 // src/screens/auth/RegisterScreen.tsx
 import React, {useState} from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {useAuth} from '../../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { FontSize, Spacing } from '../../theme';
-import { r } from '../../theme/responsive';
+import { r, rf } from '../../theme/responsive';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -22,6 +23,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const {register} = useAuth();
 
   const handleRegister = async () => {
@@ -108,11 +111,15 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   };
 
   const handleTermsPress = () => {
-    Alert.alert('Terms of Service', 'Terms of Service content would be displayed here.');
+    Linking.openURL('https://dineeaseorganization.github.io/dineease-privacy-policy/terms-and-conditions').catch(() => {
+      Alert.alert('Error', 'Unable to open the terms and conditions right now.');
+    });
   };
 
   const handlePrivacyPress = () => {
-    Alert.alert('Privacy Policy', 'Privacy Policy content would be displayed here.');
+    Linking.openURL('https://dineeaseorganization.github.io/dineease-privacy-policy/').catch(() => {
+      Alert.alert('Error', 'Unable to open the privacy policy right now.');
+    });
   };
 
   const handleSocialPress = (provider: 'Apple' | 'Google') => {
@@ -211,30 +218,56 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Create a password (min. 8 characters)"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
+                <View style={styles.passwordWrap}>
+                  <TextInput
+                    style={styles.input}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Create a password (min. 8 characters)"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowPassword((v) => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={rf(18)}
+                      color="#999"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Confirm Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Confirm your password"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
+                <View style={styles.passwordWrap}>
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm your password"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowConfirmPassword((v) => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={rf(18)}
+                      color="#999"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Terms Checkbox */}
@@ -363,8 +396,16 @@ const styles = StyleSheet.create({
     borderRadius: r(12),
     paddingHorizontal: Spacing['4'],
     paddingVertical: r(14),
+    paddingRight: r(44),
     fontSize: FontSize.lg,
     backgroundColor: 'white' },
+  passwordWrap: { position: 'relative' },
+  eyeBtn: {
+    position: 'absolute',
+    right: Spacing['3'],
+    top: r(12),
+    padding: r(2),
+  },
   phoneInputContainer: {
     flexDirection: 'row',
     gap: Spacing['2'] },

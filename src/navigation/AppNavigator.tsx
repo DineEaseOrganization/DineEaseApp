@@ -5,7 +5,8 @@ import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack
 import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {StyleSheet, Text, View} from 'react-native';
 import {navigationRef} from '../utils/navigationHelper';
-import { Colors } from '../theme';
+import { Colors, FontSize } from '../theme';
+import { r, rf } from '../theme/responsive';
 import { useUpdates } from '../context/UpdatesContext';
 
 import RestaurantListScreen from '../screens/restaurants/RestaurantListScreen';
@@ -433,7 +434,7 @@ const UpdatesTabIcon: React.FC<{ color: string }> = ({ color }) => {
   const { unreadCount } = useUpdates();
   return (
     <View>
-      <Text style={{ color, fontSize: 20 }}>🔔</Text>
+      <Text style={{ color, fontSize: FontSize['2xl'] }}>🔔</Text>
       {unreadCount > 0 && (
         <View style={tabBadgeStyles.badge}>
           <Text style={tabBadgeStyles.badgeText}>
@@ -448,21 +449,21 @@ const UpdatesTabIcon: React.FC<{ color: string }> = ({ color }) => {
 const tabBadgeStyles = StyleSheet.create({
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: r(-4),
+    right: r(-8),
+    minWidth: r(16),
+    height: r(16),
+    borderRadius: r(8),
     backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: r(3),
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: rf(9),
     fontFamily: 'Inter_600SemiBold',
-    lineHeight: 12,
+    lineHeight: rf(12),
   },
 });
 
@@ -478,13 +479,13 @@ const MainTabNavigator: React.FC = () => {
           backgroundColor: Colors.primary,             // Navy — mirrors the header
           borderTopColor: 'rgba(255,255,255,0.08)',     // Very subtle white separator
           borderTopWidth: 1,
-          paddingBottom: 6,
-          paddingTop: 6,
-          height: 62,
+          paddingBottom: r(6),
+          paddingTop: r(6),
+          height: r(62),
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter_600SemiBold',
-          fontSize: 11,
+          fontSize: FontSize.xs,
         },
       }}
     >
@@ -493,7 +494,7 @@ const MainTabNavigator: React.FC = () => {
         component={DiscoverStackNavigator}
         options={{
           tabBarIcon: ({color}) => (
-            <Text style={{color, fontSize: 20}}>🍽️</Text>
+            <Text style={{color, fontSize: FontSize['2xl']}}>🍽️</Text>
           ),
           tabBarLabel: 'Discover',
         }}
@@ -503,7 +504,7 @@ const MainTabNavigator: React.FC = () => {
         component={SearchStackNavigator}
         options={{
           tabBarIcon: ({color}) => (
-            <Text style={{color, fontSize: 20}}>🗺️</Text>
+            <Text style={{color, fontSize: FontSize['2xl']}}>🗺️</Text>
           ),
           tabBarLabel: 'Search',
         }}
@@ -521,7 +522,7 @@ const MainTabNavigator: React.FC = () => {
         component={ProtectedBookingsStackNavigator}
         options={{
           tabBarIcon: ({color}) => (
-            <Text style={{color, fontSize: 20}}>📅</Text>
+            <Text style={{color, fontSize: FontSize['2xl']}}>📅</Text>
           ),
           tabBarLabel: 'Bookings',
         }}
@@ -531,7 +532,7 @@ const MainTabNavigator: React.FC = () => {
         component={ProtectedProfileStackNavigator}
         options={{
           tabBarIcon: ({color}) => (
-            <Text style={{color, fontSize: 20}}>👤</Text>
+            <Text style={{color, fontSize: FontSize['2xl']}}>👤</Text>
           ),
           tabBarLabel: 'Profile',
         }}

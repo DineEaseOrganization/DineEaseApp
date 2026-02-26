@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeviceDTO } from '../../types/api.types';
 import { ApiError, deviceService } from '../../services/api';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -132,10 +133,10 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                        <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                        <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                     </TouchableOpacity>
                     <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Devices</AppText>
-                    <View style={{ width: 36 }} />
+                    <View style={{ width: r(36) }} />
                 </View>
                 <View style={styles.center}>
                     <ActivityIndicator size="large" color={NAVY} />
@@ -153,10 +154,10 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
             {/* ── Navy header ── */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                 </TouchableOpacity>
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Devices</AppText>
-                <View style={{ width: 36 }} />
+                <View style={{ width: r(36) }} />
             </View>
 
             <ScrollView
@@ -167,7 +168,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
             >
                 {/* Info tip */}
                 <View style={styles.infoBanner}>
-                    <Ionicons name="shield-checkmark-outline" size={18} color={NAVY} />
+                    <Ionicons name="shield-checkmark-outline" size={rf(18)} color={NAVY} />
                     <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>
                         Trusted devices skip two-factor authentication for future logins.
                     </AppText>
@@ -188,7 +189,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
 
                 {devices.length === 0 ? (
                     <View style={styles.emptyCard}>
-                        <Ionicons name="phone-portrait-outline" size={40} color={Colors.textOnLightTertiary} />
+                        <Ionicons name="phone-portrait-outline" size={rf(40)} color={Colors.textOnLightTertiary} />
                         <AppText variant="body" color={Colors.textOnLightTertiary} style={{ marginTop: Spacing['3'] }}>
                             No devices found
                         </AppText>
@@ -203,7 +204,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
                                     <View style={[styles.deviceIconWrap, device.isCurrentDevice && styles.deviceIconWrapCurrent]}>
                                         <Ionicons
                                             name={getDeviceIcon(device.platform)}
-                                            size={20}
+                                            size={rf(20)}
                                             color={device.isCurrentDevice ? Colors.white : NAVY}
                                         />
                                     </View>
@@ -216,20 +217,20 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
                                             </AppText>
                                             {device.isCurrentDevice && (
                                                 <View style={styles.currentBadge}>
-                                                    <AppText variant="captionMedium" color={Colors.success} style={{ fontSize: 10 }}>
+                                                    <AppText variant="captionMedium" color={Colors.success} style={{ fontSize: rf(10) }}>
                                                         THIS DEVICE
                                                     </AppText>
                                                 </View>
                                             )}
                                             {device.isTrusted && !device.isCurrentDevice && (
-                                                <Ionicons name="shield-checkmark" size={14} color={Colors.success} />
+                                                <Ionicons name="shield-checkmark" size={rf(14)} color={Colors.success} />
                                             )}
                                         </View>
 
                                         <AppText variant="caption" color={Colors.textOnLightSecondary}>
                                             {[device.platform, device.platformVersion, device.deviceModel].filter(Boolean).join(' · ')}
                                         </AppText>
-                                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ marginTop: 2 }}>
+                                        <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ marginTop: r(2) }}>
                                             Last active: {formatLastSeen(device.lastSeenAt)}
                                         </AppText>
 
@@ -242,7 +243,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
                                             >
                                                 <Ionicons
                                                     name={device.isTrusted ? 'shield' : 'shield-outline'}
-                                                    size={12}
+                                                    size={rf(12)}
                                                     color={device.isTrusted ? Colors.success : NAVY}
                                                 />
                                                 <AppText variant="captionMedium" color={device.isTrusted ? Colors.success : NAVY}>
@@ -280,7 +281,7 @@ const DevicesScreen: React.FC<DevicesScreenProps> = ({ navigation }) => {
                         'Only mark your personal devices as trusted',
                     ].map((tip, i) => (
                         <View key={i} style={styles.tipRow}>
-                            <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                            <Ionicons name="checkmark-circle" size={rf(16)} color={Colors.success} />
                             <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>{tip}</AppText>
                         </View>
                     ))}
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
         marginTop: Spacing['1'] },
-    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+    sectionTick: { width: r(3), height: r(14), backgroundColor: NAVY, borderRadius: r(2) },
     sectionLabel: { flex: 1, letterSpacing: 0.8 },
 
     card: {
@@ -344,11 +345,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         marginBottom: Spacing['4'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
         elevation: 2 },
-    divider: { height: 1, backgroundColor: Colors.cardBorder },
+    divider: { height: r(1), backgroundColor: Colors.cardBorder },
     emptyCard: {
         backgroundColor: Colors.white,
         borderRadius: Radius.lg,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
         gap: Spacing['3'],
         paddingVertical: Spacing['3'] },
     deviceIconWrap: {
-        width: 42, height: 42,
+        width: r(42), height: r(42),
         borderRadius: Radius.md,
         backgroundColor: 'rgba(15,51,70,0.08)',
         justifyContent: 'center',
@@ -376,11 +377,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: 3 },
+        marginBottom: r(3) },
     currentBadge: {
         backgroundColor: Colors.successFaded,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 2,
+        paddingVertical: r(2),
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: Colors.success },
@@ -391,16 +392,16 @@ const styles = StyleSheet.create({
     actionPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: Spacing['1'],
         backgroundColor: 'rgba(15,51,70,0.07)',
-        paddingHorizontal: Spacing['2'] + 2,
-        paddingVertical: 4,
+        paddingHorizontal: Spacing['2'] + r(2),
+        paddingVertical: r(4),
         borderRadius: Radius.full },
     actionPillTrusted: {
         backgroundColor: Colors.successFaded },
     removePill: {
-        paddingHorizontal: Spacing['2'] + 2,
-        paddingVertical: 4,
+        paddingHorizontal: Spacing['2'] + r(2),
+        paddingVertical: r(4),
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: Colors.error,

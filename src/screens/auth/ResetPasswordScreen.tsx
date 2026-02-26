@@ -1,9 +1,10 @@
 
     
-import React, {useState} from 'react';
+import React, {useRef, useState} from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {ApiError, passwordService} from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
 import { FontSize, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 
@@ -22,6 +23,9 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const codeInputs = useRef<Array<TextInput | null>>([]);
 
   const handleCodeChange = (text: string, index: number) => {
     if (text && !/^\d+$/.test(text)) {
@@ -29,8 +33,30 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
     }
 
     const newCode = [...code];
+
+    if (text.length > 1) {
+      const chars = text.replace(/\D/g, '').slice(0, code.length - index).split('');
+      chars.forEach((char, i) => {
+        newCode[index + i] = char;
+      });
+      setCode(newCode);
+      const nextIndex = Math.min(index + chars.length, code.length - 1);
+      codeInputs.current[nextIndex]?.focus();
+      return;
+    }
+
     newCode[index] = text;
     setCode(newCode);
+
+    if (text && index < code.length - 1) {
+      codeInputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleCodeKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !code[index] && index > 0) {
+      codeInputs.current[index - 1]?.focus();
+    }
   };
 
   const handleReset = async () => {
@@ -114,6 +140,8 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
                 style={[styles.codeInput, digit && styles.codeInputFilled]}
                 value={digit}
                 onChangeText={(text) => handleCodeChange(text, index)}
+                onKeyPress={({ nativeEvent }) => handleCodeKeyPress(nativeEvent.key, index)}
+                ref={(ref) => { codeInputs.current[index] = ref; }}
                 keyboardType="number-pad"
                 maxLength={1}
                 selectTextOnFocus
@@ -125,30 +153,56 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>New Password</Text>
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password (min. 8 characters)"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password (min. 8 characters)"
+                  secureTextEntry={!showNewPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowNewPassword((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={rf(18)}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirm new password"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm new password"
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={rf(18)}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -239,8 +293,16 @@ const styles = StyleSheet.create({
     borderRadius: r(12),
     paddingHorizontal: Spacing['4'],
     paddingVertical: r(14),
+    paddingRight: r(44),
     fontSize: FontSize.lg,
     backgroundColor: 'white' },
+  passwordWrap: { position: 'relative' },
+  eyeBtn: {
+    position: 'absolute',
+    right: Spacing['3'],
+    top: r(12),
+    padding: r(2),
+  },
   resetButton: {
     backgroundColor: '#007AFF',
     paddingVertical: Spacing['4'],

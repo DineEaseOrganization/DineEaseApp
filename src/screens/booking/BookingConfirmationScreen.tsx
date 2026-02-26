@@ -191,7 +191,7 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ r
                     </View>
                 )}
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: r(100) }} />
             </ScrollView>
 
             {/* ── Footer action bar ── */}
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['4'],
         paddingRight: Spacing['3'] },
     detailCellRight: {
-        paddingRight: 0,
+        paddingRight: Spacing['0'],
         paddingLeft: Spacing['3'],
         borderLeftWidth: 1,
         borderLeftColor: Colors.cardBorder },
@@ -420,9 +420,9 @@ const styles = StyleSheet.create({
     // ── Footer ─────────────────────────────────────────────────────────────────
     footer: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        bottom: Spacing['0'],
+        left: Spacing['0'],
+        right: Spacing['0'],
         backgroundColor: Colors.appBackground,
         borderTopWidth: 1,
         borderTopColor: Colors.cardBorder,

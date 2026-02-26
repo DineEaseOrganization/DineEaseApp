@@ -14,14 +14,12 @@ import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHand
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
-import { Colors, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const { width } = Dimensions.get('window');
 const heroHeight = Math.round(width * 0.5);
-const detailScale = Math.min(1, width / 412);
-const d = (value: number) => Math.round(value * detailScale);
-const df = (value: number) => Math.round(value * detailScale);
 
 const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, navigation }) => {
     const {
@@ -208,10 +206,10 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                         </AppText>
                         <View style={styles.ratingRow}>
                             <AppText style={styles.stars}>{renderStars(restaurant.averageRating || 4.5)}</AppText>
-                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ marginLeft: 6 }}>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ marginLeft: r(6) }}>
                                 {(restaurant.averageRating || 4.5).toFixed(1)}
                             </AppText>
-                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginLeft: 4 }}>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['1'] }}>
                                 ({restaurant.totalReviews || 0} reviews)
                             </AppText>
                         </View>
@@ -372,27 +370,27 @@ const styles = StyleSheet.create({
         bottom: Spacing['3'],
         alignSelf: 'center',
         flexDirection: 'row',
-        gap: 6,
+        gap: r(6),
         backgroundColor: Colors.overlayMedium,
         paddingHorizontal: Spacing['2'],
         paddingVertical: Spacing['1'],
         borderRadius: Radius.full },
     dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: r(6),
+        height: r(6),
+        borderRadius: r(3),
         backgroundColor: 'rgba(255,255,255,0.4)' },
     dotActive: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: r(8),
+        height: r(8),
+        borderRadius: r(4),
         backgroundColor: Colors.white },
     backButton: {
         position: 'absolute',
         top: Spacing['3'],
         left: Spacing['4'],
-        width: 36,
-        height: 36,
+        width: r(36),
+        height: r(36),
         borderRadius: Radius.full,
         backgroundColor: Colors.overlayMedium,
         justifyContent: 'center',
@@ -400,49 +398,49 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)' },
     backArrow: {
-        fontSize: 20,
+        fontSize: FontSize['2xl'],
         color: Colors.white },
 
     // ── Name + rating below image ──────────────────────────────────────────────
     nameBlock: {
-        marginBottom: d(Spacing['4']) },
+        marginBottom: Spacing['4'] },
     restaurantName: {
-        fontSize: df(20),
-        marginBottom: d(Spacing['1']) },
+        fontSize: FontSize['2xl'],
+        marginBottom: Spacing['1'] },
     ratingRow: {
         flexDirection: 'row',
         alignItems: 'center' },
     stars: {
-        fontSize: df(13),
+        fontSize: rf(13),
         color: Colors.star,
         letterSpacing: 1 },
 
     // ── Details card ──────────────────────────────────────────────────────────
     detailsCard: {
         backgroundColor: Colors.appBackground,
-        marginTop: -d(Spacing['4']),
+        marginTop: -Spacing['4'],
         borderTopLeftRadius: Radius['2xl'],
         borderTopRightRadius: Radius['2xl'],
-        paddingTop: d(Spacing['5']),
-        paddingHorizontal: d(Spacing['5']) },
+        paddingTop: Spacing['5'],
+        paddingHorizontal: Spacing['5'] },
 
     // ── Quick info ────────────────────────────────────────────────────────────
     quickInfo: {
         flexDirection: 'row',
         backgroundColor: Colors.cardBackground,
         borderRadius: Radius.lg,
-        padding: d(Spacing['4']),
-        marginBottom: d(Spacing['4']),
+        padding: Spacing['4'],
+        marginBottom: Spacing['4'],
         borderWidth: 1,
         borderColor: Colors.cardBorder },
     quickInfoItem: {
         flex: 1,
         alignItems: 'center',
-        gap: 4 },
+        gap: Spacing['1'] },
     quickInfoIcon: {
-        fontSize: df(18) },
+        fontSize: FontSize.xl },
     quickInfoDivider: {
-        width: 1,
+        width: r(1),
         backgroundColor: Colors.cardBorder,
         alignSelf: 'stretch' },
 
@@ -450,20 +448,20 @@ const styles = StyleSheet.create({
     addressRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: d(Spacing['4']),
-        gap: d(Spacing['2']) },
+        marginBottom: Spacing['4'],
+        gap: Spacing['2'] },
     addressIcon: {
-        fontSize: df(14),
-        marginTop: 1 },
+        fontSize: FontSize.base,
+        marginTop: r(1) },
     description: {
-        lineHeight: df(22),
-        marginBottom: d(Spacing['4']) },
+        lineHeight: rf(22),
+        marginBottom: Spacing['4'] },
 
     // ── Section ───────────────────────────────────────────────────────────────
     section: {
-        marginBottom: d(Spacing['5']) },
+        marginBottom: Spacing['5'] },
     sectionTitle: {
-        marginBottom: d(Spacing['3']) },
+        marginBottom: Spacing['3'] },
 
     // ── Selector button ───────────────────────────────────────────────────────
     selectorButton: {
@@ -471,21 +469,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: Colors.cardBackground,
-        paddingVertical: d(Spacing['3']) + 2,
-        paddingHorizontal: d(Spacing['4']),
+        paddingVertical: Spacing['3'] + r(2),
+        paddingHorizontal: Spacing['4'],
         borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: Colors.cardBorder },
     selectorLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: d(Spacing['2']) },
+        gap: Spacing['2'] },
     selectorIcon: {
-        fontSize: df(16) },
+        fontSize: FontSize.lg },
 
     // ── Time slots ────────────────────────────────────────────────────────────
     slotsContainer: {
-        marginBottom: 0 },
+        marginBottom: Spacing['0'] },
     loadingSlots: {
         alignItems: 'center',
         paddingVertical: Spacing['5'] },

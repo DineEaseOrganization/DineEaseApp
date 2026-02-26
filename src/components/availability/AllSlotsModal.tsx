@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: Spacing['3'] },
   noticeDivider: {
     flex: 1,
-    height: 1,
+    height: r(1),
     backgroundColor: Colors.cardBorder },
   noticePill: {
     backgroundColor: Colors.cardBackground,

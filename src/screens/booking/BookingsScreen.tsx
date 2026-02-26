@@ -10,6 +10,7 @@ import { mapReservationDtosToReservations } from '../../utils/reservationMapper'
 import { processingService } from '../../services/api/processingService';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';
 
@@ -100,7 +101,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         const accent    = statusAccent[key] ?? NAVY;
 
         return (
-            <View key={reservation.id} style={[styles.card, { borderLeftColor: accent, borderLeftWidth: 3 }]}>
+            <View key={reservation.id} style={[styles.card, { borderLeftColor: accent, borderLeftWidth: r(3) }]}>
 
                 {/* ── Header row: name + status badge ── */}
                 <View style={styles.cardHeader}>
@@ -231,7 +232,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <AppText style={{ fontSize: 40, marginBottom: Spacing['3'] }}>⚠️</AppText>
+                    <AppText style={{ fontSize: rf(40), marginBottom: Spacing['3'] }}>⚠️</AppText>
                     <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>
                         Couldn't load bookings
                     </AppText>
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
         gap: Spacing['2'] },
     filterChip: {
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['1'] + 2,
+        paddingVertical: Spacing['1'] + r(2),
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.25)',
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.06,
         shadowRadius: 6,
         elevation: 2,
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
     // Status badge
     statusBadge: {
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 3,
+        paddingVertical: r(3),
         borderRadius: Radius.full,
         borderWidth: 1,
         flexShrink: 0 },
@@ -364,12 +365,12 @@ const styles = StyleSheet.create({
     pill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4 },
-    pillIcon: { fontSize: 12 },
+        gap: Spacing['1'] },
+    pillIcon: { fontSize: FontSize.sm },
     pillDot: {
-        width: 3,
-        height: 3,
-        borderRadius: 2,
+        width: r(3),
+        height: r(3),
+        borderRadius: r(2),
         backgroundColor: Colors.cardBorder },
 
     // Confirmation code
@@ -390,19 +391,19 @@ const styles = StyleSheet.create({
     tagsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 6,
+        gap: r(6),
         marginBottom: Spacing['2'] },
     tagPill: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 3,
+        paddingVertical: r(3),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(15,51,70,0.05)',
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.10)',
-        gap: 4 },
-    tagIcon: { fontSize: 11 },
+        gap: Spacing['1'] },
+    tagIcon: { fontSize: FontSize.xs },
 
     // Special requests
     requestRow: {
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['2'],
         marginBottom: Spacing['2'] },
-    requestIcon: { fontSize: 13, marginTop: 1 },
+    requestIcon: { fontSize: rf(13), marginTop: r(1) },
 
     // Actions
     actions: {
@@ -427,21 +428,21 @@ const styles = StyleSheet.create({
         borderTopColor: Colors.cardBorder },
     cancelBtn: {
         paddingHorizontal: Spacing['3'],
-        paddingVertical: Spacing['1'] + 2,
+        paddingVertical: Spacing['1'] + r(2),
         borderRadius: Radius.md,
         backgroundColor: Colors.errorFaded,
         borderWidth: 1,
         borderColor: Colors.error },
     reviewBtn: {
         paddingHorizontal: Spacing['3'],
-        paddingVertical: Spacing['1'] + 2,
+        paddingVertical: Spacing['1'] + r(2),
         borderRadius: Radius.md,
         backgroundColor: Colors.accent },
 
     // States
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
     empty: { alignItems: 'center', paddingVertical: Spacing['10'], paddingHorizontal: Spacing['5'] },
-    emptyIcon: { fontSize: 44, marginBottom: Spacing['4'] },
+    emptyIcon: { fontSize: rf(44), marginBottom: Spacing['4'] },
     loadMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing['6'] } });
 
 export default BookingsScreen;

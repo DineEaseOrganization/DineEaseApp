@@ -22,9 +22,6 @@ import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';
 
 const { width } = Dimensions.get('window');
-const hCardScale = Math.min(1, width / 412);
-const hCardFont = (value: number) => Math.round(value * hCardScale);
-const hCardSpace = (value: number) => Math.round(value * hCardScale);
 
 // Brand navy — used as a structural/branding colour throughout
 const NAVY = Colors.primary; // #0f3346
@@ -528,9 +525,9 @@ const styles = StyleSheet.create({
     elevation: r(2) },
   selectorAccent: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
+    left: Spacing['0'],
+    top: Spacing['0'],
+    bottom: Spacing['0'],
     width: r(4),
     backgroundColor: NAVY,
     borderTopLeftRadius: Radius.lg,
@@ -638,9 +635,9 @@ const styles = StyleSheet.create({
     top: Spacing['2'],
     right: Spacing['2'] },
   hCardInfo: {
-    paddingHorizontal: hCardSpace(12),
-    paddingTop: hCardSpace(10),
-    paddingBottom: hCardSpace(12),
+    paddingHorizontal: r(12),
+    paddingTop: r(10),
+    paddingBottom: r(12),
     backgroundColor: Colors.cardBackground },
   hCardNameRow: {
     flexDirection: 'row',
@@ -655,28 +652,28 @@ const styles = StyleSheet.create({
     borderRadius: r(2) },
   hCardName: {
     flex: 1,
-    fontSize: hCardFont(15),  // Scale cardTitle (18px) down for narrow carousel card
+    fontSize: FontSize.md,
   },
   hCardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: hCardSpace(12) },
+    marginBottom: r(12) },
   hCardStar: {
     color: Colors.star,
-    fontSize: hCardFont(12) },
+    fontSize: FontSize.sm },
   hCardDot: {
-    width: hCardSpace(3),
-    height: hCardSpace(3),
-    borderRadius: hCardSpace(2),
+    width: r(3),
+    height: r(3),
+    borderRadius: r(2),
     backgroundColor: Colors.cardBorder,
-    marginHorizontal: hCardSpace(5) },
+    marginHorizontal: r(5) },
   hCardSlots: {
     flexDirection: 'row',
-    gap: hCardSpace(8) },
+    gap: r(8) },
   hCardSlot: {
     backgroundColor: Colors.accent,   // Burgundy CTA slots
-    paddingHorizontal: hCardSpace(12),
-    paddingVertical: hCardSpace(6),
+    paddingHorizontal: r(12),
+    paddingVertical: r(6),
     borderRadius: Radius.md },
 
   // ── Cuisine circles ───────────────────────────────────────────────────────────

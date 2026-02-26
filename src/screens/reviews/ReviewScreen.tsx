@@ -7,6 +7,7 @@ import { ReviewScreenProps } from '../../navigation/AppNavigator';
 import { processingService, RatingCategory } from '../../services/api/processingService';
 import { updatesService } from '../../services/api';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -108,7 +109,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
                         key={star}
                         onPress={() => setRating(star)}
                         activeOpacity={0.7}
-                        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                        hitSlop={{ top: r(8), bottom: r(8), left: r(4), right: r(4) }}
                     >
                         <AppText style={[
                             styles.star,
@@ -139,7 +140,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>
                     Write a Review
                 </AppText>
-                <View style={{ width: 36 }} />
+                <View style={{ width: r(36) }} />
             </View>
 
             <ScrollView
@@ -155,7 +156,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
                         <AppText variant="cardTitle" color={NAVY} numberOfLines={2}>
                             {reservation.restaurant.name}
                         </AppText>
-                        <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: 3 }}>
+                        <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: r(3) }}>
                             📅 {visitDate}  ·  🕐 {reservation.time}  ·  👥 {reservation.partySize} guests
                         </AppText>
                     </View>
@@ -222,7 +223,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ route, navigation }) => {
                 <View style={styles.tipsCard}>
                     <AppText style={styles.tipsIcon}>💡</AppText>
                     <View style={{ flex: 1 }}>
-                        <AppText variant="captionMedium" color={NAVY} style={{ marginBottom: 5 }}>
+                        <AppText variant="captionMedium" color={NAVY} style={{ marginBottom: r(5) }}>
                             Tips for a great review
                         </AppText>
                         {[
@@ -275,8 +276,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36,
-        height: 36,
+        width: r(36),
+        height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center' },
     backIcon: {
-        fontSize: 16,
+        fontSize: rf(16),
         color: Colors.white,
         fontFamily: 'Inter-SemiBold' },
     headerTitle: {
@@ -308,12 +309,12 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['3'],
         overflow: 'hidden',
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
         elevation: 2 },
     bannerAccent: {
-        width: 4,
+        width: r(4),
         alignSelf: 'stretch',
         backgroundColor: NAVY },
     bannerText: {
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
         padding: Spacing['4'],
         marginBottom: Spacing['3'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
         elevation: 2 },
@@ -342,10 +343,10 @@ const styles = StyleSheet.create({
         gap: Spacing['2'],
         marginBottom: Spacing['3'] },
     sectionTick: {
-        width: 3,
-        height: 14,
+        width: r(3),
+        height: r(14),
         backgroundColor: NAVY,
-        borderRadius: 2 },
+        borderRadius: r(2) },
     sectionLabel: { letterSpacing: 1 },
 
     // ── Rating row ─────────────────────────────────────────────────────────────
@@ -361,20 +362,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         flex: 1 },
-    ratingEmoji: { fontSize: 16 },
+    ratingEmoji: { fontSize: rf(16) },
     starsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 3 },
+        gap: r(3) },
     star: {
-        fontSize: 26 },
+        fontSize: rf(26) },
     starLarge: {
-        fontSize: 34 },
+        fontSize: rf(34) },
     ratingNum: {
         marginLeft: Spacing['2'],
-        minWidth: 28 },
+        minWidth: r(28) },
     divider: {
-        height: 1,
+        height: r(1),
         backgroundColor: Colors.cardBorder,
         marginVertical: Spacing['1'] },
 
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        minHeight: 110 },
+        minHeight: r(110) },
     charCount: {
         textAlign: 'right',
         marginTop: Spacing['2'] },
@@ -403,8 +404,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(15,51,70,0.08)',
         padding: Spacing['3'],
         marginBottom: Spacing['3'] },
-    tipsIcon: { fontSize: 18, marginTop: 1 },
-    tipLine: { lineHeight: 20 },
+    tipsIcon: { fontSize: rf(18), marginTop: r(1) },
+    tipLine: { lineHeight: r(20) },
 
     // ── Footer ─────────────────────────────────────────────────────────────────
     footer: {
@@ -415,11 +416,11 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.white },
     submitBtn: {
         backgroundColor: Colors.accent,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: Spacing['3'] + r(2),
         borderRadius: Radius.lg,
         alignItems: 'center',
         shadowColor: Colors.accent,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 4 },

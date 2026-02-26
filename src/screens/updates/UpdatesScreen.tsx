@@ -9,7 +9,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { UpdatesStackParamList } from '../../navigation/AppNavigator';
 import { mapReservationDtoToReservation } from '../../utils/reservationMapper';
-import { Colors, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';
 
@@ -218,7 +219,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                     </View>
 
                     {item.restaurantName && (
-                        <AppText variant="captionMedium" color={NAVY} style={{ marginBottom: 3 }}>
+                        <AppText variant="captionMedium" color={NAVY} style={{ marginBottom: r(3) }}>
                             {item.restaurantName}
                         </AppText>
                     )}
@@ -235,7 +236,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                             <AppText variant="captionMedium" color={Colors.accent}>
                                 {item.actionButton.label}
                             </AppText>
-                            <Ionicons name="arrow-forward" size={13} color={Colors.accent} />
+                            <Ionicons name="arrow-forward" size={rf(13)} color={Colors.accent} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -244,9 +245,9 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                 <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => item.updateId && deleteNotification(item.updateId)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    hitSlop={{ top: r(8), bottom: r(8), left: r(8), right: r(8) }}
                 >
-                    <Ionicons name="trash-outline" size={18} color={Colors.textOnLightTertiary} />
+                    <Ionicons name="trash-outline" size={rf(18)} color={Colors.textOnLightTertiary} />
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -260,8 +261,8 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                 style={[styles.filterChip, isActive && styles.filterChipActive]}
                 onPress={() => setActiveFilter(filter.key)}
             >
-                <Ionicons name={filter.icon} size={14} color={isActive ? Colors.primary : 'rgba(255,255,255,0.75)'} />
-                <AppText variant="captionMedium" color={isActive ? Colors.primary : 'rgba(255,255,255,0.75)'} style={{ marginLeft: 4 }}>
+                <Ionicons name={filter.icon} size={rf(14)} color={isActive ? Colors.primary : 'rgba(255,255,255,0.75)'} />
+                <AppText variant="captionMedium" color={isActive ? Colors.primary : 'rgba(255,255,255,0.75)'} style={{ marginLeft: r(4) }}>
                     {filter.label}
                 </AppText>
             </TouchableOpacity>
@@ -293,7 +294,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                     <AppText variant="h3" color={Colors.white}>Updates</AppText>
                 </View>
                 <View style={styles.centerFill}>
-                    <AppText style={{ fontSize: 48, marginBottom: Spacing['3'] }}>⚠️</AppText>
+                    <AppText style={{ fontSize: rf(48), marginBottom: Spacing['3'] }}>⚠️</AppText>
                     <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>Failed to Load</AppText>
                     <AppText variant="body" color={Colors.textOnLightSecondary} style={{ textAlign: 'center', marginBottom: Spacing['5'] }}>
                         {error}
@@ -351,7 +352,7 @@ const UpdatesScreen: React.FC<UpdatesScreenProps> = ({ navigation }) => {
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <AppText style={{ fontSize: 52, marginBottom: Spacing['3'] }}>📭</AppText>
+                        <AppText style={{ fontSize: rf(52), marginBottom: Spacing['3'] }}>📭</AppText>
                         <AppText variant="sectionTitle" color={NAVY} style={{ marginBottom: Spacing['2'] }}>All caught up</AppText>
                         <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ textAlign: 'center' }}>
                             {activeFilter === 'all'
@@ -384,23 +385,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: Spacing['3'] },
     headerTitle: {
-        fontSize: 22 },
+        fontSize: rf(22) },
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'] },
     unreadBadge: {
         backgroundColor: Colors.accent,
-        minWidth: 22,
-        height: 22,
+        minWidth: r(22),
+        height: r(22),
         borderRadius: Radius.full,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 6 },
+        paddingHorizontal: r(6) },
     markAllBtn: {
         backgroundColor: 'rgba(255,255,255,0.15)',
         paddingHorizontal: Spacing['3'],
-        paddingVertical: Spacing['1'] + 2,
+        paddingVertical: Spacing['1'] + r(2),
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)' },
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing['3'],
-        paddingVertical: 6,
+        paddingVertical: r(6),
         borderRadius: Radius.full,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.25)',
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         overflow: 'hidden',
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.06,
         shadowRadius: 8,
         elevation: 2 },
@@ -455,10 +456,10 @@ const styles = StyleSheet.create({
         borderColor: `${NAVY}25` },
     unreadAccent: {
         position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 3,
+        left: Spacing['0'],
+        top: Spacing['0'],
+        bottom: Spacing['0'],
+        width: r(3),
         borderTopLeftRadius: Radius.xl,
         borderBottomLeftRadius: Radius.xl },
     notificationInner: {
@@ -471,26 +472,26 @@ const styles = StyleSheet.create({
     // ── Icon ─────────────────────────────────────────────────────────────────
     iconWrap: {
         position: 'relative',
-        width: 44,
-        height: 44,
+        width: r(44),
+        height: r(44),
         borderRadius: Radius.lg,
         backgroundColor: 'rgba(15,51,70,0.06)',
         justifyContent: 'center',
         alignItems: 'center',
         flexShrink: 0 },
     restaurantIcon: {
-        width: 44,
-        height: 44,
+        width: r(44),
+        height: r(44),
         borderRadius: Radius.lg },
     notificationIcon: {
-        fontSize: 22 },
+        fontSize: rf(22) },
     priorityDot: {
         position: 'absolute',
-        top: -3,
-        right: -3,
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        top: r(-3),
+        right: r(-3),
+        width: r(10),
+        height: r(10),
+        borderRadius: r(5),
         borderWidth: 2,
         borderColor: Colors.cardBackground },
 
@@ -502,7 +503,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 3,
+        marginBottom: r(3),
         gap: Spacing['2'] },
     notificationTitle: {
         flex: 1 },
@@ -511,19 +512,19 @@ const styles = StyleSheet.create({
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: Spacing['1'],
         alignSelf: 'flex-start',
         marginTop: Spacing['2'],
         backgroundColor: 'rgba(122,0,0,0.06)',
-        paddingHorizontal: Spacing['2'] + 2,
-        paddingVertical: 4,
+        paddingHorizontal: Spacing['2'] + r(2),
+        paddingVertical: r(4),
         borderRadius: Radius.md,
         borderWidth: 1,
         borderColor: 'rgba(122,0,0,0.12)' },
 
     // ── Delete button ─────────────────────────────────────────────────────────
     deleteButton: {
-        padding: 4,
+        padding: r(4),
         flexShrink: 0 },
 
     // ── Empty state ───────────────────────────────────────────────────────────
