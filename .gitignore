@@ -49,7 +49,6 @@ google-play-service-account.json
 
 # EAS
 .eas/
-.idea/
 .idea
 # Local dev-only scripts (personal scratch files, not for other developers)
 local/

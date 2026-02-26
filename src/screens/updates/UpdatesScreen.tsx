@@ -9,7 +9,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { UpdatesStackParamList } from '../../navigation/AppNavigator';
 import { mapReservationDtoToReservation } from '../../utils/reservationMapper';
-import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { Colors, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';

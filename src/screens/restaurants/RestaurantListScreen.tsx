@@ -1,8 +1,9 @@
 
     
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, TouchableOpacity, View, SafeAreaView } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { RestaurantListScreenProps } from '../../navigation/AppNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CuisineStat, TopCategory } from '../../types/api.types';
 import { useLocation } from '../../hooks/useLocation';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';

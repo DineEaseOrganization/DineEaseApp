@@ -118,8 +118,6 @@ class AvailabilityStreamService {
     const subscriptionKey = this.getSubscriptionKey(restaurantId, date, partySize);
 
     // Apply configuration overrides
-    const _maxReconnectAttempts = config?.maxReconnectAttempts ?? this.MAX_RECONNECT_ATTEMPTS;
-    const _reconnectDelayMs = config?.reconnectDelayMs ?? this.RECONNECT_DELAY_MS;
     const connectionTimeoutMs = config?.connectionTimeoutMs ?? 3600000; // 1 hour default
 
     // Close existing connection if any

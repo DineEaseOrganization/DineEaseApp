@@ -1,8 +1,9 @@
 
     
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert, Linking, FlatList, SafeAreaView } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert, Linking, FlatList } from 'react-native';
 import { CachedImage } from '../../components/CachedImage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
