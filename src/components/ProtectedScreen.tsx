@@ -1,7 +1,12 @@
 // src/components/ProtectedScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { Colors, FontSize, LineHeight, Radius, Spacing } from '../theme';
+import AppText from './ui/AppText';
 
 interface ProtectedScreenProps {
     children: React.ReactNode;
@@ -13,20 +18,28 @@ interface ProtectedScreenProps {
 }
 
 const ProtectedScreen: React.FC<ProtectedScreenProps> = ({
-                                                             children,
-                                                             title,
-                                                             description,
-                                                             icon,
-                                                             onLoginPress,
-                                                             onRegisterPress
-                                                         }) => {
+    children,
+    title,
+    description,
+    icon,
+    onLoginPress,
+    onRegisterPress
+}) => {
     const { isAuthenticated, loading } = useAuth();
+    const insets = useSafeAreaInsets();
+    const tabBarHeight = useBottomTabBarHeight();
+
+    const handleSocialPress = (provider: 'Apple' | 'Google') => {
+        Alert.alert('Feature coming soon', `${provider} sign-in will be available soon.`);
+    };
 
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Loading...</Text>
+                    <AppText variant="bodyMedium" color={Colors.textOnLightSecondary} style={styles.loadingText}>
+                        Loading...
+                    </AppText>
                 </View>
             </SafeAreaView>
         );
@@ -35,34 +48,62 @@ const ProtectedScreen: React.FC<ProtectedScreenProps> = ({
     if (!isAuthenticated) {
         return (
             <SafeAreaView style={styles.container}>
-                <View style={styles.authContainer}>
+                <ScrollView
+                    contentContainerStyle={[
+                        styles.authContainer,
+                        { paddingBottom: Spacing['6'] + insets.bottom + tabBarHeight },
+                    ]}
+                    showsVerticalScrollIndicator={false}
+                >
                     <View style={styles.content}>
-                        <Text style={styles.icon}>{icon}</Text>
-                        <Text style={styles.title}>{title}</Text>
-                        <Text style={styles.description}>{description}</Text>
+                        <AppText style={styles.icon}>{icon}</AppText>
+                        <AppText variant="h3" color={Colors.textOnLight} style={styles.title}>
+                            {title}
+                        </AppText>
+                        <AppText variant="body" color={Colors.textOnLightSecondary} style={styles.description}>
+                            {description}
+                        </AppText>
                     </View>
 
                     <View style={styles.actionButtons}>
                         <TouchableOpacity style={styles.loginButton} onPress={onLoginPress}>
-                            <Text style={styles.loginButtonText}>Sign In</Text>
+                            <AppText variant="button" color={Colors.white} style={styles.loginButtonText}>
+                                Sign In
+                            </AppText>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.registerButton} onPress={onRegisterPress}>
-                            <Text style={styles.registerButtonText}>Create Account</Text>
+                            <AppText variant="button" color={Colors.textOnLight} style={styles.registerButtonText}>
+                                Create Account
+                            </AppText>
                         </TouchableOpacity>
 
-                        <Text style={styles.orText}>or</Text>
+                        <AppText variant="captionMedium" color={Colors.textOnLightSecondary} style={styles.orText}>
+                            or
+                        </AppText>
 
                         <View style={styles.socialButtons}>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Text style={styles.socialButtonText}>📱 Continue with Apple</Text>
+                            <TouchableOpacity
+                                style={styles.socialButtonDisabled}
+                                onPress={() => handleSocialPress('Apple')}
+                                activeOpacity={0.75}
+                            >
+                                <AppText variant="buttonSmall" color={Colors.textOnLight} style={styles.socialButtonText}>
+                                    Continue with Apple
+                                </AppText>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Text style={styles.socialButtonText}>🔵 Continue with Google</Text>
+                            <TouchableOpacity
+                                style={styles.socialButtonDisabled}
+                                onPress={() => handleSocialPress('Google')}
+                                activeOpacity={0.75}
+                            >
+                                <AppText variant="buttonSmall" color={Colors.textOnLight} style={styles.socialButtonText}>
+                                    Continue with Google
+                                </AppText>
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
+                </ScrollView>
             </SafeAreaView>
         );
     }
@@ -73,93 +114,74 @@ const ProtectedScreen: React.FC<ProtectedScreenProps> = ({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
-    },
+        backgroundColor: Colors.appBackground },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     loadingText: {
-        fontSize: 16,
-        color: '#666',
-    },
+        fontSize: FontSize.base },
     authContainer: {
-        flex: 1,
+        flexGrow: 1,
         justifyContent: 'center',
-        paddingHorizontal: 24,
-    },
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['6'] },
     content: {
         alignItems: 'center',
-        marginBottom: 60,
-    },
+        marginBottom: Spacing['8'] },
     icon: {
-        fontSize: 80,
-        marginBottom: 24,
-    },
+        fontSize: FontSize['6xl'] + Spacing['2'],
+        marginBottom: Spacing['4'] },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#333',
         textAlign: 'center',
-        marginBottom: 12,
-    },
+        marginBottom: Spacing['3'] },
     description: {
-        fontSize: 16,
-        color: '#666',
         textAlign: 'center',
-        lineHeight: 24,
-        paddingHorizontal: 20,
-    },
+        lineHeight: Math.round(FontSize.base * LineHeight.normal),
+        paddingHorizontal: Spacing['4'] },
     actionButtons: {
-        gap: 16,
-    },
+        gap: Spacing['3'] },
     loginButton: {
-        backgroundColor: '#007AFF',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
+        backgroundColor: Colors.accent,
+        paddingVertical: Spacing['4'],
+        borderRadius: Radius.lg,
+        alignItems: 'center' },
     loginButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+        letterSpacing: 0.3 },
     registerButton: {
-        backgroundColor: 'white',
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: Colors.white,
+        paddingVertical: Spacing['4'],
+        borderRadius: Radius.lg,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ddd',
-    },
+        borderColor: Colors.cardBorder },
     registerButtonText: {
-        color: '#333',
-        fontSize: 16,
-        fontWeight: '600',
-    },
+        letterSpacing: 0.3 },
     orText: {
         textAlign: 'center',
-        color: '#666',
-        fontSize: 14,
-        marginVertical: 8,
-    },
+        marginVertical: Spacing['2'] },
     socialButtons: {
-        gap: 12,
-    },
+        gap: Spacing['3'] },
     socialButton: {
-        backgroundColor: 'white',
-        paddingVertical: 14,
-        borderRadius: 12,
+        backgroundColor: Colors.white,
+        paddingVertical: Spacing['3'],
+        borderRadius: Radius.lg,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ddd',
-    },
+        borderColor: Colors.cardBorder },
+    socialButtonDisabled: {
+        backgroundColor: '#f2f3f5',
+        paddingVertical: Spacing['3'],
+        borderRadius: Radius.lg,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        opacity: 0.7 },
     socialButtonText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#333',
-    },
-});
+        letterSpacing: 0.2 } });
 
 export default ProtectedScreen;
+
+
+
+

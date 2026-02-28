@@ -1,15 +1,10 @@
 // src/screens/profile/AccountSettings.tsx
 import React from 'react';
-import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -29,16 +24,14 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ navigatio
                 { icon: 'person-outline' as const,         label: 'Your Details',    sub: 'Name, phone & contact info',     onPress: () => navigation.navigate('YourDetails'),    enabled: true },
                 { icon: 'notifications-outline' as const,  label: 'Communications',  sub: 'Email & push preferences',       onPress: () => navigation.navigate('Communications'), enabled: true },
                 { icon: 'phone-portrait-outline' as const, label: 'Devices',         sub: 'Manage your signed-in devices',  onPress: () => navigation.navigate('Devices'),        enabled: true },
-            ],
-        },
+            ] },
         {
             label: '⚙️  MORE',
             items: [
                 { icon: 'card-outline' as const,               label: 'Payment Methods', sub: 'Manage saved cards',             onPress: () => showComingSoon('Payment Methods'), enabled: false },
                 { icon: 'help-circle-outline' as const,        label: 'Help & Support',  sub: 'FAQs and contact us',            onPress: () => showComingSoon('Help & Support'),  enabled: false },
                 { icon: 'information-circle-outline' as const, label: 'Terms & Privacy', sub: 'Legal information',              onPress: () => showComingSoon('Terms & Privacy'), enabled: false },
-            ],
-        },
+            ] },
     ];
 
     return (
@@ -47,10 +40,10 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ navigatio
             {/* ── Navy header ── */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                 </TouchableOpacity>
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Account Settings</AppText>
-                <View style={{ width: 36 }} />
+                <View style={{ width: r(36) }} />
             </View>
 
             <ScrollView
@@ -78,7 +71,7 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ navigatio
                                         <View style={[styles.iconWrap, !item.enabled && styles.iconWrapDisabled]}>
                                             <Ionicons
                                                 name={item.icon}
-                                                size={18}
+                                                size={rf(18)}
                                                 color={item.enabled ? NAVY : Colors.textOnLightTertiary}
                                             />
                                         </View>
@@ -95,12 +88,12 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ navigatio
                                         </View>
                                         {!item.enabled ? (
                                             <View style={styles.comingBadge}>
-                                                <AppText variant="captionMedium" color={Colors.textOnLightTertiary} style={{ fontSize: 10 }}>
+                                                <AppText variant="captionMedium" color={Colors.textOnLightTertiary} style={{ fontSize: rf(10) }}>
                                                     SOON
                                                 </AppText>
                                             </View>
                                         ) : (
-                                            <Ionicons name="chevron-forward" size={16} color={Colors.textOnLightTertiary} />
+                                            <Ionicons name="chevron-forward" size={rf(16)} color={Colors.textOnLightTertiary} />
                                         )}
                                     </TouchableOpacity>
                                 </View>
@@ -124,17 +117,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
 
     scroll: { flex: 1 },
@@ -144,9 +135,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['2'],
-    },
-    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+        marginBottom: Spacing['2'] },
+    sectionTick: { width: r(3), height: r(14), backgroundColor: NAVY, borderRadius: r(2) },
     sectionLabel: { letterSpacing: 0.8 },
 
     card: {
@@ -156,28 +146,25 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         paddingHorizontal: Spacing['4'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
-    divider: { height: 1, backgroundColor: Colors.cardBorder },
+        elevation: 2 },
+    divider: { height: r(1), backgroundColor: Colors.cardBorder },
 
     menuRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     menuRowDisabled: { opacity: 0.55 },
-    menuText: { flex: 1, gap: 2 },
+    menuText: { flex: 1, gap: r(2) },
     iconWrap: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.sm,
         backgroundColor: 'rgba(15,51,70,0.08)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     iconWrapDisabled: { backgroundColor: Colors.cardBackground },
     comingBadge: {
         backgroundColor: Colors.cardBackground,
@@ -185,8 +172,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 2,
-    },
-});
+        paddingVertical: r(2) } });
 
 export default AccountSettingsScreen;

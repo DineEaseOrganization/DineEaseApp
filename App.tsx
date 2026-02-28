@@ -1,6 +1,6 @@
 // App.tsx
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useFonts,
@@ -50,7 +50,9 @@ const App = () => {
                 <AuthProvider>
                     <UpdatesProvider>
                         <FavoritesProvider>
-                            <AppNavigator />
+                            <View style={styles.appRoot}>
+                                <AppNavigator />
+                            </View>
                         </FavoritesProvider>
                     </UpdatesProvider>
                 </AuthProvider>
@@ -60,3 +62,9 @@ const App = () => {
 };
 
 export default App;
+
+const styles = StyleSheet.create({
+    appRoot: {
+        flex: 1,
+    },
+});

@@ -1,8 +1,10 @@
 // src/components/availability/AllSlotsModal.tsx
 import React from 'react';
-import { Modal, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvailableSlot } from '../../types/api.types';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../ui/AppText';
 import { TimeSlotDisplay } from './TimeSlotDisplay';
 
@@ -27,16 +29,14 @@ export const AllSlotsModal: React.FC<AllSlotsModalProps> = ({
   onTimeSelect,
   onAdvanceNoticeSlotPress,
   headerTitle = 'All Available Times',
-  headerSubtitle,
-}) => {
+  headerSubtitle }) => {
   const groupSlotsByMealPeriod = (slotsToGroup: AvailableSlot[]) => {
     const groups: { [key: string]: AvailableSlot[] } = {
       'Morning': [],
       'Lunch': [],
       'Afternoon': [],
       'Dinner': [],
-      'Late Night': [],
-    };
+      'Late Night': [] };
 
     slotsToGroup.forEach(slot => {
       const hour = parseInt(slot.time.split(':')[0]);
@@ -47,7 +47,7 @@ export const AllSlotsModal: React.FC<AllSlotsModalProps> = ({
       else groups['Late Night'].push(slot);
     });
 
-    return Object.entries(groups).filter(([_, s]) => s.length > 0);
+    return Object.entries(groups).filter(([__unused, s]) => s.length > 0);
   };
 
   const slotsToDisplay = allSlots && allSlots.length > 0 ? allSlots : slots;
@@ -78,8 +78,7 @@ export const AllSlotsModal: React.FC<AllSlotsModalProps> = ({
     'Lunch': '☀️',
     'Afternoon': '🕑',
     'Dinner': '🌙',
-    'Late Night': '🌃',
-  };
+    'Late Night': '🌃' };
 
   return (
     <Modal
@@ -207,8 +206,7 @@ export const AllSlotsModal: React.FC<AllSlotsModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.appBackground,
-  },
+    backgroundColor: Colors.appBackground },
 
   // ── Header ─────────────────────────────────────────────────────────────────
   header: {
@@ -217,103 +215,83 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing['5'],
-    paddingVertical: Spacing['4'],
-  },
+    paddingVertical: Spacing['4'] },
   headerLeft: {
-    flex: 1,
-  },
+    flex: 1 },
   title: {
-    fontSize: FontSize.xl,
-  },
+    fontSize: FontSize.xl },
   subtitle: {
-    marginTop: 3,
-  },
+    marginTop: r(3) },
   closeButton: {
-    width: 34,
-    height: 34,
+    width: r(34),
+    height: r(34),
     borderRadius: Radius.full,
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing['3'],
-  },
+    marginLeft: Spacing['3'] },
   closeIcon: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: Colors.white,
-    fontFamily: 'Inter_600SemiBold',
-  },
+    fontFamily: 'Inter_600SemiBold' },
 
   // ── Scroll ─────────────────────────────────────────────────────────────────
   scroll: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing['5'],
     paddingTop: Spacing['5'],
-    paddingBottom: Spacing['10'],
-  },
+    paddingBottom: Spacing['10'] },
 
   // ── Section ────────────────────────────────────────────────────────────────
   section: {
-    marginBottom: Spacing['6'],
-  },
+    marginBottom: Spacing['6'] },
   sectionLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing['3'],
-    gap: Spacing['2'],
-  },
+    gap: Spacing['2'] },
   sectionTick: {
-    width: 3,
-    height: 18,
+    width: r(3),
+    height: r(18),
     backgroundColor: Colors.primary,
-    borderRadius: 2,
-  },
+    borderRadius: r(2) },
   periodEmoji: {
-    fontSize: 15,
-  },
+    fontSize: FontSize.md },
   periodTitle: {
     fontSize: FontSize.lg,
-    flex: 1,
-  },
+    flex: 1 },
   slotCount: {
-    alignSelf: 'flex-end',
-  },
+    alignSelf: 'flex-end' },
 
   // ── Slot grid ──────────────────────────────────────────────────────────────
   slotGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing['2'],
-  },
+    gap: Spacing['2'] },
 
   // ── Advance notice section ─────────────────────────────────────────────────
   noticeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing['2'],
-    gap: Spacing['3'],
-  },
+    gap: Spacing['3'] },
   noticeDivider: {
     flex: 1,
-    height: 1,
-    backgroundColor: Colors.cardBorder,
-  },
+    height: r(1),
+    backgroundColor: Colors.cardBorder },
   noticePill: {
     backgroundColor: Colors.cardBackground,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing['3'],
-    paddingVertical: Spacing['1'],
-  },
+    paddingVertical: Spacing['1'] },
   noticePillText: {
-    letterSpacing: 0.2,
-  },
+    letterSpacing: 0.2 },
   noticeSubtext: {
     marginBottom: Spacing['3'],
-    lineHeight: 18,
-  },
+    lineHeight: r(18) },
   disabledSlot: {
     paddingHorizontal: Spacing['3'],
     paddingVertical: Spacing['2'],
@@ -321,26 +299,24 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    minWidth: 72,
+    minWidth: r(72),
     alignItems: 'center',
-    opacity: 0.5,
-  },
+    opacity: 0.5 },
 
   // ── Empty state ────────────────────────────────────────────────────────────
   emptyState: {
     alignItems: 'center',
-    paddingVertical: Spacing['12'],
-  },
+    paddingVertical: Spacing['12'] },
   emptyIcon: {
-    fontSize: 38,
-    marginBottom: Spacing['3'],
-  },
+    fontSize: FontSize['6xl'],
+    marginBottom: Spacing['3'] },
   emptySubtext: {
-    marginTop: 4,
+    marginTop: Spacing['1'],
     textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: Spacing['4'],
-  },
-});
+    lineHeight: r(18),
+    paddingHorizontal: Spacing['4'] } });
 
 export default AllSlotsModal;
+
+
+

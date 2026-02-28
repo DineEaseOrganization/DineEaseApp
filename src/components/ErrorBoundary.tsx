@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { FontSize, Spacing } from '../theme';
+import { r } from '../theme/responsive';
 
 interface Props {
   children: React.ReactNode;
@@ -45,16 +47,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing['5'],
     backgroundColor: '#fff',
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSize['2xl'],
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: r(10),
   },
   message: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#666',
     textAlign: 'center',
   },

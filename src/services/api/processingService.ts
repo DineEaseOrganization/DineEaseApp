@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
 import { AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest } from '../../types/api.types';
-import { Review } from '../../types';
 
 export interface SubmitReviewRequest {
   reservationId: number;

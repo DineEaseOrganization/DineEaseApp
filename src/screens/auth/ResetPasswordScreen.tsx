@@ -1,16 +1,12 @@
-import React, {useState} from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+
+    
+import React, {useRef, useState} from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {ApiError, passwordService} from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
+import { FontSize, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 
 interface ResetPasswordScreenProps {
   navigation: any;
@@ -27,6 +23,9 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const codeInputs = useRef<Array<TextInput | null>>([]);
 
   const handleCodeChange = (text: string, index: number) => {
     if (text && !/^\d+$/.test(text)) {
@@ -34,8 +33,30 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
     }
 
     const newCode = [...code];
+
+    if (text.length > 1) {
+      const chars = text.replace(/\D/g, '').slice(0, code.length - index).split('');
+      chars.forEach((char, i) => {
+        newCode[index + i] = char;
+      });
+      setCode(newCode);
+      const nextIndex = Math.min(index + chars.length, code.length - 1);
+      codeInputs.current[nextIndex]?.focus();
+      return;
+    }
+
     newCode[index] = text;
     setCode(newCode);
+
+    if (text && index < code.length - 1) {
+      codeInputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleCodeKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !code[index] && index > 0) {
+      codeInputs.current[index - 1]?.focus();
+    }
   };
 
   const handleReset = async () => {
@@ -72,8 +93,7 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
             text: 'OK',
             onPress: () => {
               navigation.navigate('Login');
-            },
-          },
+            } },
         ]);
       } else {
         Alert.alert('Error', response.message);
@@ -120,6 +140,8 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
                 style={[styles.codeInput, digit && styles.codeInputFilled]}
                 value={digit}
                 onChangeText={(text) => handleCodeChange(text, index)}
+                onKeyPress={({ nativeEvent }) => handleCodeKeyPress(nativeEvent.key, index)}
+                ref={(ref) => { codeInputs.current[index] = ref; }}
                 keyboardType="number-pad"
                 maxLength={1}
                 selectTextOnFocus
@@ -131,30 +153,56 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>New Password</Text>
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password (min. 8 characters)"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password (min. 8 characters)"
+                  secureTextEntry={!showNewPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowNewPassword((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={rf(18)}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirm new password"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm new password"
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={rf(18)}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -178,106 +226,98 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({navigation, ro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
+    backgroundColor: '#f8f9fa' },
   scrollContent: {
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
+    paddingHorizontal: Spacing['6'],
+    paddingTop: Spacing['5'] },
   backButton: {
     alignSelf: 'flex-start',
-    marginBottom: 20,
-    paddingVertical: 10,
-  },
+    marginBottom: Spacing['5'],
+    paddingVertical: r(10) },
   backButtonText: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#007AFF',
-    fontWeight: '500',
-  },
+    fontWeight: '500' },
   icon: {
-    fontSize: 64,
+    fontSize: rf(64),
     textAlign: 'center',
-    marginBottom: 16,
-  },
+    marginBottom: Spacing['4'] },
   title: {
-    fontSize: 28,
+    fontSize: FontSize['4xl'],
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 12,
-  },
+    marginBottom: Spacing['3'] },
   subtitle: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
+    lineHeight: r(24),
+    marginBottom: Spacing['8'] },
   email: {
     fontWeight: '600',
-    color: '#007AFF',
-  },
+    color: '#007AFF' },
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
-    paddingHorizontal: 8,
-  },
+    marginBottom: Spacing['8'],
+    paddingHorizontal: Spacing['2'] },
   codeInput: {
-    width: 48,
-    height: 56,
+    width: r(48),
+    height: r(56),
     borderWidth: 2,
     borderColor: '#ddd',
-    borderRadius: 12,
-    fontSize: 24,
+    borderRadius: r(12),
+    fontSize: FontSize['3xl'],
     fontWeight: 'bold',
     textAlign: 'center',
     backgroundColor: 'white',
-    color: '#333',
-  },
+    color: '#333' },
   codeInputFilled: {
-    borderColor: '#007AFF',
-  },
+    borderColor: '#007AFF' },
   form: {
-    marginBottom: 32,
-  },
+    marginBottom: Spacing['8'] },
   inputContainer: {
-    marginBottom: 20,
-  },
+    marginBottom: Spacing['5'] },
   inputLabel: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     fontWeight: '500',
     color: '#333',
-    marginBottom: 8,
-  },
+    marginBottom: Spacing['2'] },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    backgroundColor: 'white',
+    borderRadius: r(12),
+    paddingHorizontal: Spacing['4'],
+    paddingVertical: r(14),
+    paddingRight: r(44),
+    fontSize: FontSize.lg,
+    backgroundColor: 'white' },
+  passwordWrap: { position: 'relative' },
+  eyeBtn: {
+    position: 'absolute',
+    right: Spacing['3'],
+    top: r(12),
+    padding: r(2),
   },
   resetButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: Spacing['4'],
+    borderRadius: r(12),
     alignItems: 'center',
-    marginTop: 8,
-  },
+    marginTop: Spacing['2'] },
   resetButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
+    backgroundColor: '#ccc' },
   resetButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+    fontSize: FontSize.lg,
+    fontWeight: 'bold' } });
 
 export default ResetPasswordScreen;
+
+
+
+

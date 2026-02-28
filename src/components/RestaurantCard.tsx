@@ -9,7 +9,8 @@ import { Restaurant } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
 import { CachedImage } from './CachedImage';
-import { Colors, Radius, Spacing } from '../theme';
+import { Colors, FontSize, Radius, Spacing } from '../theme';
+import { r, rf } from '../theme/responsive';
 import AppText from './ui/AppText';
 
 interface RestaurantCardProps {
@@ -77,7 +78,7 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({
             style={[styles.favBtn, favorite && styles.favBtnActive]}
             onPress={handleFavoritePress}
             disabled={isToggling}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: r(8), bottom: r(8), left: r(8), right: r(8) }}
           >
             {isToggling ? (
               <ActivityIndicator size="small" color={Colors.accent} />
@@ -154,17 +155,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     // Soft shadow on warm cream background
     shadowColor: '#1a2e3b',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: r(0), height: r(3) },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowRadius: r(10),
+    elevation: r(4),
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
 
   // ── Image ──────────────────────────────────────────────────────────────────
   imageContainer: {
-    height: 195,
+    height: r(195),
     position: 'relative',
   },
   image: {
@@ -176,8 +177,8 @@ const styles = StyleSheet.create({
     top: Spacing['3'],
     right: Spacing['3'],
     backgroundColor: `${Colors.primary}CC`,  // Navy at ~80% opacity
-    paddingHorizontal: Spacing['2'] + 2,
-    paddingVertical: 4,
+    paddingHorizontal: r(10),
+    paddingVertical: Spacing['1'],
     borderRadius: Radius.full,
   },
   priceText: {
@@ -188,33 +189,33 @@ const styles = StyleSheet.create({
     top: Spacing['3'],
     left: Spacing['3'],
     backgroundColor: 'rgba(255, 255, 255, 0.93)',
-    width: 38,
-    height: 38,
+    width: r(38),
+    height: r(38),
     borderRadius: Radius.full,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: r(0), height: r(1) },
     shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: r(4),
+    elevation: r(3),
   },
   favBtnActive: {
     backgroundColor: '#fff0f0',
   },
   favIcon: {
-    fontSize: 17,
+    fontSize: rf(17),
   },
 
   // ── Info ───────────────────────────────────────────────────────────────────
   info: {
     paddingHorizontal: Spacing['4'],
-    paddingTop: Spacing['3'] + 2,
+    paddingTop: r(14),
     paddingBottom: Spacing['4'],
     backgroundColor: Colors.cardBackground,
   },
   name: {
-    marginBottom: 3,
+    marginBottom: r(3),
   },
   cuisine: {
     marginBottom: Spacing['2'],
@@ -225,27 +226,27 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['3'],
   },
   stars: {
-    fontSize: 13,
+    fontSize: rf(13),
     color: Colors.star,
     letterSpacing: 0.5,
   },
   ratingNum: {
-    marginLeft: 5,
+    marginLeft: r(5),
   },
   divider: {
-    height: 1,
+    height: r(1),
     backgroundColor: Colors.cardBorder,
     marginBottom: Spacing['3'],
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 4,
-    marginBottom: Spacing['2'] + 2,
+    gap: Spacing['1'],
+    marginBottom: r(10),
   },
   addressPin: {
-    fontSize: 12,
-    marginTop: 1,
+    fontSize: FontSize.sm,
+    marginTop: r(1),
   },
   addressText: {
     flex: 1,
@@ -253,13 +254,13 @@ const styles = StyleSheet.create({
   pillsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 2,
+    gap: r(6),
+    marginTop: r(2),
   },
   pill: {
     backgroundColor: 'rgba(15, 51, 70, 0.06)',  // Navy-tinted cream pill
-    paddingHorizontal: Spacing['2'] + 2,
-    paddingVertical: 4,
+    paddingHorizontal: r(10),
+    paddingVertical: Spacing['1'],
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: 'rgba(15, 51, 70, 0.12)',

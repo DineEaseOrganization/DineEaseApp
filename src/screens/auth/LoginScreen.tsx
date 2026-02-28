@@ -1,19 +1,11 @@
 import React, {useState} from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {useAuth} from '../../context/AuthContext';
 import {ApiError} from '../../services/api';
-import { Colors, Radius, Spacing } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -25,6 +17,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const {login} = useAuth();
 
@@ -53,6 +46,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSocialPress = (provider: 'Apple' | 'Google') => {
+    Alert.alert('Feature Not Available', `${provider} sign-in is not available yet.`);
   };
 
   return (
@@ -95,17 +92,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
             <View style={styles.inputGroup}>
               <AppText variant="captionMedium" color={Colors.textOnLight} style={styles.label}>Password</AppText>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor={Colors.textOnLightTertiary}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  placeholderTextColor={Colors.textOnLightTertiary}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={rf(18)}
+                    color={Colors.textOnLightSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -141,7 +151,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           {/* Social */}
           <View style={styles.socialRow}>
             {['📱  Apple', '🔵  Google'].map((label) => (
-              <TouchableOpacity key={label} style={styles.socialBtn} disabled={isLoading} activeOpacity={0.8}>
+              <TouchableOpacity
+                key={label}
+                style={styles.socialBtn}
+                disabled={isLoading}
+                activeOpacity={0.8}
+                onPress={() => handleSocialPress(label.includes('Apple') ? 'Apple' : 'Google')}
+              >
                 <AppText variant="body" color={Colors.textOnLight}>{label}</AppText>
               </TouchableOpacity>
             ))}
@@ -168,8 +184,8 @@ const styles = StyleSheet.create({
   backBtn: { alignSelf: 'flex-start', paddingVertical: Spacing['2'], marginBottom: Spacing['4'] },
 
   brandMark: {
-    width: 72,
-    height: 72,
+    width: r(72),
+    height: r(72),
     borderRadius: Radius.full,
     backgroundColor: NAVY,
     justifyContent: 'center',
@@ -177,12 +193,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: Spacing['5'],
     shadowColor: NAVY,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: r(0), height: r(4) },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 5,
-  },
-  brandEmoji: { fontSize: 30 },
+    elevation: 5 },
+  brandEmoji: { fontSize: rf(30) },
 
   title: { textAlign: 'center', marginBottom: Spacing['1'] },
   subtitle: { textAlign: 'center', marginBottom: Spacing['6'] },
@@ -196,11 +211,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     marginBottom: Spacing['5'],
     shadowColor: '#1a2e3b',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: r(0), height: r(3) },
     shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 3,
-  },
+    elevation: 3 },
   inputGroup: { marginBottom: Spacing['4'] },
   label: { marginBottom: Spacing['2'], letterSpacing: 0.3 },
   input: {
@@ -209,10 +223,16 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing['4'],
     paddingVertical: Spacing['3'],
-    fontSize: 15,
+    fontSize: FontSize.md,
     backgroundColor: Colors.appBackground,
     color: Colors.textOnLight,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_400Regular' },
+  passwordWrap: { position: 'relative' },
+  eyeBtn: {
+    position: 'absolute',
+    right: Spacing['3'],
+    top: r(12),
+    padding: r(2),
   },
 
   forgotBtn: { alignSelf: 'flex-end', marginBottom: Spacing['5'] },
@@ -221,13 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     paddingVertical: Spacing['4'],
     borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   loginBtnDisabled: { backgroundColor: Colors.textOnLightTertiary },
 
   // ── Divider ───────────────────────────────────────────────────────────────
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing['4'] },
-  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.cardBorder },
+  dividerLine: { flex: 1, height: r(1), backgroundColor: Colors.cardBorder },
   dividerText: { marginHorizontal: Spacing['3'] },
 
   // ── Social ────────────────────────────────────────────────────────────────
@@ -239,10 +258,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
+    borderColor: Colors.cardBorder },
 
-  signUpRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-});
+  signUpRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' } });
 
 export default LoginScreen;
+
+
+
+

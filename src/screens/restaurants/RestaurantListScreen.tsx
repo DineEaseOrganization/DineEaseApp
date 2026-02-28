@@ -1,15 +1,9 @@
+
+    
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { RestaurantListScreenProps } from '../../navigation/AppNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CuisineStat, TopCategory } from '../../types/api.types';
 import { useLocation } from '../../hooks/useLocation';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
@@ -21,10 +15,10 @@ import {
   useNearbyRestaurants,
   useFeaturedRestaurants,
   useTopRestaurants,
-  useAvailableCuisines,
-} from '../../hooks/useRestaurantQueries';
+  useAvailableCuisines } from '../../hooks/useRestaurantQueries';
 import { CACHE_CONFIG } from '../../config/cache.config';
-import { Colors, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';
 
@@ -91,8 +85,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
       cuisineType,
       latitude: userLocation.latitude,
       longitude: userLocation.longitude,
-      radius: searchRadius,
-    });
+      radius: searchRadius });
   };
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -109,8 +102,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
     const map: Record<string, string> = {
       Italian: '🍝', Japanese: '🍣', Chinese: '🥢', Mexican: '🌮',
       Indian: '🍛', Thai: '🍜', French: '🥐', Greek: '🥗',
-      Mediterranean: '🫒', American: '🍔', British: '🍺',
-    };
+      Mediterranean: '🫒', American: '🍔', British: '🍺' };
     return map[cuisineType] || '🍽️';
   };
 
@@ -221,10 +213,10 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
           <AppText style={styles.topStars}>
             {'★'.repeat(Math.floor(restaurant.averageRating))}
           </AppText>
-          <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ marginLeft: 4 }}>
+          <AppText variant="bodySemiBold" color={Colors.textOnLight} style={styles.topRatingValue}>
             {restaurant.averageRating.toFixed(1)}
           </AppText>
-          <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ marginLeft: 3 }}>
+          <AppText variant="caption" color={Colors.textOnLightTertiary} style={styles.topRatingReviews}>
             ({restaurant.totalReviews})
           </AppText>
         </View>
@@ -292,7 +284,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
             <AppText variant="h3" color={Colors.white}>Discover</AppText>
             <View style={styles.locationRow}>
               {isUsingDefault && (
-                <AppText variant="caption" color={Colors.warning} style={{ marginRight: 6 }}>Default</AppText>
+                <AppText variant="caption" color={Colors.warning} style={styles.defaultBadge}>Default</AppText>
               )}
               <AppText style={styles.pinIcon}>📍</AppText>
               <AppText variant="caption" color="rgba(255,255,255,0.75)">{locationName}</AppText>
@@ -348,8 +340,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
             <TouchableOpacity onPress={() => navigation.navigate('NearbyRestaurants', {
               latitude: userLocation.latitude,
               longitude: userLocation.longitude,
-              radius: searchRadius,
-            })}>
+              radius: searchRadius })}>
               <AppText variant="bodyMedium" color={Colors.accent}>View more →</AppText>
             </TouchableOpacity>
           </View>
@@ -360,7 +351,7 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
             <View style={styles.emptyState}>
               <AppText style={styles.emptyIcon}>📍</AppText>
               <AppText variant="bodyMedium" color={Colors.textOnLight}>No restaurants found nearby</AppText>
-              <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: 4, textAlign: 'center' }}>
+              <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.emptySubtext}>
                 Try using the search to explore other areas
               </AppText>
             </View>
@@ -484,38 +475,34 @@ const styles = StyleSheet.create({
   // ── Screen ────────────────────────────────────────────────────────────────────
   container: {
     flex: 1,
-    backgroundColor: Colors.appBackground,
-  },
+    backgroundColor: Colors.appBackground },
   scrollContent: {
-    paddingBottom: Spacing['6'],
-  },
+    paddingBottom: Spacing['6'] },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.appBackground,
-    padding: Spacing['5'],
-  },
+    padding: Spacing['5'] },
 
   // ── Header — NAVY brand block ─────────────────────────────────────────────────
   header: {
     backgroundColor: NAVY,
     paddingHorizontal: Spacing['5'],
     paddingTop: Spacing['2'],
-    paddingBottom: Spacing['2'],
-  },
+    paddingBottom: Spacing['2'] },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
-    gap: 4,
-  },
-  pinIcon: { fontSize: 11 },
+    marginTop: r(2),
+    gap: Spacing['1'] },
+  pinIcon: { fontSize: FontSize.xs },
+  defaultBadge: {
+    marginRight: r(6) },
 
   // ── Party selector ────────────────────────────────────────────────────────────
   selectorCard: {
@@ -533,29 +520,26 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     overflow: 'hidden',
     shadowColor: '#1a2e3b',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: r(0), height: r(2) },
     shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
-  },
+    shadowRadius: r(6),
+    elevation: r(2) },
   selectorAccent: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
+    left: Spacing['0'],
+    top: Spacing['0'],
+    bottom: Spacing['0'],
+    width: r(4),
     backgroundColor: NAVY,
     borderTopLeftRadius: Radius.lg,
-    borderBottomLeftRadius: Radius.lg,
-  },
+    borderBottomLeftRadius: Radius.lg },
   selectorLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing['2'],
     flex: 1,
-    paddingLeft: Spacing['2'],
-  },
-  selectorIcon: { fontSize: 16 },
+    paddingLeft: Spacing['2'] },
+  selectorIcon: { fontSize: FontSize.lg },
 
   // ── Radius ────────────────────────────────────────────────────────────────────
   radiusSection: {
@@ -567,20 +551,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
     shadowColor: '#1a2e3b',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: r(0), height: r(2) },
     shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
-  },
+    shadowRadius: r(6),
+    elevation: r(2) },
   radiusHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing['3'],
-  },
+    marginBottom: Spacing['3'] },
   radiusButtons: {
     flexDirection: 'row',
-    gap: Spacing['2'],
-  },
+    gap: Spacing['2'] },
   radiusButton: {
     flex: 1,
     paddingVertical: Spacing['2'],
@@ -588,47 +569,39 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.white },
   radiusButtonActive: {
     // Navy for radius — distinguishes from burgundy CTAs
     backgroundColor: NAVY,
-    borderColor: NAVY,
-  },
+    borderColor: NAVY },
 
   // ── Section ───────────────────────────────────────────────────────────────────
   section: {
-    marginBottom: Spacing['8'],
-  },
+    marginBottom: Spacing['8'] },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing['5'],
-    marginBottom: Spacing['4'],
-  },
+    marginBottom: Spacing['4'] },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing['2'],
-  },
+    gap: Spacing['2'] },
   // Small navy vertical tick to the left of every section title
   sectionTick: {
-    width: 3,
-    height: 20,
+    width: r(3),
+    height: r(20),
     backgroundColor: NAVY,
-    borderRadius: 2,
-  },
+    borderRadius: r(2) },
   sectionSubtitle: {
     paddingHorizontal: Spacing['5'],
     marginBottom: Spacing['4'],
-    marginTop: -Spacing['2'],
-  },
+    marginTop: -Spacing['2'] },
   loader: { marginVertical: Spacing['5'] },
   hList: {
     paddingHorizontal: Spacing['5'],
-    gap: Spacing['4'],
-  },
+    gap: Spacing['4'] },
 
   // ── Horizontal card ───────────────────────────────────────────────────────────
   hCard: {
@@ -639,92 +612,78 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
     shadowColor: '#1a2e3b',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: r(0), height: r(3) },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
+    shadowRadius: r(10),
+    elevation: r(4) },
   hCardImageWrap: {
-    height: 160,
-    position: 'relative',
-  },
+    height: Math.round(width * 0.32),
+    position: 'relative' },
   hCardImage: {
     width: '100%',
-    height: '100%',
-  },
+    height: '100%' },
   hCardPriceBadge: {
     position: 'absolute',
-    top: Spacing['2'] + 2,
+    top: r(10),
     left: Spacing['3'],
     // Navy badge on image
     backgroundColor: `${NAVY}CC`,   // navy at 80% opacity
     paddingHorizontal: Spacing['2'],
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
+    paddingVertical: r(3),
+    borderRadius: Radius.full },
   hCardFav: {
     position: 'absolute',
     top: Spacing['2'],
-    right: Spacing['2'],
-  },
+    right: Spacing['2'] },
   hCardInfo: {
-    paddingHorizontal: Spacing['3'],
-    paddingTop: Spacing['2'] + 2,
-    paddingBottom: Spacing['3'],
-    backgroundColor: Colors.cardBackground,
-  },
+    paddingHorizontal: r(12),
+    paddingTop: r(10),
+    paddingBottom: r(12),
+    backgroundColor: Colors.cardBackground },
   hCardNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing['2'],
-    marginBottom: 3,
-  },
+    marginBottom: r(3) },
   // Thin navy left accent bar beside the name in horizontal cards
   hCardNavyAccent: {
-    width: 3,
-    height: 18,
+    width: r(3),
+    height: r(18),
     backgroundColor: NAVY,
-    borderRadius: 2,
-  },
+    borderRadius: r(2) },
   hCardName: {
     flex: 1,
-    fontSize: 15,  // Scale cardTitle (18px) down for narrow carousel card
+    fontSize: FontSize.md,
   },
   hCardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing['3'],
-  },
+    marginBottom: r(12) },
   hCardStar: {
     color: Colors.star,
-    fontSize: 12,
-  },
+    fontSize: FontSize.sm },
   hCardDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
+    width: r(3),
+    height: r(3),
+    borderRadius: r(2),
     backgroundColor: Colors.cardBorder,
-    marginHorizontal: 5,
-  },
+    marginHorizontal: r(5) },
   hCardSlots: {
     flexDirection: 'row',
-    gap: Spacing['2'],
-  },
+    gap: r(8) },
   hCardSlot: {
     backgroundColor: Colors.accent,   // Burgundy CTA slots
-    paddingHorizontal: Spacing['3'],
-    paddingVertical: Spacing['1'] + 2,
-    borderRadius: Radius.md,
-  },
+    paddingHorizontal: r(12),
+    paddingVertical: r(6),
+    borderRadius: Radius.md },
 
   // ── Cuisine circles ───────────────────────────────────────────────────────────
   cuisineItem: {
     alignItems: 'center',
-    width: 76,
-  },
+    width: r(76) },
   cuisineCircle: {
-    width: 64,
-    height: 64,
+    width: r(64),
+    height: r(64),
     borderRadius: Radius.full,
     backgroundColor: Colors.white,    // White — emoji shows naturally
     borderWidth: 2,
@@ -733,36 +692,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing['2'],
     shadowColor: NAVY,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: r(0), height: r(2) },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cuisineEmoji: { fontSize: 28 },
+    shadowRadius: r(4),
+    elevation: r(2) },
+  cuisineEmoji: { fontSize: FontSize['4xl'] },
   cuisineName: {
     textAlign: 'center',
-    marginBottom: 2,
-  },
+    marginBottom: r(2) },
 
   // ── Category tabs — navy active ───────────────────────────────────────────────
   tabRow: {
     flexDirection: 'row',
     paddingHorizontal: Spacing['5'],
     marginBottom: Spacing['4'],
-    gap: Spacing['2'],
-  },
+    gap: Spacing['2'] },
   tab: {
     paddingVertical: Spacing['2'],
     paddingHorizontal: Spacing['3'],
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    backgroundColor: Colors.cardBackground,
-  },
+    backgroundColor: Colors.cardBackground },
   tabActive: {
     backgroundColor: NAVY,            // Navy active tab
-    borderColor: NAVY,
-  },
+    borderColor: NAVY },
 
   // ── Top restaurants list ──────────────────────────────────────────────────────
   topList: {
@@ -773,11 +727,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     overflow: 'hidden',
     shadowColor: '#1a2e3b',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: r(0), height: r(2) },
     shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+    shadowRadius: r(8),
+    elevation: r(3) },
   topItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -785,58 +738,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing['4'],
     borderBottomWidth: 1,
     borderBottomColor: Colors.cardBorder,
-    gap: Spacing['3'],
-  },
+    gap: Spacing['3'] },
   // Filled navy pill for rank number
   rankBadge: {
-    width: 24,
-    height: 24,
+    width: r(24),
+    height: r(24),
     borderRadius: Radius.full,
     backgroundColor: NAVY,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-  },
+    flexShrink: 0 },
   topThumb: {
-    width: 64,
-    height: 64,
+    width: r(64),
+    height: r(64),
     borderRadius: Radius.lg,
-    flexShrink: 0,
-  },
+    flexShrink: 0 },
   topInfo: {
     flex: 1,
-    gap: 3,
+    gap: r(3),
     minWidth: 0,  // allows text truncation
   },
   topName: {
-    fontSize: 14,   // Scale cardTitle (18px) down for compact list row
-    marginBottom: 1,
-  },
+    fontSize: FontSize.base,   // Scale cardTitle (18px) down for compact list row
+    marginBottom: r(1) },
   topRatingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   topStars: {
     color: Colors.star,
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
+    fontSize: FontSize.xs,
+    letterSpacing: 0.5 },
   topMeta: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   topMetaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
+    width: r(3),
+    height: r(3),
+    borderRadius: r(2),
     backgroundColor: Colors.textOnLightTertiary,
-    marginHorizontal: 5,
-  },
+    marginHorizontal: r(5) },
   topRight: {
     alignItems: 'flex-end',
     gap: Spacing['2'],
-    flexShrink: 0,
-  },
+    flexShrink: 0 },
   // Subtle pill for price — navy text on cream bg
   topPricePill: {
     backgroundColor: 'rgba(15, 51, 70, 0.07)',
@@ -844,25 +788,31 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(15, 51, 70, 0.12)',
     borderRadius: Radius.full,
     paddingHorizontal: Spacing['2'],
-    paddingVertical: 3,
-  },
+    paddingVertical: r(3) },
   topSaveButton: {
-    width: 28,
-    height: 28,
+    width: r(28),
+    height: r(28),
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
 
   // ── Empty state ───────────────────────────────────────────────────────────────
   emptyState: {
     alignItems: 'center',
     paddingVertical: Spacing['10'],
-    paddingHorizontal: Spacing['5'],
-  },
+    paddingHorizontal: Spacing['5'] },
   emptyIcon: {
-    fontSize: 38,
-    marginBottom: Spacing['3'],
-  },
-});
+    fontSize: FontSize['6xl'],
+    marginBottom: Spacing['3'] },
+  topRatingValue: {
+    marginLeft: r(4) },
+  topRatingReviews: {
+    marginLeft: r(3) },
+  emptySubtext: {
+    marginTop: Spacing['1'],
+    textAlign: 'center' } });
 
 export default RestaurantListScreen;
+
+
+
+

@@ -10,7 +10,9 @@ import {
     View,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { formatDateWeekdayShortDayMonthYear } from '../../utils/Datetimeutils';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 interface PartyDateTimePickerProps {
@@ -19,9 +21,9 @@ interface PartyDateTimePickerProps {
     partySize: number;
     selectedDate: Date;
     selectedTime: string;
-    onPartySizeChange: (size: number) => void;
-    onDateChange: (date: Date) => void;
-    onTimeChange: (time: string) => void;
+    onPartySizeChange: (_size: number) => void;
+    onDateChange: (_date: Date) => void;
+    onTimeChange: (_time: string) => void;
 }
 
 function parseTime(time: string): { hour: string; minute: string } {
@@ -113,8 +115,7 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
         }
     };
 
-    const formatDate = (d: Date) =>
-        d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const formatDate = (d: Date) => formatDateWeekdayShortDayMonthYear(d);
 
     const handleDone = () => {
         setShowDatePicker(false);
@@ -310,13 +311,13 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.appBackground,
         borderTopLeftRadius: Radius['2xl'],
         borderTopRightRadius: Radius['2xl'],
-        paddingBottom: 34,
+        paddingBottom: r(34),
         maxHeight: '90%',
     },
     handle: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
+        width: r(40),
+        height: r(4),
+        borderRadius: r(2),
         backgroundColor: Colors.cardBorder,
         alignSelf: 'center',
         marginTop: Spacing['3'],
@@ -333,8 +334,8 @@ const styles = StyleSheet.create({
     },
     title: { fontSize: FontSize.lg },
     closeBtn: {
-        width: 32,
-        height: 32,
+        width: r(32),
+        height: r(32),
         borderRadius: Radius.full,
         backgroundColor: Colors.cardBackground,
         borderWidth: 1,
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     closeIcon: {
-        fontSize: 12,
+        fontSize: FontSize.sm,
         color: Colors.textOnLightSecondary,
         fontFamily: FontFamily.semiBold,
     },
@@ -364,10 +365,10 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['3'],
     },
     sectionTick: {
-        width: 3,
-        height: 14,
+        width: r(3),
+        height: r(14),
         backgroundColor: Colors.primary,
-        borderRadius: 2,
+        borderRadius: r(2),
     },
     sectionLabel: { letterSpacing: 1 },
 
@@ -378,8 +379,8 @@ const styles = StyleSheet.create({
         gap: Spacing['2'],
     },
     sizeBtn: {
-        width: 56,
-        height: 48,
+        width: r(56),
+        height: r(48),
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: Colors.cardBackground,
@@ -409,13 +410,13 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary,
         borderColor: Colors.primary,
     },
-    rowIcon: { fontSize: 16 },
+    rowIcon: { fontSize: FontSize.lg },
 
     // ── ASAP check ─────────────────────────────────────────────────────────────
     checkCircle: {
         marginLeft: 'auto',
-        width: 22,
-        height: 22,
+        width: r(22),
+        height: r(22),
         borderRadius: Radius.full,
         borderWidth: 1.5,
         borderColor: Colors.cardBorder,
@@ -427,7 +428,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.success,
     },
     checkMark: {
-        fontSize: 11,
+        fontSize: FontSize.xs,
         color: Colors.white,
         fontFamily: FontFamily.bold,
     },
@@ -448,8 +449,8 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     timeInput: {
-        width: 88,
-        height: 72,
+        width: r(88),
+        height: r(72),
         borderRadius: Radius.lg,
         borderWidth: 1.5,
         borderColor: Colors.primary,
@@ -475,14 +476,14 @@ const styles = StyleSheet.create({
     },
     doneBtn: {
         backgroundColor: Colors.accent,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: r(14),
         borderRadius: Radius.lg,
         alignItems: 'center',
         shadowColor: Colors.accent,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.25,
-        shadowRadius: 6,
-        elevation: 4,
+        shadowRadius: r(6),
+        elevation: r(4),
     },
 });
 

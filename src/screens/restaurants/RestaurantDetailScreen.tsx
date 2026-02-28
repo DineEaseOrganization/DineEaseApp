@@ -1,17 +1,9 @@
+
+    
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {
-    Dimensions,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ActivityIndicator,
-    Alert,
-    Linking,
-    FlatList,
-} from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert, Linking, FlatList } from 'react-native';
 import { CachedImage } from '../../components/CachedImage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { RestaurantDetailScreenProps } from '../../navigation/AppNavigator';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
@@ -23,11 +15,12 @@ import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHand
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
 import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
-import { Colors, Radius, Shadow, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
-import AppButton from '../../components/ui/AppButton';
 
 const { width } = Dimensions.get('window');
+const heroHeight = Math.round(width * 0.5);
 
 const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, navigation }) => {
     const {
@@ -49,7 +42,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     const [showPickerModal, setShowPickerModal] = useState(false);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
 
-    const { data: restaurantDetails, isLoading: loading } = useRestaurantDetail(initialRestaurant.id);
+    const { data: restaurantDetails } = useRestaurantDetail(initialRestaurant.id);
 
     useEffect(() => {
         if (restaurantDetails) setRestaurant(mapRestaurantDetailToRestaurant(restaurantDetails));
@@ -61,16 +54,14 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
         slots: streamedSlots,
         allSlots: streamedAllSlots,
         isLoading: slotsLoading,
-        error: streamError,
-    } = useAvailabilityStream({
+        error: streamError } = useAvailabilityStream({
         restaurantId: restaurant.id,
         date: dateStr,
         partySize,
         enabled: true,
         isFocused,
         isAuthenticated,
-        pollingIntervalMs: 30000,
-    });
+        pollingIntervalMs: 30000 });
 
     const availableSlots = streamedSlots;
 
@@ -216,10 +207,10 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                         </AppText>
                         <View style={styles.ratingRow}>
                             <AppText style={styles.stars}>{renderStars(restaurant.averageRating || 4.5)}</AppText>
-                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ marginLeft: 6 }}>
+                            <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ marginLeft: r(6) }}>
                                 {(restaurant.averageRating || 4.5).toFixed(1)}
                             </AppText>
-                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginLeft: 4 }}>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['1'] }}>
                                 ({restaurant.totalReviews || 0} reviews)
                             </AppText>
                         </View>
@@ -361,83 +352,69 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.appBackground,
-    },
+        backgroundColor: Colors.appBackground },
     scrollView: {
-        flex: 1,
-    },
+        flex: 1 },
 
     // ── Carousel ──────────────────────────────────────────────────────────────
     imageContainer: {
         position: 'relative',
-        height: 220,
-    },
+        height: heroHeight },
     carouselSlide: {
         width,
-        height: 220,
-    },
+        height: heroHeight },
     restaurantImage: {
         width: '100%',
-        height: '100%',
-    },
+        height: '100%' },
     paginationContainer: {
         position: 'absolute',
         bottom: Spacing['3'],
         alignSelf: 'center',
         flexDirection: 'row',
-        gap: 6,
+        gap: r(6),
         backgroundColor: Colors.overlayMedium,
         paddingHorizontal: Spacing['2'],
         paddingVertical: Spacing['1'],
-        borderRadius: Radius.full,
-    },
+        borderRadius: Radius.full },
     dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-    },
+        width: r(6),
+        height: r(6),
+        borderRadius: r(3),
+        backgroundColor: 'rgba(255,255,255,0.4)' },
     dotActive: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: Colors.white,
-    },
+        width: r(8),
+        height: r(8),
+        borderRadius: r(4),
+        backgroundColor: Colors.white },
     backButton: {
         position: 'absolute',
         top: Spacing['3'],
         left: Spacing['4'],
-        width: 36,
-        height: 36,
+        width: r(36),
+        height: r(36),
         borderRadius: Radius.full,
         backgroundColor: Colors.overlayMedium,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-    },
+        borderColor: 'rgba(255,255,255,0.2)' },
     backArrow: {
-        fontSize: 20,
-        color: Colors.white,
-    },
+        fontSize: FontSize['2xl'],
+        color: Colors.white },
 
     // ── Name + rating below image ──────────────────────────────────────────────
     nameBlock: {
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
     restaurantName: {
-        fontSize: 20,
-        marginBottom: Spacing['1'],
-    },
+        fontSize: FontSize['2xl'],
+        marginBottom: Spacing['1'] },
     ratingRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     stars: {
-        fontSize: 13,
+        fontSize: rf(13),
         color: Colors.star,
-        letterSpacing: 1,
-    },
+        letterSpacing: 1 },
 
     // ── Details card ──────────────────────────────────────────────────────────
     detailsCard: {
@@ -446,8 +423,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: Radius['2xl'],
         borderTopRightRadius: Radius['2xl'],
         paddingTop: Spacing['5'],
-        paddingHorizontal: Spacing['5'],
-    },
+        paddingHorizontal: Spacing['5'] },
 
     // ── Quick info ────────────────────────────────────────────────────────────
     quickInfo: {
@@ -457,45 +433,36 @@ const styles = StyleSheet.create({
         padding: Spacing['4'],
         marginBottom: Spacing['4'],
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     quickInfoItem: {
         flex: 1,
         alignItems: 'center',
-        gap: 4,
-    },
+        gap: Spacing['1'] },
     quickInfoIcon: {
-        fontSize: 20,
-    },
+        fontSize: FontSize.xl },
     quickInfoDivider: {
-        width: 1,
+        width: r(1),
         backgroundColor: Colors.cardBorder,
-        alignSelf: 'stretch',
-    },
+        alignSelf: 'stretch' },
 
     // ── Address ───────────────────────────────────────────────────────────────
     addressRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         marginBottom: Spacing['4'],
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     addressIcon: {
-        fontSize: 15,
-        marginTop: 1,
-    },
+        fontSize: FontSize.base,
+        marginTop: r(1) },
     description: {
-        lineHeight: 22,
-        marginBottom: Spacing['4'],
-    },
+        lineHeight: rf(22),
+        marginBottom: Spacing['4'] },
 
     // ── Section ───────────────────────────────────────────────────────────────
     section: {
-        marginBottom: Spacing['5'],
-    },
+        marginBottom: Spacing['5'] },
     sectionTitle: {
-        marginBottom: Spacing['3'],
-    },
+        marginBottom: Spacing['3'] },
 
     // ── Selector button ───────────────────────────────────────────────────────
     selectorButton: {
@@ -503,41 +470,36 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: Colors.cardBackground,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: Spacing['3'] + r(2),
         paddingHorizontal: Spacing['4'],
         borderRadius: Radius.lg,
         borderWidth: 1,
-        borderColor: Colors.cardBorder,
-    },
+        borderColor: Colors.cardBorder },
     selectorLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     selectorIcon: {
-        fontSize: 18,
-    },
+        fontSize: FontSize.lg },
 
     // ── Time slots ────────────────────────────────────────────────────────────
     slotsContainer: {
-        marginBottom: 0,
-    },
+        marginBottom: Spacing['0'] },
     loadingSlots: {
         alignItems: 'center',
-        paddingVertical: Spacing['5'],
-    },
+        paddingVertical: Spacing['5'] },
     slotsList: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     moreTimesButton: {
-        marginTop: Spacing['3'],
-    },
+        marginTop: Spacing['3'] },
     noSlots: {
         fontStyle: 'italic',
-        marginTop: Spacing['2'],
-    },
-});
+        marginTop: Spacing['2'] } });
 
 export default RestaurantDetailScreen;
+
+
+
+

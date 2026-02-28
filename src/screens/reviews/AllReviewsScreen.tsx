@@ -1,18 +1,13 @@
 // src/screens/reviews/AllReviewsScreen.tsx
 import React, { useCallback, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AllReviewsScreenProps } from '../../navigation/AppNavigator';
 import { processingService, ReviewResponse } from '../../services/api/processingService';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -38,14 +33,14 @@ const getCategoryDisplayName = (name: string) => {
 
 const formatDate = (dateStr: string) => {
     try {
-        return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return formatDateDayMonthYear(new Date(dateStr));
     } catch { return dateStr; }
 };
 
 const Stars = ({ rating, size = 15 }: { rating: number; size?: number }) => (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
+    <View style={{ flexDirection: 'row', gap: r(2) }}>
         {[1, 2, 3, 4, 5].map(i => (
-            <AppText key={i} style={{ fontSize: size, color: i <= rating ? '#F5A623' : Colors.cardBorder }}>★</AppText>
+            <AppText key={i} style={{ fontSize: rf(size), color: i <= rating ? '#F5A623' : Colors.cardBorder }}>★</AppText>
         ))}
     </View>
 );
@@ -79,8 +74,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
                         } catch {
                             Alert.alert('Error', 'Failed to delete review. Please try again.');
                         }
-                    },
-                },
+                    } },
             ]
         );
     };
@@ -106,7 +100,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
                 </AppText>
                 {review.isVerified && (
                     <View style={styles.verifiedPill}>
-                        <Ionicons name="checkmark-circle" size={12} color={Colors.success} />
+                        <Ionicons name="checkmark-circle" size={rf(12)} color={Colors.success} />
                         <AppText variant="captionMedium" color={Colors.success}>Verified</AppText>
                     </View>
                 )}
@@ -116,7 +110,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
             {review.reviewText ? (
                 <View style={styles.reviewTextBox}>
                     <AppText style={styles.quoteIcon}>❝</AppText>
-                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1, lineHeight: 18 }}>
+                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1, lineHeight: r(18) }}>
                         {review.reviewText}
                     </AppText>
                 </View>
@@ -132,7 +126,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
                                 <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.categoryLabel}>
                                     {getCategoryDisplayName(cr.categoryName).toUpperCase()}
                                 </AppText>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing['1'] }}>
                                     <Stars rating={cr.score} size={11} />
                                     <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
                                         {cr.score}/5
@@ -151,7 +145,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
                     onPress={() => handleDelete(review.reviewId)}
                     activeOpacity={0.8}
                 >
-                    <Ionicons name="trash-outline" size={13} color={Colors.error} />
+                    <Ionicons name="trash-outline" size={rf(13)} color={Colors.error} />
                     <AppText variant="captionMedium" color={Colors.error}>Delete</AppText>
                 </TouchableOpacity>
             </View>
@@ -164,7 +158,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
             {/* ── Navy header ── */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                 </TouchableOpacity>
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>
                     My Reviews
@@ -175,7 +169,7 @@ const AllReviewsScreen: React.FC<AllReviewsScreenProps> = ({ navigation }) => {
                         <AppText variant="captionMedium" color={Colors.white}>{reviews.length}</AppText>
                     </View>
                 )}
-                {reviews.length === 0 && <View style={{ width: 36 }} />}
+                {reviews.length === 0 && <View style={{ width: r(36) }} />}
             </View>
 
             {isLoading ? (
@@ -219,26 +213,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg, flex: 1, marginLeft: Spacing['3'] },
     countBadge: {
         backgroundColor: Colors.accent,
         borderRadius: Radius.full,
-        paddingHorizontal: Spacing['2'] + 2,
-        paddingVertical: 4,
-        minWidth: 28,
-        alignItems: 'center',
-    },
+        paddingHorizontal: Spacing['2'] + r(2),
+        paddingVertical: r(4),
+        minWidth: r(28),
+        alignItems: 'center' },
 
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
 
@@ -246,8 +237,7 @@ const styles = StyleSheet.create({
     list: {
         paddingHorizontal: Spacing['4'],
         paddingTop: Spacing['4'],
-        paddingBottom: Spacing['8'],
-    },
+        paddingBottom: Spacing['8'] },
     emptyContainer: { flex: 1 },
 
     // ── Card ───────────────────────────────────────────────────────────────────
@@ -256,16 +246,15 @@ const styles = StyleSheet.create({
         borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
-        borderLeftWidth: 3,
+        borderLeftWidth: r(3),
         borderLeftColor: '#F5A623',
         marginBottom: Spacing['3'],
         overflow: 'hidden',
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.06,
         shadowRadius: 6,
-        elevation: 2,
-    },
+        elevation: 2 },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -273,8 +262,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingTop: Spacing['3'],
         paddingBottom: Spacing['2'],
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     restaurantName: { flex: 1, fontSize: FontSize.md },
 
     // Overall stars
@@ -282,20 +270,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing['4'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     verifiedPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: Spacing['1'],
         marginLeft: Spacing['2'],
         backgroundColor: Colors.successFaded,
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 3,
+        paddingVertical: r(3),
         borderWidth: 1,
-        borderColor: Colors.success,
-    },
+        borderColor: Colors.success },
 
     // Review text
     reviewTextBox: {
@@ -306,9 +292,8 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['2'],
         backgroundColor: Colors.cardBackground,
         borderRadius: Radius.md,
-        padding: Spacing['3'],
-    },
-    quoteIcon: { fontSize: 16, color: Colors.cardBorder, marginTop: -2 },
+        padding: Spacing['3'] },
+    quoteIcon: { fontSize: rf(16), color: Colors.cardBorder, marginTop: r(-2) },
 
     // Category grid
     categoryGrid: {
@@ -319,17 +304,15 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing['2'],
         borderTopWidth: 1,
         borderTopColor: Colors.cardBorder,
-        flexWrap: 'wrap',
-    },
+        flexWrap: 'wrap' },
     categoryItem: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
         flex: 1,
-        minWidth: '30%',
-    },
-    categoryEmoji: { fontSize: 18 },
-    categoryLabel: { letterSpacing: 0.5, fontSize: 10, marginBottom: 2 },
+        minWidth: '30%' },
+    categoryEmoji: { fontSize: rf(18) },
+    categoryLabel: { letterSpacing: 0.5, fontSize: rf(10), marginBottom: r(2) },
 
     // Footer
     cardFooter: {
@@ -338,19 +321,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         paddingVertical: Spacing['2'],
         borderTopWidth: 1,
-        borderTopColor: Colors.cardBorder,
-    },
+        borderTopColor: Colors.cardBorder },
     deleteBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
+        gap: r(5),
         paddingHorizontal: Spacing['3'],
-        paddingVertical: Spacing['1'] + 2,
+        paddingVertical: Spacing['1'] + r(2),
         borderRadius: Radius.md,
         backgroundColor: Colors.errorFaded,
         borderWidth: 1,
-        borderColor: Colors.error,
-    },
+        borderColor: Colors.error },
 
     // Empty state
     empty: {
@@ -358,9 +339,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: Spacing['10'],
-        paddingHorizontal: Spacing['5'],
-    },
-    emptyIcon: { fontSize: 48, marginBottom: Spacing['4'] },
-});
+        paddingHorizontal: Spacing['5'] },
+    emptyIcon: { fontSize: rf(48), marginBottom: Spacing['4'] } });
 
 export default AllReviewsScreen;

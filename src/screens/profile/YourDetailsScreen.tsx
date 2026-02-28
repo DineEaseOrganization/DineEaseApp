@@ -1,19 +1,12 @@
 // src/screens/profile/YourDetailsScreen.tsx
 import React, { useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/api';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -48,7 +41,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
 
         setIsSaving(true);
         try {
-            const updateData: any = {};
+            const updateData: any = { };
             if (firstName !== user?.firstName) updateData.firstName = firstName;
             if (lastName !== user?.lastName) updateData.lastName = lastName;
             if (phone !== user?.phone) updateData.phone = phone;
@@ -101,7 +94,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                 ) : (
                     <>
                         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                            <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                            <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                         </TouchableOpacity>
                         <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Your Details</AppText>
                         <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.headerSideBtn}>
@@ -127,7 +120,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                     <AppText variant="cardTitle" color={NAVY}>
                         {user?.firstName} {user?.lastName}
                     </AppText>
-                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: 2 }}>
+                    <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: r(2) }}>
                         {user?.email}
                     </AppText>
                 </View>
@@ -184,12 +177,12 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                             <AppText variant="body" color={Colors.textOnLightSecondary} style={{ flex: 1 }} numberOfLines={1}>
                                 {user?.email}
                             </AppText>
-                            {user?.emailVerified ? (
-                                <View style={styles.verifiedPill}>
-                                    <Ionicons name="checkmark-circle" size={13} color={Colors.success} />
-                                    <AppText variant="captionMedium" color={Colors.success}>Verified</AppText>
-                                </View>
-                            ) : (
+                                {user?.emailVerified ? (
+                                    <View style={styles.verifiedPill}>
+                                        <Ionicons name="checkmark-circle" size={rf(13)} color={Colors.success} />
+                                        <AppText variant="captionMedium" color={Colors.success}>Verified</AppText>
+                                    </View>
+                                ) : (
                                 <TouchableOpacity
                                     style={styles.verifyBtn}
                                     onPress={() => navigation.navigate('EmailVerification', { email: user?.email || '' })}
@@ -221,7 +214,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                             />
                             <View style={{ flex: 1, position: 'relative' }}>
                                 <TextInput
-                                    style={[styles.phoneInput, !isEditing && styles.fieldInputReadOnly, { paddingRight: 90 }]}
+                                    style={[styles.phoneInput, !isEditing && styles.fieldInputReadOnly, { paddingRight: r(90) }]}
                                     value={phone}
                                     onChangeText={setPhone}
                                     placeholder="Phone number"
@@ -232,7 +225,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                                 />
                                 {user?.phoneVerified ? (
                                     <View style={styles.phoneVerifiedPill}>
-                                        <Ionicons name="checkmark-circle" size={13} color={Colors.success} />
+                                        <Ionicons name="checkmark-circle" size={rf(13)} color={Colors.success} />
                                         <AppText variant="captionMedium" color={Colors.success}>Verified</AppText>
                                     </View>
                                 ) : (
@@ -258,10 +251,10 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                 <View style={styles.card}>
                     <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('ChangePassword')} activeOpacity={0.7}>
                         <View style={styles.menuIconWrap}>
-                            <Ionicons name="lock-closed-outline" size={18} color={NAVY} />
+                            <Ionicons name="lock-closed-outline" size={rf(18)} color={NAVY} />
                         </View>
                         <AppText variant="bodyMedium" color={Colors.textOnLight} style={{ flex: 1 }}>Change Password</AppText>
-                        <Ionicons name="chevron-forward" size={17} color={Colors.textOnLightTertiary} />
+                        <Ionicons name="chevron-forward" size={rf(17)} color={Colors.textOnLightTertiary} />
                     </TouchableOpacity>
                 </View>
 
@@ -275,10 +268,10 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                 <View style={styles.card}>
                     <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('DeleteAccount')} activeOpacity={0.7}>
                         <View style={[styles.menuIconWrap, { backgroundColor: Colors.errorFaded }]}>
-                            <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                            <Ionicons name="trash-outline" size={rf(18)} color={Colors.error} />
                         </View>
                         <AppText variant="bodyMedium" color={Colors.error} style={{ flex: 1 }}>Delete Account</AppText>
-                        <Ionicons name="chevron-forward" size={17} color={Colors.error} />
+                        <Ionicons name="chevron-forward" size={rf(17)} color={Colors.error} />
                     </TouchableOpacity>
                 </View>
 
@@ -298,19 +291,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
-    headerSideBtn: { minWidth: 52, alignItems: 'flex-end' },
+    headerSideBtn: { minWidth: r(52), alignItems: 'flex-end' },
 
     // ── Scroll ────────────────────────────────────────────────────────────────
     scroll: { flex: 1 },
@@ -320,30 +311,26 @@ const styles = StyleSheet.create({
     avatarBlock: {
         alignItems: 'center',
         paddingVertical: Spacing['5'],
-        marginBottom: Spacing['2'],
-    },
+        marginBottom: Spacing['2'] },
     avatarRing: {
-        width: 80, height: 80,
+        width: r(80), height: r(80),
         borderRadius: Radius.full,
         borderWidth: 2,
         borderColor: Colors.cardBorder,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: Spacing['3'],
-        backgroundColor: Colors.cardBackground,
-    },
+        backgroundColor: Colors.cardBackground },
     avatar: {
-        width: 68, height: 68,
+        width: r(68), height: r(68),
         borderRadius: Radius.full,
         backgroundColor: NAVY,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     initials: {
-        fontSize: 24,
+        fontSize: rf(24),
         fontFamily: 'Inter_700Bold',
-        color: Colors.white,
-    },
+        color: Colors.white },
 
     // ── Section labels ────────────────────────────────────────────────────────
     sectionLabelRow: {
@@ -351,9 +338,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
-        marginTop: Spacing['1'],
-    },
-    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+        marginTop: Spacing['1'] },
+    sectionTick: { width: r(3), height: r(14), backgroundColor: NAVY, borderRadius: r(2) },
     sectionLabel: { letterSpacing: 0.8 },
 
     // ── Card ──────────────────────────────────────────────────────────────────
@@ -365,106 +351,92 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['4'],
         marginBottom: Spacing['4'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
-    divider: { height: 1, backgroundColor: Colors.cardBorder },
+        elevation: 2 },
+    divider: { height: r(1), backgroundColor: Colors.cardBorder },
 
     // ── Field rows ────────────────────────────────────────────────────────────
     fieldRow: { paddingVertical: Spacing['3'] },
     fieldLabel: {
         letterSpacing: 0.8,
-        fontSize: 10,
-        marginBottom: 5,
-    },
+        fontSize: rf(10),
+        marginBottom: r(5) },
     fieldValueRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing['2'],
-    },
+        gap: Spacing['2'] },
     fieldInput: {
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        paddingVertical: 4,
-    },
+        paddingVertical: r(4) },
     fieldInputReadOnly: {
-        color: Colors.textOnLightSecondary,
-    },
-    helperText: { marginTop: 4 },
+        color: Colors.textOnLightSecondary },
+    helperText: { marginTop: r(4) },
 
     // Verified / verify pills
     verifiedPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: Spacing['1'],
         backgroundColor: Colors.successFaded,
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 4,
-    },
+        paddingVertical: r(4) },
     verifyBtn: {
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
-        paddingVertical: 4,
-        borderRadius: Radius.full,
-    },
+        paddingVertical: r(4),
+        borderRadius: Radius.full },
 
     // Phone row
     phoneRow: { flexDirection: 'row', gap: Spacing['2'] },
     countryCodeInput: {
-        width: 64,
+        width: r(64),
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        paddingVertical: 4,
-        textAlign: 'center',
-    },
+        paddingVertical: r(4),
+        textAlign: 'center' },
     phoneInput: {
         flex: 1,
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        paddingVertical: 4,
-    },
+        paddingVertical: r(4) },
     phoneVerifiedPill: {
         position: 'absolute',
-        right: 0,
-        top: 3,
+        right: r(0),
+        top: r(3),
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: Spacing['1'],
         backgroundColor: Colors.successFaded,
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 4,
-    },
+        paddingVertical: r(4) },
     phoneVerifyBtn: {
         position: 'absolute',
-        right: 0,
-        top: 1,
+        right: r(0),
+        top: r(1),
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
-        paddingVertical: 4,
-        borderRadius: Radius.full,
-    },
+        paddingVertical: r(4),
+        borderRadius: Radius.full },
 
     // Menu rows (Security / Danger Zone)
     menuRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     menuIconWrap: {
-        width: 34, height: 34,
+        width: r(34), height: r(34),
         borderRadius: Radius.sm,
         backgroundColor: 'rgba(15,51,70,0.07)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-});
+        alignItems: 'center' } });
 
 export default YourDetailsScreen;

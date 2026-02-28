@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-    View,
-    FlatList,
-    ActivityIndicator,
-    SafeAreaView,
-    TouchableOpacity,
-    StyleSheet,
-} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { restaurantService } from '../../services/api';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
 import { RouteProp } from '@react-navigation/native';
 import { DiscoverStackParamList } from '../../navigation/AppNavigator';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { CachedImage } from '../../components/CachedImage';
-import { Colors, Radius, Spacing } from '../../theme';
+import { Colors, FontSize, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -128,7 +123,7 @@ const NearbyRestaurantsScreen: React.FC<Props> = ({ route, navigation }) => {
                         Within {radius}km
                     </AppText>
                 </View>
-                <View style={{ width: 32 }} />
+                <View style={{ width: r(32) }} />
             </View>
 
             {loading ? (
@@ -176,9 +171,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['5'],
         paddingTop: Spacing['3'],
-        paddingBottom: Spacing['3'],
-    },
-    backBtn: { width: 32, justifyContent: 'center' },
+        paddingBottom: Spacing['3'] },
+    backBtn: { width: r(32), justifyContent: 'center' },
 
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing['5'] },
 
@@ -187,9 +181,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['2'],
-        marginBottom: Spacing['3'],
-    },
-    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+        marginBottom: Spacing['3'] },
+    sectionTick: { width: r(3), height: r(14), backgroundColor: NAVY, borderRadius: r(2) },
 
     // ── Card ──────────────────────────────────────────────────────────────────
     card: {
@@ -201,28 +194,25 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.08,
         shadowRadius: 10,
-        elevation: 3,
-    },
-    image: { width: 108, height: 108 },
-    info: { flex: 1, padding: Spacing['3'], justifyContent: 'center', gap: 4 },
-    name: { fontSize: 15 },
+        elevation: 3 },
+    image: { width: r(108), height: r(108) },
+    info: { flex: 1, padding: Spacing['3'], justifyContent: 'center', gap: Spacing['1'] },
+    name: { fontSize: FontSize.md },
     ratingRow: { flexDirection: 'row', alignItems: 'center' },
-    star: { color: Colors.star, fontSize: 12 },
-    address: {},
-    metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 2 },
-    dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.cardBorder, marginHorizontal: 5 },
+    star: { color: Colors.star, fontSize: FontSize.sm },
+    address: { },
+    metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: r(2) },
+    dot: { width: r(3), height: r(3), borderRadius: r(2), backgroundColor: Colors.cardBorder, marginHorizontal: r(5) },
     pricePill: {
         backgroundColor: 'rgba(15,51,70,0.07)',
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.12)',
         borderRadius: Radius.full,
         paddingHorizontal: Spacing['2'],
-        paddingVertical: 2,
-    },
-    footer: { paddingVertical: Spacing['5'], alignItems: 'center' },
-});
+        paddingVertical: r(2) },
+    footer: { paddingVertical: Spacing['5'], alignItems: 'center' } });
 
 export default NearbyRestaurantsScreen;

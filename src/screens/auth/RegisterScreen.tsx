@@ -1,19 +1,13 @@
+
+    
 // src/screens/auth/RegisterScreen.tsx
 import React, {useState} from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {useAuth} from '../../context/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { FontSize, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -29,6 +23,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const {register} = useAuth();
 
   const handleRegister = async () => {
@@ -106,7 +102,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   };
 
   const isValidPhone = (phone: string) => {
-    const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,}$/;
+    const phoneRegex = /^[+]?[\d\s-()]{8 }$/;
     return phoneRegex.test(phone);
   };
 
@@ -115,11 +111,19 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   };
 
   const handleTermsPress = () => {
-    Alert.alert('Terms of Service', 'Terms of Service content would be displayed here.');
+    Linking.openURL('https://dineeaseorganization.github.io/dineease-privacy-policy/terms-and-conditions').catch(() => {
+      Alert.alert('Error', 'Unable to open the terms and conditions right now.');
+    });
   };
 
   const handlePrivacyPress = () => {
-    Alert.alert('Privacy Policy', 'Privacy Policy content would be displayed here.');
+    Linking.openURL('https://dineeaseorganization.github.io/dineease-privacy-policy/').catch(() => {
+      Alert.alert('Error', 'Unable to open the privacy policy right now.');
+    });
+  };
+
+  const handleSocialPress = (provider: 'Apple' | 'Google') => {
+    Alert.alert('Feature coming soon', `${provider} sign-in will be available soon.`);
   };
 
   const handleGoBack = () => {
@@ -152,7 +156,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
             {/* Registration Form */}
             <View style={styles.form}>
               <View style={styles.nameRow}>
-                <View style={[styles.inputContainer, {flex: 1, marginRight: 8}]}>
+                <View style={[styles.inputContainer, {flex: 1, marginRight: Spacing['2']}]}>
                   <Text style={styles.inputLabel}>First Name</Text>
                   <TextInput
                     style={styles.input}
@@ -163,7 +167,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                     editable={!isLoading}
                   />
                 </View>
-                <View style={[styles.inputContainer, {flex: 1, marginLeft: 8}]}>
+                <View style={[styles.inputContainer, {flex: 1, marginLeft: Spacing['2']}]}>
                   <Text style={styles.inputLabel}>Last Name</Text>
                   <TextInput
                     style={styles.input}
@@ -214,30 +218,56 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Create a password (min. 8 characters)"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
+                <View style={styles.passwordWrap}>
+                  <TextInput
+                    style={styles.input}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Create a password (min. 8 characters)"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowPassword((v) => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={rf(18)}
+                      color="#999"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Confirm Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Confirm your password"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
+                <View style={styles.passwordWrap}>
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm your password"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowConfirmPassword((v) => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={rf(18)}
+                      color="#999"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Terms Checkbox */}
@@ -286,10 +316,20 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               </View>
 
               <View style={styles.socialButtons}>
-                <TouchableOpacity style={styles.socialButton} disabled={isLoading}>
+                <TouchableOpacity
+                  style={styles.socialButtonDisabled}
+                  disabled={isLoading}
+                  onPress={() => handleSocialPress('Apple')}
+                  activeOpacity={0.75}
+                >
                   <Text style={styles.socialButtonText}>📱 Apple</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.socialButton} disabled={isLoading}>
+                <TouchableOpacity
+                  style={styles.socialButtonDisabled}
+                  disabled={isLoading}
+                  onPress={() => handleSocialPress('Google')}
+                  activeOpacity={0.75}
+                >
                   <Text style={styles.socialButtonText}>🔵 Google</Text>
                 </TouchableOpacity>
               </View>
@@ -312,196 +352,179 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
+    backgroundColor: '#f8f9fa' },
   keyboardAvoidingView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContainer: {
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   content: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-  },
+    paddingHorizontal: Spacing['6'],
+    paddingVertical: Spacing['5'] },
   header: {
-    marginBottom: 32,
-  },
+    marginBottom: Spacing['8'] },
   backButton: {
     alignSelf: 'flex-start',
-    marginBottom: 20,
-    paddingVertical: 10,
-  },
+    marginBottom: Spacing['5'],
+    paddingVertical: r(10) },
   backButtonText: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#007AFF',
-    fontWeight: '500',
-  },
+    fontWeight: '500' },
   title: {
-    fontSize: 32,
+    fontSize: FontSize['5xl'],
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 8,
-  },
+    marginBottom: Spacing['2'] },
   subtitle: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     color: '#666',
-    lineHeight: 22,
-  },
+    lineHeight: r(22) },
   form: {
-    marginBottom: 32,
-  },
+    marginBottom: Spacing['8'] },
   nameRow: {
-    flexDirection: 'row',
-  },
+    flexDirection: 'row' },
   inputContainer: {
-    marginBottom: 20,
-  },
+    marginBottom: Spacing['5'] },
   inputLabel: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     fontWeight: '500',
     color: '#333',
-    marginBottom: 8,
-  },
+    marginBottom: Spacing['2'] },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    backgroundColor: 'white',
+    borderRadius: r(12),
+    paddingHorizontal: Spacing['4'],
+    paddingVertical: r(14),
+    paddingRight: r(44),
+    fontSize: FontSize.lg,
+    backgroundColor: 'white' },
+  passwordWrap: { position: 'relative' },
+  eyeBtn: {
+    position: 'absolute',
+    right: Spacing['3'],
+    top: r(12),
+    padding: r(2),
   },
   phoneInputContainer: {
     flexDirection: 'row',
-    gap: 8,
-  },
+    gap: Spacing['2'] },
   countryCodeInput: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderRadius: r(12),
+    paddingHorizontal: Spacing['4'],
+    paddingVertical: r(14),
+    fontSize: FontSize.lg,
     backgroundColor: 'white',
-    width: 80,
-  },
+    width: r(80) },
   phoneInput: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    backgroundColor: 'white',
-  },
+    borderRadius: r(12),
+    paddingHorizontal: Spacing['4'],
+    paddingVertical: r(14),
+    fontSize: FontSize.lg,
+    backgroundColor: 'white' },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 24,
-  },
+    marginBottom: Spacing['6'] },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: r(20),
+    height: r(20),
     borderWidth: 2,
     borderColor: '#ddd',
-    borderRadius: 4,
-    marginRight: 12,
-    marginTop: 2,
+    borderRadius: r(4),
+    marginRight: Spacing['3'],
+    marginTop: r(2),
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   checkboxChecked: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
+    borderColor: '#007AFF' },
   checkmark: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+    fontSize: FontSize.sm,
+    fontWeight: 'bold' },
   termsTextContainer: {
     flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   termsText: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#666',
-    lineHeight: 20,
-  },
+    lineHeight: r(20) },
   termsLink: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#007AFF',
     fontWeight: '500',
-    lineHeight: 20,
-  },
+    lineHeight: r(20) },
   registerButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+    paddingVertical: Spacing['4'],
+    borderRadius: r(12),
+    alignItems: 'center' },
   registerButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
+    backgroundColor: '#ccc' },
   registerButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    fontSize: FontSize.lg,
+    fontWeight: 'bold' },
   socialContainer: {
-    marginBottom: 32,
-  },
+    marginBottom: Spacing['8'] },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-  },
+    marginBottom: Spacing['5'] },
   divider: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
+    height: r(1),
+    backgroundColor: '#ddd' },
   dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#666',
-  },
+    marginHorizontal: Spacing['4'],
+    fontSize: FontSize.base,
+    color: '#666' },
   socialButtons: {
     flexDirection: 'row',
-    gap: 12,
-  },
+    gap: Spacing['3'] },
   socialButton: {
     flex: 1,
     backgroundColor: 'white',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: r(14),
+    borderRadius: r(12),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd' },
+  socialButtonDisabled: {
+    flex: 1,
+    backgroundColor: '#f2f3f5',
+    paddingVertical: r(14),
+    borderRadius: r(12),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
-  },
+    opacity: 0.7 },
   socialButtonText: {
-    fontSize: 16,
+    fontSize: FontSize.lg,
     fontWeight: '500',
-    color: '#333',
-  },
+    color: '#333' },
   signInContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   signInText: {
-    fontSize: 14,
-    color: '#666',
-  },
+    fontSize: FontSize.base,
+    color: '#666' },
   signInLink: {
-    fontSize: 14,
+    fontSize: FontSize.base,
     color: '#007AFF',
-    fontWeight: '500',
-  },
-});
+    fontWeight: '500' } });
 
 export default RegisterScreen;
+
+
+
+

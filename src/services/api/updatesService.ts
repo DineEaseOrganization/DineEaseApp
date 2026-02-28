@@ -1,7 +1,6 @@
 // src/services/api/updatesService.ts
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
-import axios from 'axios';
 
 // Types matching backend DTOs
 export interface MobileUpdate {

@@ -1,19 +1,12 @@
 // src/screens/profile/ChangePasswordScreen.tsx
 import React, { useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { passwordService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 
 const NAVY = Colors.primary;
@@ -107,8 +100,7 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
     const canSubmit = !!currentPassword && !!newPassword && !!confirmPassword && !isLoading;
 
     const PasswordField = ({
-        label, value, onChange, show, onToggle, placeholder,
-    }: {
+        label, value, onChange, show, onToggle, placeholder }: {
         label: string; value: string; onChange: (v: string) => void;
         show: boolean; onToggle: () => void; placeholder: string;
     }) => (
@@ -126,7 +118,7 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
                     autoCorrect={false}
                 />
                 <TouchableOpacity style={styles.eyeBtn} onPress={onToggle} activeOpacity={0.7}>
-                    <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={19} color={Colors.textOnLightSecondary} />
+                    <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={rf(19)} color={Colors.textOnLightSecondary} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -138,10 +130,10 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
             {/* ── Navy header ── */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.white} />
+                    <Ionicons name="chevron-back" size={rf(20)} color={Colors.white} />
                 </TouchableOpacity>
                 <AppText variant="sectionTitle" color={Colors.white} style={styles.headerTitle}>Change Password</AppText>
-                <View style={{ width: 36 }} />
+                <View style={{ width: r(36) }} />
             </View>
 
             <ScrollView
@@ -193,8 +185,7 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
                                     styles.strengthBarFill,
                                     {
                                         width: passwordStrength ? strengthWidth(passwordStrength.strength) : '0%',
-                                        backgroundColor: passwordStrength ? strengthColor(passwordStrength.strength) : Colors.cardBorder,
-                                    },
+                                        backgroundColor: passwordStrength ? strengthColor(passwordStrength.strength) : Colors.cardBorder },
                                 ]} />
                             </View>
                             {checkingStrength ? (
@@ -210,12 +201,12 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
                     {/* Violations */}
                     {passwordStrength && passwordStrength.violations.length > 0 && (
                         <View style={styles.violationsBox}>
-                            <AppText variant="captionMedium" color={Colors.error} style={{ marginBottom: 6 }}>
+                            <AppText variant="captionMedium" color={Colors.error} style={{ marginBottom: r(6) }}>
                                 Password must contain:
                             </AppText>
                             {passwordStrength.violations.map((v, i) => (
                                 <View key={i} style={styles.checkRow}>
-                                    <Ionicons name="close-circle" size={14} color={Colors.error} />
+                                    <Ionicons name="close-circle" size={rf(14)} color={Colors.error} />
                                     <AppText variant="caption" color={Colors.error}>{v}</AppText>
                                 </View>
                             ))}
@@ -224,10 +215,10 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
 
                     {/* Suggestions */}
                     {passwordStrength && passwordStrength.suggestions.length > 0 && (
-                        <View style={{ gap: 6, marginTop: Spacing['2'] }}>
+                        <View style={{ gap: r(6), marginTop: Spacing['2'] }}>
                             {passwordStrength.suggestions.map((s, i) => (
                                 <View key={i} style={styles.checkRow}>
-                                    <Ionicons name="information-circle-outline" size={14} color={NAVY} />
+                                    <Ionicons name="information-circle-outline" size={rf(14)} color={NAVY} />
                                     <AppText variant="caption" color={Colors.textOnLightSecondary}>{s}</AppText>
                                 </View>
                             ))}
@@ -253,7 +244,7 @@ const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ navigation 
 
                 {/* Info tile */}
                 <View style={styles.infoBanner}>
-                    <Ionicons name="shield-checkmark-outline" size={18} color={NAVY} />
+                    <Ionicons name="shield-checkmark-outline" size={rf(18)} color={NAVY} />
                     <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ flex: 1 }}>
                         For security, you may be logged out from all devices after changing your password.
                     </AppText>
@@ -287,17 +278,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing['4'],
-        paddingVertical: Spacing['3'],
-    },
+        paddingVertical: Spacing['3'] },
     backBtn: {
-        width: 36, height: 36,
+        width: r(36), height: r(36),
         borderRadius: Radius.full,
         backgroundColor: 'rgba(255,255,255,0.15)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
+        alignItems: 'center' },
     headerTitle: { fontSize: FontSize.lg },
 
     scroll: { flex: 1 },
@@ -308,9 +297,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing['2'],
         marginBottom: Spacing['2'],
-        marginTop: Spacing['1'],
-    },
-    sectionTick: { width: 3, height: 14, backgroundColor: NAVY, borderRadius: 2 },
+        marginTop: Spacing['1'] },
+    sectionTick: { width: r(3), height: r(14), backgroundColor: NAVY, borderRadius: r(2) },
     sectionLabel: { letterSpacing: 0.8 },
 
     card: {
@@ -322,20 +310,18 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing['2'],
         marginBottom: Spacing['4'],
         shadowColor: '#1a2e3b',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: r(0), height: r(2) },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
-    },
-    divider: { height: 1, backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
+        elevation: 2 },
+    divider: { height: r(1), backgroundColor: Colors.cardBorder, marginVertical: Spacing['2'] },
 
     fieldGroup: { paddingTop: Spacing['3'] },
     fieldLabel: {
         letterSpacing: 0.8,
-        marginBottom: 6,
+        marginBottom: r(6),
         textTransform: 'uppercase',
-        fontSize: 11,
-    },
+        fontSize: FontSize.xs },
     passwordWrap: { position: 'relative' },
     passwordInput: {
         backgroundColor: Colors.cardBackground,
@@ -343,33 +329,29 @@ const styles = StyleSheet.create({
         borderColor: Colors.cardBorder,
         borderRadius: Radius.md,
         paddingHorizontal: Spacing['3'],
-        paddingVertical: 11,
-        paddingRight: 44,
+        paddingVertical: r(11),
+        paddingRight: r(44),
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
-        color: Colors.textOnLight,
-    },
+        color: Colors.textOnLight },
     eyeBtn: {
         position: 'absolute',
-        right: 12,
-        top: 11,
-        padding: 2,
-    },
+        right: r(12),
+        top: r(11),
+        padding: r(2) },
 
     strengthSection: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['3'],
-        marginTop: Spacing['2'],
-    },
+        marginTop: Spacing['2'] },
     strengthBarBg: {
         flex: 1,
-        height: 4,
+        height: r(4),
         backgroundColor: Colors.cardBorder,
-        borderRadius: 2,
-        overflow: 'hidden',
-    },
-    strengthBarFill: { height: '100%', borderRadius: 2 },
+        borderRadius: r(2),
+        overflow: 'hidden' },
+    strengthBarFill: { height: '100%', borderRadius: r(2) },
 
     violationsBox: {
         marginTop: Spacing['2'],
@@ -377,14 +359,12 @@ const styles = StyleSheet.create({
         borderRadius: Radius.md,
         borderWidth: 1,
         borderColor: Colors.error,
-        padding: Spacing['3'],
-    },
+        padding: Spacing['3'] },
     checkRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: Spacing['1'] + 2,
-        marginBottom: 3,
-    },
+        gap: Spacing['1'] + r(2),
+        marginBottom: r(3) },
 
     infoBanner: {
         flexDirection: 'row',
@@ -395,25 +375,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(15,51,70,0.10)',
         padding: Spacing['3'],
-        marginBottom: Spacing['4'],
-    },
+        marginBottom: Spacing['4'] },
 
     submitBtn: {
         backgroundColor: Colors.accent,
-        paddingVertical: Spacing['3'] + 2,
+        paddingVertical: Spacing['3'] + r(2),
         borderRadius: Radius.lg,
         alignItems: 'center',
         shadowColor: Colors.accent,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: r(0), height: r(3) },
         shadowOpacity: 0.3,
         shadowRadius: 6,
-        elevation: 4,
-    },
+        elevation: 4 },
     submitBtnDisabled: {
         backgroundColor: Colors.textOnLightTertiary,
         shadowOpacity: 0,
-        elevation: 0,
-    },
-});
+        elevation: 0 } });
 
 export default ChangePasswordScreen;

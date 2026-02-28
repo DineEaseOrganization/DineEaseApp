@@ -8,7 +8,8 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
+import { Colors, Radius, Spacing } from '../../theme';
+import { r } from '../../theme/responsive';
 import AppText from './AppText';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
 
   // Sizes
   size_sm: {
-    paddingVertical: Spacing['1'] + 2,
+    paddingVertical: r(6),
     paddingHorizontal: Spacing['3'],
     borderRadius: Radius.md,
   },
