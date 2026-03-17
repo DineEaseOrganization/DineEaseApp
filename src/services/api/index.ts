@@ -12,6 +12,7 @@ export type { AvailabilityStreamCallbacks, AvailabilitySubscription } from './av
 export { favoritesService, FavoritesService } from './favoritesService';
 export { updatesService } from './updatesService';
 export type { MobileUpdate, UpdatesPage, ActionButton, CreateUpdate } from './updatesService';
+export { paymentService, PaymentService } from './paymentService';
 
 export * from './deviceService';
 

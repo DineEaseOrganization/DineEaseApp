@@ -356,9 +356,12 @@ export interface AvailabilitySlotsResponse {
 export enum ReservationState {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
+  ON_HOLD = 'ON_HOLD',
   CANCELLED = 'CANCELLED',
+  CANCELLED_BY_RESTAURANT = 'CANCELLED_BY_RESTAURANT',
   COMPLETED = 'COMPLETED',
   NO_SHOW = 'NO_SHOW',
+  CHECKED_IN = 'CHECKED_IN',
 }
 
 export interface ReservationCustomerDto {
@@ -388,6 +391,45 @@ export interface ReservationDto {
   comments?: string;
   reservationTypeId?: number;
   tags?: ReservationTagMapping[];
+  /** Amount charged (deposit/booking fee) or held (cancellation fee). Null for non-payment bookings. */
+  paymentAmount?: number;
+  /** ISO-4217 currency code, e.g. "GBP". */
+  paymentCurrency?: string;
+  /** "DEPOSIT", "BOOKING_FEE", or "CANCELLATION_FEE". */
+  paymentTransactionType?: string;
+  /**
+   * The DineEasePayments policy ID that was active when this reservation was booked.
+   * Null for staff-created reservations and legacy bookings.
+   *
+   * Use this to fetch the exact historical policy on-demand via
+   * GET /mobile/reservations/policy/{paymentPolicyId} — only when needed
+   * (e.g. the user taps Cancel and needs to see the correct refund terms).
+   */
+  paymentPolicyId?: number;
+}
+
+/**
+ * Lightweight policy details returned by GET /mobile/reservations/policy/{policyId}.
+ *
+ * Mirrors PolicyCheckResponse from DineEaseProcessing. Fetched lazily by the app
+ * only when the user is about to cancel a payment-enabled reservation.
+ */
+export interface ReservationPolicyDetails {
+  policyId?: number;
+  enabled?: boolean;
+  // Cancellation fee
+  cancelFeeEnabled?: boolean;
+  cancelWindowHours?: number;
+  cancellationFeeTiers?: CancellationFeeTier[];
+  // Deposit refund
+  depositEnabled?: boolean;
+  depositWindowHours?: number;
+  depositRefundPercent?: number;
+  depositRefundTiers?: DepositRefundTier[];
+  // Booking fee refund
+  bookingFeeEnabled?: boolean;
+  bookingFeeWindowHours?: number;
+  bookingFeeRefundPercent?: number;
 }
 
 export interface ReservationListResponse {
@@ -470,4 +512,145 @@ export interface ApiErrorResponse {
   message: string;
   errors?: Record<string, string[]>;
 }
+
+// ============ PAYMENT API TYPES ============
+
+/** Mirrors TransactionType enum from DineEasePayments */
+export type TransactionType = 'DEPOSIT' | 'BOOKING_FEE' | 'CANCELLATION_FEE' | 'REFUND' | 'RELEASE';
+
+/** Mirrors TransactionStatus enum from DineEasePayments */
+export type TransactionStatus =
+  | 'PENDING'
+  | 'AUTHORIZED'
+  | 'CAPTURED'
+  | 'FAILED'
+  | 'REFUNDED'
+  | 'RELEASED'
+  | 'CANCELLED';
+
+/** Mirrors FeeType enum */
+export type FeeType = 'FIXED' | 'PERCENTAGE' | 'PER_PERSON';
+
+/** Mirrors BookingFeeType enum */
+export type BookingFeeType = 'FIXED' | 'PER_PERSON';
+
+/** A single tier in a graduated cancellation fee schedule. */
+export interface CancellationFeeTier {
+  /** Hours before reservation — cancellations within this threshold are charged at chargePercent. */
+  hoursBefore: number;
+  /** Percentage of the cancellation fee to charge (0-100). */
+  chargePercent: number;
+}
+
+/** A single tier in a graduated deposit refund schedule. */
+export interface DepositRefundTier {
+  tierId?: number;
+  /** Hours before reservation — cancellations within this threshold receive refundPercent of the deposit. */
+  hoursBefore: number;
+  /** Percentage of the deposit to refund (0-100). 0 = keep deposit; 100 = full refund. */
+  refundPercent: number;
+}
+
+/** The effective payment policy returned by the backend */
+export interface PaymentPolicyResponse {
+  policyId: number;
+  restaurantId: number;
+  policyName: string;
+  policyLevel: 'RESTAURANT' | 'SECTION';
+  sectionId: number | null;
+  sectionName: string | null;
+  enabled: boolean;
+  depositEnabled: boolean;
+  depositType: FeeType | null;
+  depositValue: number | null;
+  depositCurrency: string;
+  bookingFeeEnabled: boolean;
+  bookingFeeType: BookingFeeType | null;
+  bookingFeeValue: number | null;
+  bookingFeeCurrency: string;
+  cancelFeeEnabled: boolean;
+  cancelFeeType: FeeType | null;
+  cancelFeeValue: number | null;
+  cancelFeeCurrency: string;
+  cancelWindowHours: number | null;
+  cancelNoShowCharge: boolean;
+  /** Graduated cancellation fee tiers, sorted by hoursBefore ascending. */
+  cancellationFeeTiers?: CancellationFeeTier[];
+  /** Hours before the reservation within which a full deposit refund is given on cancellation */
+  depositWindowHours: number | null;
+  /** Percentage of the deposit refunded when cancelling outside the free window (0-100) */
+  depositRefundPercent: number | null;
+  /** Graduated deposit refund tiers. Non-empty takes precedence over flat depositWindowHours/depositRefundPercent. */
+  depositRefundTiers?: DepositRefundTier[];
+  /** Hours before the reservation within which a full booking fee refund is given on cancellation */
+  bookingFeeWindowHours: number | null;
+  /** Percentage of the booking fee refunded when cancelling outside the free window (0-100) */
+  bookingFeeRefundPercent: number | null;
+  stripeAccountId: string | null;
+}
+
+/** Response from POST /payments/customer/setup (Stripe Customer + SetupIntent) */
+export interface CustomerSetupResponse {
+  stripeCustomerId: string;
+  setupIntentId: string;
+  clientSecret: string;    // SetupIntent client_secret — used to confirm card with Stripe SDK
+  status: string;
+}
+
+/** A single saved card returned by GET /payments/customer/me/payment-methods */
+export interface SavedCard {
+  paymentMethodId: string; // Stripe PaymentMethod ID (pm_xxx) — used to remove the card
+  last4: string;
+  brand: string;     // lowercase: "visa", "mastercard", "amex", etc.
+  expMonth: number;
+  expYear: number;   // full year, e.g. 2034
+}
+
+/** Response from GET /payments/customer/me/payment-methods */
+export interface ListPaymentMethodsResponse {
+  hasCard: boolean;
+  cards: SavedCard[];
+}
+
+/** Response from GET /payments/customer/me/ephemeral-key */
+export interface EphemeralKeyResponse {
+  /** Stripe Customer ID (cus_xxx) — passed as customerId to initPaymentSheet */
+  customerId: string;
+  /** Short-lived secret for the Stripe React Native SDK's Payment Sheet */
+  ephemeralKeySecret: string;
+}
+
+/** Response from POST /payments/intent/create (PaymentIntent) */
+export interface CreatePaymentIntentResponse {
+  transactionId: number;
+  paymentIntentId: string;
+  clientSecret: string;    // PaymentIntent client_secret — used to confirm payment
+  amount: number;          // In major currency units (e.g. 10.00 for £10)
+  currency: string;
+  transactionType: TransactionType;
+  captureDeadlineIso: string | null;  // ISO timestamp — only present for CANCELLATION_FEE holds
+}
+
+/**
+ * Extended booking response that includes optional Stripe fields.
+ * processingService.createReservation() returns this shape when
+ * CommitMobileReservationProcessor attaches payment data.
+ */
+export interface BookingResponseWithPayment {
+  reservationId: number;
+  /** Present when a new Stripe Customer was created — complete card setup */
+  setupClientSecret?: string;
+  stripeCustomerId?: string;
+  /** Present when an immediate payment was created — confirm with Stripe SDK */
+  paymentClientSecret?: string;
+  paymentAmount?: number;
+  paymentCurrency?: string;
+  paymentTransactionType?: TransactionType;
+  /** Present when a cancellation fee hold was placed */
+  holdClientSecret?: string;
+  holdAmount?: number;
+  holdCurrency?: string;
+  holdCaptureDeadline?: string;
+}
+
 

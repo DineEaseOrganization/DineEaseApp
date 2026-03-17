@@ -50,6 +50,8 @@ export const Colors = {
   errorFaded: 'rgba(231, 76, 60, 0.15)',
   warning: '#f39c12',
   warningFaded: 'rgba(243, 156, 18, 0.15)',
+  orange: '#e67e22',
+  orangeFaded: 'rgba(230, 126, 34, 0.15)',
 
   // ── Semantic ──────────────────────────────────────────────────────────────
   star: '#FFB800',           // Star ratings

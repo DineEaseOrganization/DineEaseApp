@@ -34,6 +34,7 @@ import YourDetailsScreen from "../screens/profile/YourDetailsScreen";
 import AccountSettingsScreen from "../screens/profile/AccountSettings";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 import DeleteAccountScreen from "../screens/profile/DeleteAccountScreen";
+import PaymentMethodsScreen from "../screens/profile/PaymentMethodsScreen";
 import CuisineRestaurantsScreen from '../screens/restaurants/CuisineRestaurantsScreen';
 import NearbyRestaurantsScreen from "../screens/restaurants/NearbyRestaurantsScreen";
 
@@ -47,21 +48,32 @@ export type RootStackParamList = {
   ResetPassword: { email: string };
   RestaurantDetail: { restaurant: Restaurant };
   BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number };
-  BookingConfirmation: {
-    booking: {
-      restaurant: Restaurant;
-      date: Date;
-      time: string;
-      partySize: number;
-      customerName: string;
-      customerPhone: string;
-      customerEmail?: string;
-      specialRequests?: string;
-      confirmationCode: string;
-    };
-  };
+  BookingConfirmation: { booking: BookingConfirmationParams };
   ReviewScreen: { reservation: Reservation };
 };
+
+/** Booking confirmation payload — shared across stacks */
+export interface BookingConfirmationParams {
+  restaurant: Restaurant;
+  date: Date;
+  time: string;
+  partySize: number;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  specialRequests?: string;
+  confirmationCode: string;
+  // Payment fields (optional — only present when a policy is active)
+  setupClientSecret?: string;
+  paymentClientSecret?: string;
+  paymentAmount?: number;
+  paymentCurrency?: string;
+  paymentTransactionType?: string;
+  holdClientSecret?: string;
+  holdAmount?: number;
+  holdCurrency?: string;
+  holdCaptureDeadline?: string;
+}
 
 export type DiscoverStackParamList = {
   RestaurantList: undefined;
@@ -78,19 +90,7 @@ export type DiscoverStackParamList = {
     };
     RestaurantDetail: { restaurant: Restaurant; partySize?: number; selectedDate?: Date; selectedTime?: string };
   BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string };
-  BookingConfirmation: {
-    booking: {
-      restaurant: Restaurant;
-      date: Date;
-      time: string;
-      partySize: number;
-      customerName: string;
-      customerPhone: string;
-      customerEmail?: string;
-      specialRequests?: string;
-      confirmationCode: string;
-    };
-  };
+  BookingConfirmation: { booking: BookingConfirmationParams };
   ReviewScreen: { reservation: Reservation; updateId?: number };
 };
 
@@ -103,19 +103,7 @@ export type SearchStackParamList = {
 
 export type BookingsStackParamList = {
   BookingsList: undefined;
-  BookingConfirmation: {
-    booking: {
-      restaurant: Restaurant;
-      date: Date;
-      time: string;
-      partySize: number;
-      customerName: string;
-      customerPhone: string;
-      customerEmail?: string;
-      specialRequests?: string;
-      confirmationCode: string;
-    };
-  };
+  BookingConfirmation: { booking: BookingConfirmationParams };
   ReviewScreen: { reservation: Reservation };
 };
 
@@ -125,25 +113,18 @@ export type ProfileStackParamList = {
   Favorites: undefined;
   RestaurantDetail: { restaurant: Restaurant; partySize?: number; selectedDate?: Date; selectedTime?: string };
   BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string };
-  BookingConfirmation: {
-    booking: {
-      restaurant: Restaurant;
-      date: Date;
-      time: string;
-      partySize: number;
-      customerName: string;
-      customerPhone: string;
-      customerEmail?: string;
-      specialRequests?: string;
-      confirmationCode: string;
-    };
-  };
+  BookingConfirmation: { booking: BookingConfirmationParams };
   AccountSettings: undefined;
   YourDetails: undefined;
   Communications: undefined;
   Devices: undefined;
   ChangePassword: undefined;
   DeleteAccount: undefined;
+  PaymentMethods: {
+    fromBooking?: boolean;
+    setupClientSecret?: string;
+    reservationId?: number;
+  } | undefined;
 };
 
 export type UpdatesStackParamList = {
@@ -422,6 +403,11 @@ const ProtectedProfileStackNavigator: React.FC = () => {
         <ProfileStackNav.Screen
           name="DeleteAccount"
           component={DeleteAccountScreen}
+          options={{headerShown: false}}
+        />
+        <ProfileStackNav.Screen
+          name="PaymentMethods"
+          component={PaymentMethodsScreen}
           options={{headerShown: false}}
         />
       </ProfileStackNav.Navigator>

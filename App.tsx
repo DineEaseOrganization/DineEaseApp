@@ -9,6 +9,7 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { CACHE_CONFIG } from './src/config/cache.config';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider } from './src/context/AuthContext';
@@ -45,19 +46,24 @@ const App = () => {
     }
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <ErrorBoundary>
-                <AuthProvider>
-                    <UpdatesProvider>
-                        <FavoritesProvider>
-                            <View style={styles.appRoot}>
-                                <AppNavigator />
-                            </View>
-                        </FavoritesProvider>
-                    </UpdatesProvider>
-                </AuthProvider>
-            </ErrorBoundary>
-        </QueryClientProvider>
+        <StripeProvider
+            publishableKey={process.env.STRIPE_PUBLISHABLE_KEY ?? ''}
+            merchantIdentifier="merchant.com.dineease"
+        >
+            <QueryClientProvider client={queryClient}>
+                <ErrorBoundary>
+                    <AuthProvider>
+                        <UpdatesProvider>
+                            <FavoritesProvider>
+                                <View style={styles.appRoot}>
+                                    <AppNavigator />
+                                </View>
+                            </FavoritesProvider>
+                        </UpdatesProvider>
+                    </AuthProvider>
+                </ErrorBoundary>
+            </QueryClientProvider>
+        </StripeProvider>
     );
 };
 

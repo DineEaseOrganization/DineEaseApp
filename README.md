@@ -11,8 +11,8 @@
 Open `app.json` and update two fields:
 
 ```json
-"version": "1.2.0",    // user-visible version string (semver: major.minor.patch)
-"versionCode": 3,      // integer — must be HIGHER than the previous release
+"version": "2.0.1",    // user-visible version string (semver: major.minor.patch)
+"versionCode": 4,      // integer — must be HIGHER than the previous release
 ```
 
 > Google Play **rejects** a build with the same `versionCode` as a previous one.
