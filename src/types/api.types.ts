@@ -402,17 +402,19 @@ export interface ReservationDto {
    * Null for staff-created reservations and legacy bookings.
    *
    * Use this to fetch the exact historical policy on-demand via
-   * GET /mobile/reservations/policy/{paymentPolicyId} — only when needed
+   * GET /payments/customer/me/policy/{paymentPolicyId} — only when needed
    * (e.g. the user taps Cancel and needs to see the correct refund terms).
+   * See paymentService.getReservationPolicy().
    */
   paymentPolicyId?: number;
 }
 
 /**
- * Lightweight policy details returned by GET /mobile/reservations/policy/{policyId}.
+ * Lightweight policy details — superseded by PaymentPolicyResponse.
  *
- * Mirrors PolicyCheckResponse from DineEaseProcessing. Fetched lazily by the app
- * only when the user is about to cancel a payment-enabled reservation.
+ * @deprecated Use PaymentPolicyResponse from paymentService.getReservationPolicy()
+ * which calls GET /payments/customer/me/policy/{policyId} directly.
+ * This interface is retained only for any remaining call-sites not yet migrated.
  */
 export interface ReservationPolicyDetails {
   policyId?: number;

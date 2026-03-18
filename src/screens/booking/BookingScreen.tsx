@@ -1,19 +1,33 @@
 // src/screens/booking/BookingScreen.tsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Modal, ActivityIndicator } from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useIsFocused } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
-import { AvailableSlot, BookingResponseWithPayment, ReservationTag, ReservationTagRequest } from '../../types/api.types';
-import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
-import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
+import {
+    AvailableSlot,
+    BookingResponseWithPayment,
+    PaymentPolicyResponse,
+    ReservationTag,
+    ReservationTagRequest
+} from '../../types/api.types';
+import { AvailabilityError, parseAvailabilityError } from '../../utils/errorHandlers';
+import { AllSlotsModal, AvailabilityErrorDisplay, TimeSlotDisplay } from '../../components/availability';
 import { processingService, restaurantService } from '../../services/api';
 import { paymentService } from '../../services/api/paymentService';
-import { PaymentPolicyResponse } from '../../types/api.types';
-import { Colors, Radius, Spacing, FontFamily, FontSize } from '../../theme';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
 import { Ionicons } from '@expo/vector-icons';
@@ -275,7 +289,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 // Silently cancel the ON_HOLD reservation when the customer abandons payment.
                 // Best-effort — a background job will expire orphaned holds if this fails.
                 const cancelOnHoldReservation = async () => {
-                    try { await processingService.cancelReservation(response.reservationId); } catch {}
+                    try { await processingService.cancelReservation(response.reservationId); } catch { /* empty */ }
                 };
 
                 // Present the Payment Sheet — user sees their saved card or enters a new one

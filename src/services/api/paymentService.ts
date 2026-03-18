@@ -77,6 +77,21 @@ class PaymentService {
   // ─── Payment Policy ────────────────────────────────────────────────────────
 
   /**
+   * Fetch the historical payment policy that was active when a reservation was booked.
+   *
+   * Call lazily — only when the customer is about to cancel a payment-enabled reservation
+   * and needs to see the exact refund/cancellation terms. Returns the policy version that
+   * was in effect at booking time, even if the restaurant has since changed their policy.
+   *
+   * GET /payments/customer/me/policy/{policyId}
+   */
+  async getReservationPolicy(policyId: number): Promise<PaymentPolicyResponse> {
+    return apiClient.get<PaymentPolicyResponse>(
+      `${this.BASE_URL}${API_CONFIG.ENDPOINTS.CUSTOMER_POLICY}/${policyId}`
+    );
+  }
+
+  /**
    * Fetch the effective payment policy for a restaurant.
    * If there is a section-level override the backend returns that,
    * otherwise the restaurant-level policy is returned.

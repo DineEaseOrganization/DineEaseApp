@@ -4,11 +4,12 @@ import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
 import { Alert, FlatList, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Reservation } from '../../types';
-import { ReservationPolicyDetails } from '../../types/api.types';
+import { PaymentPolicyResponse } from '../../types/api.types';
 import { BookingsScreenProps } from '../../navigation/AppNavigator';
 import { useReservations } from '../../hooks/useReservations';
 import { mapReservationDtosToReservations } from '../../utils/reservationMapper';
 import { processingService } from '../../services/api/processingService';
+import { paymentService } from '../../services/api/paymentService';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
@@ -70,7 +71,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
 
     const buildCancelDialog = (
         reservation: Reservation,
-        policy: ReservationPolicyDetails | null
+        policy: PaymentPolicyResponse | null
     ): { title: string; message: string; confirmText: string } => {
         const txType = reservation.paymentTransactionType;
         const hasPayment = reservation.paymentAmount != null && reservation.paymentCurrency != null;
@@ -175,13 +176,13 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
             && reservation.paymentCurrency != null
             && reservation.paymentTransactionType != null;
 
-        let policy: ReservationPolicyDetails | null = null;
+        let policy: PaymentPolicyResponse | null = null;
 
         // Fetch the historical policy lazily — only needed when there's a payment type.
         // This avoids the N policy-fetches-on-load that the old enrichment approach caused.
         if (hasPayment && reservation.paymentPolicyId != null) {
             try {
-                policy = await processingService.getReservationPolicy(reservation.paymentPolicyId);
+                policy = await paymentService.getReservationPolicy(reservation.paymentPolicyId);
             } catch (e) {
                 // Policy fetch failed — dialog will fall back to a generic "contact restaurant" message.
             }

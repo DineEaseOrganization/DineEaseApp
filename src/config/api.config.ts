@@ -80,6 +80,7 @@ export const API_CONFIG = {
     CUSTOMER_SETUP: '/customer/me/setup',             // POST — create Stripe Customer + SetupIntent (mobile JWT auth)
     CUSTOMER_PAYMENT_METHODS: '/customer/me/payment-methods', // GET  — list saved cards; DELETE /{pmId} — remove card
     CUSTOMER_EPHEMERAL_KEY: '/customer/me/ephemeral-key',     // GET  — create ephemeral key for Payment Sheet (mobile JWT auth)
+    CUSTOMER_POLICY: '/customer/me/policy',           // GET /{policyId} — fetch historical policy (mobile JWT auth)
     PAYMENT_INTENT_CREATE: '/intent/create',          // POST — create PaymentIntent
     PAYMENT_INTENT_RETRY: '/intent/retry',      // POST /{reservationId}
     PAYMENT_REFUND: '/refund',                  // POST /{transactionId}

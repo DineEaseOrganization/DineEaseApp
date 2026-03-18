@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
-import { AvailabilitySlotsResponse, ReservationDto, ReservationPolicyDetails, ReservationTagRequest } from '../../types/api.types';
+import { AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest } from '../../types/api.types';
 
 export interface SubmitReviewRequest {
   reservationId: number;
@@ -177,22 +177,6 @@ class ProcessingService {
   async cancelReservation(reservationId: number): Promise<{ success: boolean; message: string }> {
     return await apiClient.delete<{ success: boolean; message: string }>(
       `${this.BASE_URL}/reservations/${reservationId}`
-    );
-  }
-
-  /**
-   * Fetch the historical payment policy for a reservation.
-   *
-   * Call this lazily — only when the user is about to cancel a payment-enabled
-   * reservation and needs to see the exact refund/cancellation terms.
-   * The policy returned is the one that was active at booking time, so it is
-   * correct even if the restaurant has since changed their policy.
-   *
-   * Endpoint: GET /mobile/reservations/policy/{policyId}
-   */
-  async getReservationPolicy(policyId: number): Promise<ReservationPolicyDetails> {
-    return await apiClient.get<ReservationPolicyDetails>(
-      `${this.BASE_URL}/reservations/policy/${policyId}`
     );
   }
 
