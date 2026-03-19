@@ -72,11 +72,14 @@ export function useReservations(options?: {
 
     try {
       if (usePagination) {
+        const sortParam = filter === 'upcoming'
+          ? 'reservationDate,asc'
+          : 'reservationDate,desc';
         const response = await processingService.getCustomerReservationsPaginated(
           filter,
           page,
           pageSize,
-          'reservationDate,desc'
+          sortParam
         );
         if (__DEV__) {
           console.log('[useReservations] Paginated reservations response:', response);

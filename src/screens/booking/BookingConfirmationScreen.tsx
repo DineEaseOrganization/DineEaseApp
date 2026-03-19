@@ -8,9 +8,22 @@ import { BookingConfirmationScreenProps } from '../../navigation/AppNavigator';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
+import { Ionicons } from '@expo/vector-icons';
+import { rf } from '../../theme/responsive';
+import { paymentService } from '../../services/api/paymentService';
 
 const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ route, navigation }) => {
     const { booking } = route.params;
+
+    // Derived payment state
+    const hasPayment = !!(booking.paymentClientSecret || booking.paymentAmount);
+    const hasHold = !!(booking.holdClientSecret || booking.holdAmount);
+    const needsCardSetup = !!booking.setupClientSecret;
+
+    const fmtCurrency = (amount?: number, currency?: string) => {
+        if (!amount || !currency) return '';
+        return paymentService.formatAmount(amount, currency);
+    };
 
     const formatDate = (date: Date) => formatDateWeekdayLongDayMonthYear(date);
 
@@ -171,6 +184,85 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({ r
                         </View>
                     ))}
                 </View>
+
+                {/* ── Payment charged ── */}
+                {hasPayment && (
+                    <View style={styles.paymentSection}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Payment</AppText>
+                        </View>
+                        <View style={styles.paymentCard}>
+                            <Ionicons name="checkmark-circle" size={rf(20)} color={Colors.success} style={{ marginRight: Spacing['2'] }} />
+                            <View style={{ flex: 1 }}>
+                                <AppText variant="bodyMedium" color={Colors.textOnLight}>
+                                    {booking.paymentTransactionType === 'DEPOSIT' ? 'Deposit paid' : 'Booking fee paid'}
+                                </AppText>
+                                {booking.paymentAmount != null && (
+                                    <AppText variant="caption" color={Colors.textOnLightSecondary}>
+                                        {fmtCurrency(booking.paymentAmount, booking.paymentCurrency ?? 'GBP')} charged to your saved card
+                                    </AppText>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* ── Cancellation fee hold ── */}
+                {hasHold && (
+                    <View style={styles.paymentSection}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Cancellation Hold</AppText>
+                        </View>
+                        <View style={[styles.paymentCard, styles.holdCard]}>
+                            <Ionicons name="shield-checkmark-outline" size={rf(20)} color={Colors.primary} style={{ marginRight: Spacing['2'] }} />
+                            <View style={{ flex: 1 }}>
+                                <AppText variant="bodyMedium" color={Colors.textOnLight}>
+                                    {fmtCurrency(booking.holdAmount, booking.holdCurrency ?? 'GBP')} hold placed
+                                </AppText>
+                                <AppText variant="caption" color={Colors.textOnLightSecondary}>
+                                    Released automatically if you keep your reservation.
+                                    {booking.holdCaptureDeadline
+                                        ? ` Hold expires ${new Date(booking.holdCaptureDeadline).toLocaleDateString()}.`
+                                        : ''}
+                                </AppText>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* ── Card setup prompt ── */}
+                {needsCardSetup && !hasPayment && !hasHold && (
+                    <View style={styles.paymentSection}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Save Your Card</AppText>
+                        </View>
+                        <View style={[styles.paymentCard, styles.setupCard]}>
+                            <Ionicons name="card-outline" size={rf(20)} color={Colors.accent} style={{ marginRight: Spacing['2'] }} />
+                            <View style={{ flex: 1 }}>
+                                <AppText variant="bodyMedium" color={Colors.textOnLight}>
+                                    Add a card for faster future bookings
+                                </AppText>
+                                <AppText variant="caption" color={Colors.textOnLightSecondary}>
+                                    Your card is required for cancellation fee protection.
+                                </AppText>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.saveCardBtn}
+                            onPress={() => navigation.navigate('PaymentMethods', {
+                                fromBooking: true,
+                                setupClientSecret: booking.setupClientSecret,
+                            })}
+                            activeOpacity={0.85}
+                        >
+                            <Ionicons name="add-circle-outline" size={rf(16)} color={Colors.white} style={{ marginRight: r(6) }} />
+                            <AppText variant="button" color={Colors.white}>Add Payment Method</AppText>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {/* ── Call restaurant ── */}
                 {booking.restaurant.phoneNumber && (
@@ -399,6 +491,43 @@ const styles = StyleSheet.create({
         flexShrink: 0 },
     infoIcon: { fontSize: FontSize.lg },
     infoText: { flex: 1, lineHeight: r(20), marginTop: Spacing['2'] },
+
+    // ── Payment sections ───────────────────────────────────────────────────────
+    paymentSection: {
+        paddingHorizontal: Spacing['5'],
+        paddingTop: Spacing['5'],
+    },
+    paymentCard: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#f0fdf4',
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: '#bbf7d0',
+        padding: Spacing['3'],
+    },
+    holdCard: {
+        backgroundColor: 'rgba(15,51,70,0.05)',
+        borderColor: 'rgba(15,51,70,0.15)',
+    },
+    setupCard: {
+        backgroundColor: 'rgba(245,158,11,0.06)',
+        borderColor: 'rgba(245,158,11,0.2)',
+        marginBottom: Spacing['3'],
+    },
+    saveCardBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.accent,
+        borderRadius: Radius.lg,
+        paddingVertical: r(12),
+        shadowColor: Colors.accent,
+        shadowOffset: { width: r(0), height: r(2) },
+        shadowOpacity: 0.2,
+        shadowRadius: r(4),
+        elevation: r(2),
+    },
 
     // ── Call section ───────────────────────────────────────────────────────────
     callSection: {

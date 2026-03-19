@@ -1,24 +1,43 @@
 // src/screens/booking/BookingScreen.tsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Modal, ActivityIndicator } from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useIsFocused } from '@react-navigation/native';
 import { BookingScreenProps } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
-import { AvailableSlot, ReservationTag, ReservationTagRequest } from '../../types/api.types';
-import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
-import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
+import {
+    AvailableSlot,
+    BookingResponseWithPayment,
+    PaymentPolicyResponse,
+    ReservationTag,
+    ReservationTagRequest
+} from '../../types/api.types';
+import { AvailabilityError, parseAvailabilityError } from '../../utils/errorHandlers';
+import { AllSlotsModal, AvailabilityErrorDisplay, TimeSlotDisplay } from '../../components/availability';
 import { processingService, restaurantService } from '../../services/api';
-import { Colors, Radius, Spacing, FontFamily, FontSize } from '../../theme';
+import { paymentService } from '../../services/api/paymentService';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
+import { Ionicons } from '@expo/vector-icons';
+import { useStripe } from '@stripe/stripe-react-native';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
     const { isAuthenticated, user } = useAuth();
     const isFocused = useIsFocused();
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
@@ -48,6 +67,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
 
     const [availableTags, setAvailableTags] = useState<ReservationTag[]>([]);
     const [selectedTags, setSelectedTags] = useState<ReservationTagRequest[]>([]);
+    const [paymentPolicy, setPaymentPolicy] = useState<PaymentPolicyResponse | null>(null);
 
     const slotScrollRef = useRef<ScrollView>(null);
     const slotPositions = useRef<Record<string, number>>({ });
@@ -84,6 +104,16 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             }
         };
         fetchTags();
+    }, [restaurant.id]);
+
+    // Fetch the restaurant's active payment policy so we can show the user
+    // exactly what charge / hold will apply before they confirm the booking.
+    useEffect(() => {
+        const fetchPolicy = async () => {
+            const policy = await paymentService.getEffectivePolicy(restaurant.id);
+            setPaymentPolicy(policy?.enabled ? policy : null);
+        };
+        fetchPolicy();
     }, [restaurant.id]);
 
     const handleTagToggle = (tagId: number) => {
@@ -184,11 +214,143 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 comments: specialRequests || undefined,
                 tagRequests: selectedTags.length > 0 ? selectedTags : undefined };
 
-            const response = await processingService.createReservation(reservation);
+            const response: BookingResponseWithPayment = await processingService.createReservation(reservation);
             const confirmationCode = response.reservationId ? `RES${response.reservationId}` : 'RES' + Math.random().toString(36).substr(2, 6).toUpperCase();
-            setIsLoading(false);
-            navigation.navigate('BookingConfirmation', {
-                booking: { restaurant, date: selectedDate, time: selectedTime, partySize, customerName, customerPhone, customerEmail, specialRequests, confirmationCode } });
+
+            // ── Build shared navigation params ────────────────────────────────────
+            const bookingParams = {
+                restaurant,
+                date: selectedDate,
+                time: selectedTime,
+                partySize,
+                customerName,
+                customerPhone,
+                customerEmail,
+                specialRequests,
+                confirmationCode,
+                setupClientSecret: response.setupClientSecret,
+                paymentClientSecret: response.paymentClientSecret,
+                paymentAmount: response.paymentAmount,
+                paymentCurrency: response.paymentCurrency,
+                paymentTransactionType: response.paymentTransactionType,
+                holdClientSecret: response.holdClientSecret,
+                holdAmount: response.holdAmount,
+                holdCurrency: response.holdCurrency,
+                holdCaptureDeadline: response.holdCaptureDeadline,
+            };
+
+            // ── Payment handling ──────────────────────────────────────────────────
+            // If the backend returned a PaymentIntent secret (deposit / booking fee)
+            // or a hold secret (cancellation-fee hold), collect the payment NOW via
+            // the Stripe Payment Sheet before showing the confirmation screen.
+            // setupClientSecret-only means "please save a card for future use" —
+            // that is handled on the confirmation screen as a best-effort step.
+            const immediatePaymentSecret = response.paymentClientSecret ?? response.holdClientSecret;
+
+            if (immediatePaymentSecret) {
+                // Attempt to fetch an ephemeral key so the Payment Sheet can pre-fill
+                // the customer's saved card. This will fail with 404 for customers who
+                // have never saved a card — that's fine, we just proceed in card-entry mode.
+                let ephemeralKeySecret: string | undefined;
+                let stripeCustomerId: string | undefined;
+                try {
+                    const ek = await paymentService.getEphemeralKey();
+                    ephemeralKeySecret = ek.ephemeralKeySecret;
+                    stripeCustomerId = ek.customerId;
+                } catch {
+                    // No saved card yet — Payment Sheet opens in card-entry mode instead
+                }
+
+                const { error: initError } = await initPaymentSheet({
+                    paymentIntentClientSecret: immediatePaymentSecret,
+                    merchantDisplayName: 'DineEase',
+                    allowsDelayedPaymentMethods: false,
+                    // Only pass customer fields when we have both — the SDK requires them
+                    // together and will return an initError if only one is provided.
+                    ...(stripeCustomerId && ephemeralKeySecret
+                        ? { customerId: stripeCustomerId, customerEphemeralKeySecret: ephemeralKeySecret }
+                        : {}),
+                });
+
+                setIsLoading(false);
+
+                if (initError) {
+                    // Stripe SDK couldn't initialise — system-level failure, not the user's fault.
+                    // Fail-open: keep the ON_HOLD reservation so they can retry payment from
+                    // the Reservations screen once the issue clears.
+                    Alert.alert(
+                        'Payment System Unavailable',
+                        'We couldn\'t open the payment screen right now. Your booking is on hold — you can complete payment from your Reservations.',
+                    );
+                    navigation.navigate('BookingConfirmation', { booking: bookingParams });
+                    return;
+                }
+
+                // Silently cancel the ON_HOLD reservation when the customer abandons payment.
+                // Best-effort — a background job will expire orphaned holds if this fails.
+                const cancelOnHoldReservation = async () => {
+                    try { await processingService.cancelReservation(response.reservationId); } catch { /* empty */ }
+                };
+
+                // Present the Payment Sheet — user sees their saved card or enters a new one
+                const { error: sheetError } = await presentPaymentSheet();
+
+                if (!sheetError) {
+                    // Payment confirmed — show the confirmation screen
+                    navigation.navigate('BookingConfirmation', { booking: bookingParams });
+                    return;
+                }
+
+                if (sheetError.code === 'Canceled') {
+                    // User deliberately dismissed the sheet — payment is required so we must
+                    // cancel the ON_HOLD reservation to free the slot.
+                    await cancelOnHoldReservation();
+                    Alert.alert(
+                        'Booking Cancelled',
+                        'Payment is required to confirm your reservation. Your booking has been cancelled — please try again when you\'re ready to pay.',
+                        [{ text: 'OK' }],
+                    );
+                    return; // Stay on BookingScreen, no confirmation
+                }
+
+                // Payment failed (card declined, network error, etc.) — give the user options
+                Alert.alert(
+                    'Payment Failed',
+                    sheetError.message ?? 'Your card could not be charged.',
+                    [
+                        {
+                            text: 'Try Again',
+                            onPress: async () => {
+                                // presentPaymentSheet can be re-called without re-initialising
+                                const { error: retryError } = await presentPaymentSheet();
+                                if (!retryError) {
+                                    navigation.navigate('BookingConfirmation', { booking: bookingParams });
+                                } else {
+                                    // Still failing — keep booking on hold so they can retry later
+                                    Alert.alert(
+                                        'Payment Pending',
+                                        'Payment could not be completed. Your booking is on hold — you can retry from your Reservations.',
+                                    );
+                                    navigation.navigate('BookingConfirmation', { booking: bookingParams });
+                                }
+                            },
+                        },
+                        {
+                            text: 'Cancel Booking',
+                            style: 'destructive',
+                            onPress: async () => {
+                                await cancelOnHoldReservation();
+                                Alert.alert('Booking Cancelled', 'Your reservation has been cancelled.');
+                            },
+                        },
+                    ],
+                );
+            } else {
+                // No immediate payment needed — may still have a setupClientSecret for
+                // the "save your card" flow shown on the confirmation screen.
+                setIsLoading(false);
+                navigation.navigate('BookingConfirmation', { booking: bookingParams });
+            }
         } catch (error: any) {
             setIsLoading(false);
             Alert.alert('Booking Failed', error.message || 'Unable to create reservation. Please try again.', [{ text: 'OK' }]);
@@ -238,6 +400,105 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     }
 
     const isFormReady = !!selectedTime && !!customerName && !!customerPhone;
+
+    // Build a concise, user-facing description of the applicable charge.
+    // For PER_PERSON fee types the total = value × partySize; we show both
+    // the per-person rate and the total so the user is never surprised.
+    const policyNotice: { icon: 'card-outline' | 'shield-outline' | 'cash-outline'; title: string; body: string; accent: string } | null =
+        (() => {
+            if (!paymentPolicy) return null;
+            const fmt = (val: number | null, cur: string) =>
+                val != null ? paymentService.formatAmount(val, cur) : '';
+
+            /** Compute the actual charge amount and an optional breakdown note. */
+            const resolveAmount = (
+                value: number,
+                type: string | null,
+                currency: string,
+            ): { total: string; breakdown: string } => {
+                if (type === 'PER_PERSON') {
+                    const total = value * partySize;
+                    return {
+                        total: fmt(total, currency),
+                        breakdown: ` (${fmt(value, currency)} × ${partySize} guests)`,
+                    };
+                }
+                return { total: fmt(value, currency), breakdown: '' };
+            };
+
+            if (paymentPolicy.depositEnabled && paymentPolicy.depositValue != null) {
+                const { total, breakdown } = resolveAmount(
+                    paymentPolicy.depositValue,
+                    paymentPolicy.depositType,
+                    paymentPolicy.depositCurrency,
+                );
+                const windowNote = paymentPolicy.depositWindowHours != null
+                    ? ` Free cancellation if you cancel more than ${paymentPolicy.depositWindowHours} hours in advance.`
+                    : '';
+                const refundNote = paymentPolicy.depositRefundPercent != null && paymentPolicy.depositRefundPercent > 0 && paymentPolicy.depositWindowHours != null
+                    ? ` If cancelled within ${paymentPolicy.depositWindowHours} hours, ${paymentPolicy.depositRefundPercent}% is refunded.`
+                    : '';
+                return {
+                    icon: 'cash-outline',
+                    title: `Deposit required — ${total}`,
+                    body: `A deposit of ${total}${breakdown} will be charged to your card when you confirm. It will be applied towards your bill.${windowNote}${refundNote}`,
+                    accent: '#1d4ed8',
+                };
+            }
+            if (paymentPolicy.bookingFeeEnabled && paymentPolicy.bookingFeeValue != null) {
+                const { total, breakdown } = resolveAmount(
+                    paymentPolicy.bookingFeeValue,
+                    paymentPolicy.bookingFeeType,
+                    paymentPolicy.bookingFeeCurrency,
+                );
+                const windowNote = paymentPolicy.bookingFeeWindowHours != null
+                    ? ` Free cancellation if you cancel more than ${paymentPolicy.bookingFeeWindowHours} hours in advance.`
+                    : '';
+                const refundNote = paymentPolicy.bookingFeeRefundPercent != null && paymentPolicy.bookingFeeRefundPercent > 0 && paymentPolicy.bookingFeeWindowHours != null
+                    ? ` If cancelled within ${paymentPolicy.bookingFeeWindowHours} hours, ${paymentPolicy.bookingFeeRefundPercent}% is refunded.`
+                    : '';
+                return {
+                    icon: 'card-outline',
+                    title: `Booking fee — ${total}`,
+                    body: `A non-refundable booking fee of ${total}${breakdown} will be charged to your card when you confirm.${windowNote}${refundNote}`,
+                    accent: '#1d4ed8',
+                };
+            }
+            if (paymentPolicy.cancelFeeEnabled && paymentPolicy.cancelFeeValue != null) {
+                const { total, breakdown } = resolveAmount(
+                    paymentPolicy.cancelFeeValue,
+                    paymentPolicy.cancelFeeType,
+                    paymentPolicy.cancelFeeCurrency,
+                );
+                const tiers = paymentPolicy.cancellationFeeTiers;
+                if (tiers && tiers.length > 0) {
+                    // Tiered cancellation — show graduated schedule
+                    const sorted = [...tiers].sort((a, b) => a.hoursBefore - b.hoursBefore);
+                    const feeVal = paymentPolicy.cancelFeeValue;
+                    const cur = paymentPolicy.cancelFeeCurrency;
+                    const lines = sorted.map((t, i) => {
+                        const chargeAmt = fmt((feeVal * t.chargePercent) / 100, cur);
+                        const prevHours = i > 0 ? sorted[i - 1].hoursBefore : 0;
+                        return `• ${prevHours}–${t.hoursBefore}h before: ${t.chargePercent}% fee (${chargeAmt})`;
+                    });
+                    lines.push(`• ${sorted[sorted.length - 1].hoursBefore}h+ before: Free cancellation`);
+                    return {
+                        icon: 'shield-outline',
+                        title: `Cancellation policy — ${total} hold`,
+                        body: `A ${total}${breakdown} hold will be placed on your card. Charges depend on when you cancel:\n${lines.join('\n')}`,
+                        accent: Colors.primary as string,
+                    };
+                }
+                const window = paymentPolicy.cancelWindowHours ?? 24;
+                return {
+                    icon: 'shield-outline',
+                    title: `Cancellation policy — ${total} hold`,
+                    body: `A ${total}${breakdown} authorisation hold will be placed on your card. It is released automatically if you cancel more than ${window} hours in advance.`,
+                    accent: Colors.primary as string,
+                };
+            }
+            return null;
+        })();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -438,6 +699,30 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                     </View>
                 )}
 
+                {/* ── Payment policy notice ── */}
+                {policyNotice && (
+                    <View style={styles.policyBanner}>
+                        <View style={[styles.policyBannerAccent, { backgroundColor: policyNotice.accent }]} />
+                        <View style={styles.policyBannerBody}>
+                            <View style={styles.policyBannerHeader}>
+                                <Ionicons name={policyNotice.icon} size={rf(16)} color={policyNotice.accent} style={{ marginRight: r(6) }} />
+                                <AppText variant="bodySemiBold" color={Colors.textOnLight} style={{ flex: 1 }}>
+                                    {policyNotice.title}
+                                </AppText>
+                            </View>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={styles.policyBannerText}>
+                                {policyNotice.body}
+                            </AppText>
+                            <View style={styles.policyBannerSecure}>
+                                <Ionicons name="lock-closed-outline" size={rf(11)} color={Colors.textOnLightTertiary} />
+                                <AppText variant="caption" color={Colors.textOnLightTertiary} style={{ marginLeft: r(4) }}>
+                                    Secured by Stripe · Card details never stored on our servers
+                                </AppText>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
                 {/* ── Confirm button ── */}
                 <TouchableOpacity
                     style={[styles.confirmBtn, (!isFormReady || isLoading) && styles.confirmBtnDisabled]}
@@ -447,6 +732,11 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 >
                     {isLoading ? (
                         <ActivityIndicator color={Colors.white} />
+                    ) : policyNotice ? (
+                        <View style={styles.confirmBtnInner}>
+                            <Ionicons name="card-outline" size={rf(16)} color={Colors.white} style={{ marginRight: r(6) }} />
+                            <AppText variant="button" color={Colors.white}>{'Confirm & Pay'}</AppText>
+                        </View>
                     ) : (
                         <AppText variant="button" color={Colors.white}>Confirm Reservation</AppText>
                     )}
@@ -586,10 +876,44 @@ const styles = StyleSheet.create({
     tagIcon: { fontSize: FontSize.base },
     tagNotes: { marginTop: Spacing['2'] },
 
+    // ── Payment policy banner ──────────────────────────────────────────────────
+    policyBanner: {
+        flexDirection: 'row',
+        marginHorizontal: Spacing['5'],
+        marginTop: Spacing['5'],
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        backgroundColor: Colors.cardBackground,
+        overflow: 'hidden',
+    },
+    policyBannerAccent: {
+        width: r(4),
+        borderTopLeftRadius: Radius.lg,
+        borderBottomLeftRadius: Radius.lg,
+    },
+    policyBannerBody: {
+        flex: 1,
+        padding: Spacing['3'],
+    },
+    policyBannerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: Spacing['1'],
+    },
+    policyBannerText: {
+        lineHeight: r(18),
+        marginBottom: Spacing['2'],
+    },
+    policyBannerSecure: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
     // ── Confirm button ─────────────────────────────────────────────────────────
     confirmBtn: {
         marginHorizontal: Spacing['5'],
-        marginTop: Spacing['6'],
+        marginTop: Spacing['4'],
         backgroundColor: Colors.accent,
         paddingVertical: Spacing['4'],
         borderRadius: Radius.lg,
@@ -603,6 +927,10 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.cardBorder,
         shadowOpacity: 0,
         elevation: 0 },
+    confirmBtnInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
 
     // ── Auth prompt modal ──────────────────────────────────────────────────────
     modalOverlay: {

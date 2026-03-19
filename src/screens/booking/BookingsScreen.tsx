@@ -4,10 +4,12 @@ import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
 import { Alert, FlatList, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Reservation } from '../../types';
+import { PaymentPolicyResponse } from '../../types/api.types';
 import { BookingsScreenProps } from '../../navigation/AppNavigator';
 import { useReservations } from '../../hooks/useReservations';
 import { mapReservationDtosToReservations } from '../../utils/reservationMapper';
 import { processingService } from '../../services/api/processingService';
+import { paymentService } from '../../services/api/paymentService';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
@@ -51,23 +53,157 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         }, [])
     );
 
-    const reservations = mapReservationDtosToReservations(reservationDtos, undefined, reviewedReservationIds);
+    const sortReservations = (items: Reservation[], key: FilterKey) => {
+        const dir = key === 'upcoming' ? 1 : -1;
+        return [...items].sort((a, b) => {
+            const aDt = new Date(`${a.date}T${a.time}`);
+            const bDt = new Date(`${b.date}T${b.time}`);
+            return (aDt.getTime() - bDt.getTime()) * dir;
+        });
+    };
+
+    const reservations = sortReservations(
+        mapReservationDtosToReservations(reservationDtos, undefined, reviewedReservationIds),
+        filter
+    );
 
     const handleReviewPress = (reservation: Reservation) => navigation.navigate('ReviewScreen', { reservation });
 
-    const handleCancelReservation = async (reservationId: number) => {
-        Alert.alert('Cancel Reservation', 'Are you sure you want to cancel this reservation?', [
-            { text: 'No', style: 'cancel' },
+    const buildCancelDialog = (
+        reservation: Reservation,
+        policy: PaymentPolicyResponse | null
+    ): { title: string; message: string; confirmText: string } => {
+        const txType = reservation.paymentTransactionType;
+        const hasPayment = reservation.paymentAmount != null && reservation.paymentCurrency != null;
+
+        if (!hasPayment || !txType) {
+            return {
+                title: 'Cancel Reservation',
+                message: 'Are you sure you want to cancel this reservation? This cannot be undone.',
+                confirmText: 'Yes, Cancel',
+            };
+        }
+
+        const fmt = (v: number) => v.toLocaleString('en-GB', {
+            style: 'currency',
+            currency: reservation.paymentCurrency!,
+        });
+        const paidAmt = reservation.paymentAmount!;
+        const amtStr = fmt(paidAmt);
+
+        const [hrs, mins] = reservation.time.split(':').map(Number);
+        const reservationDt = new Date(reservation.date);
+        reservationDt.setHours(hrs, mins, 0, 0);
+        const hoursUntil = (reservationDt.getTime() - Date.now()) / (1000 * 60 * 60);
+
+        if (txType === 'DEPOSIT') {
+            const depositTiers = policy?.depositRefundTiers;
+            if (depositTiers && depositTiers.length > 0) {
+                const sorted = [...depositTiers].sort((a, b) => a.hoursBefore - b.hoursBefore);
+                const matchedTier = sorted.find(t => hoursUntil < t.hoursBefore);
+                if (!matchedTier) {
+                    return { title: 'Cancel Reservation', confirmText: 'Yes, Cancel & Get Refund', message: `You're more than ${sorted[sorted.length - 1].hoursBefore}h before your reservation, so your full deposit of ${amtStr} will be refunded.\n\nWould you like to proceed?` };
+                } else if (matchedTier.refundPercent <= 0) {
+                    return { title: 'Deposit Non-Refundable', confirmText: 'Cancel (No Refund)', message: `You're cancelling within ${matchedTier.hoursBefore}h of your reservation.\n\nYour deposit of ${amtStr} will not be refunded.` };
+                } else if (matchedTier.refundPercent >= 100) {
+                    return { title: 'Cancel Reservation', confirmText: 'Yes, Cancel & Get Refund', message: `Your full deposit of ${amtStr} will be refunded.\n\nWould you like to proceed?` };
+                } else {
+                    const refundAmt = fmt((paidAmt * matchedTier.refundPercent) / 100);
+                    return { title: 'Partial Deposit Refund', confirmText: `Cancel & Receive ${refundAmt}`, message: `Cancelling now (${Math.floor(hoursUntil)}h before) entitles you to a ${matchedTier.refundPercent}% refund.\n\nYou'll receive ${refundAmt} back (of ${amtStr} paid).` };
+                }
+            }
+            const wh = policy?.depositWindowHours;
+            if (wh != null) {
+                if (hoursUntil >= wh) {
+                    return { title: 'Cancel Reservation', confirmText: 'Yes, Cancel & Get Refund', message: `You're cancelling more than ${wh}h before your reservation, so your deposit of ${amtStr} will be refunded in full.\n\nWould you like to proceed?` };
+                }
+                const rp = policy?.depositRefundPercent ?? 0;
+                if (rp > 0) {
+                    const refundAmt = fmt((paidAmt * rp) / 100);
+                    return { title: 'Partial Deposit Refund', confirmText: `Cancel & Receive ${refundAmt}`, message: `You're cancelling within ${wh}h of your reservation.\n\nYou'll receive a ${rp}% partial refund of ${refundAmt} (deposit paid: ${amtStr}).` };
+                }
+                return { title: 'Deposit Non-Refundable', confirmText: 'Cancel (No Refund)', message: `You're cancelling within ${wh}h of your reservation.\n\nYour deposit of ${amtStr} will not be refunded.` };
+            }
+            return { title: 'Deposit May Not Be Refunded', confirmText: 'Cancel Reservation', message: `This reservation has a deposit of ${amtStr}. Please contact the restaurant directly for their refund policy.\n\nAre you sure you want to cancel?` };
+        }
+
+        if (txType === 'BOOKING_FEE') {
+            const wh = policy?.bookingFeeWindowHours;
+            if (wh != null) {
+                if (hoursUntil >= wh) {
+                    return { title: 'Cancel Reservation', confirmText: 'Yes, Cancel & Get Refund', message: `You're cancelling more than ${wh}h before your reservation, so your booking fee of ${amtStr} will be refunded in full.\n\nWould you like to proceed?` };
+                }
+                const rp = policy?.bookingFeeRefundPercent ?? 0;
+                if (rp > 0) {
+                    const refundAmt = fmt((paidAmt * rp) / 100);
+                    return { title: 'Partial Booking Fee Refund', confirmText: `Cancel & Receive ${refundAmt}`, message: `You're cancelling within ${wh}h of your reservation.\n\nYou'll receive a ${rp}% partial refund of ${refundAmt} (booking fee paid: ${amtStr}).` };
+                }
+                return { title: 'Booking Fee Non-Refundable', confirmText: 'Cancel (No Refund)', message: `Booking fees are non-refundable at this restaurant.\n\nYour booking fee of ${amtStr} will not be returned on cancellation.` };
+            }
+            return { title: 'Booking Fee May Not Be Refunded', confirmText: 'Cancel Reservation', message: `This reservation has a booking fee of ${amtStr}. Please contact the restaurant for their refund policy.\n\nAre you sure you want to cancel?` };
+        }
+
+        if (txType === 'CANCELLATION_FEE') {
+            const tiers = policy?.cancellationFeeTiers;
+            if (tiers && tiers.length > 0) {
+                const sorted = [...tiers].sort((a, b) => a.hoursBefore - b.hoursBefore);
+                const matchedTier = sorted.find(t => hoursUntil < t.hoursBefore);
+                if (!matchedTier) {
+                    return { title: 'Cancel Reservation', confirmText: 'Yes, Cancel', message: `You're more than ${sorted[sorted.length - 1].hoursBefore}h before your reservation, so no fee will be charged.\n\nWould you like to proceed?` };
+                }
+                const chargeAmt = fmt((paidAmt * matchedTier.chargePercent) / 100);
+                return { title: 'Cancellation Fee Applies', confirmText: 'Cancel & Pay Fee', message: `Cancelling now (${Math.floor(hoursUntil)}h before) will incur a ${matchedTier.chargePercent}% fee.\n\nYour card will be charged ${chargeAmt} (of ${amtStr} hold).` };
+            }
+            const wh = policy?.cancelWindowHours;
+            if (wh != null) {
+                if (hoursUntil <= wh) {
+                    return { title: 'Cancellation Fee Applies', confirmText: 'Cancel & Pay Fee', message: `You're cancelling within ${wh} hours of your reservation.\n\nYour card will be charged ${amtStr} as per the restaurant's cancellation policy.` };
+                }
+                return { title: 'Cancel Reservation', confirmText: 'Yes, Cancel', message: `You're outside the ${wh}-hour cancellation window, so no fee will be charged.\n\nWould you like to proceed?` };
+            }
+            return { title: 'Cancellation Fee May Apply', confirmText: 'Cancel Reservation', message: `This reservation has a ${amtStr} cancellation fee. Depending on how close your reservation is, this fee may be charged to your card.\n\nAre you sure you want to cancel?` };
+        }
+
+        return {
+            title: 'Cancel Reservation',
+            message: 'Are you sure you want to cancel this reservation? This cannot be undone.',
+            confirmText: 'Yes, Cancel',
+        };
+    };
+
+    const handleCancelReservation = async (reservation: Reservation) => {
+        const hasPayment = reservation.paymentAmount != null
+            && reservation.paymentCurrency != null
+            && reservation.paymentTransactionType != null;
+
+        let policy: PaymentPolicyResponse | null = null;
+
+        // Fetch the historical policy lazily — only needed when there's a payment type.
+        // This avoids the N policy-fetches-on-load that the old enrichment approach caused.
+        if (hasPayment && reservation.paymentPolicyId != null) {
+            try {
+                policy = await paymentService.getReservationPolicy(reservation.paymentPolicyId);
+            } catch (e) {
+                // Policy fetch failed — dialog will fall back to a generic "contact restaurant" message.
+            }
+        }
+
+        const { title, message, confirmText } = buildCancelDialog(reservation, policy);
+
+        Alert.alert(title, message, [
+            { text: 'Keep Reservation', style: 'cancel' },
             {
-                text: 'Yes, Cancel', style: 'destructive',
+                text: confirmText,
+                style: 'destructive',
                 onPress: async () => {
                     try {
-                        await cancelReservationApi(reservationId);
-                        Alert.alert('Cancelled', 'Your reservation has been cancelled.');
+                        await cancelReservationApi(reservation.id);
+                        Alert.alert('Reservation Cancelled', 'Your reservation has been cancelled successfully.');
                     } catch {
-                        Alert.alert('Error', 'Failed to cancel reservation. Please try again.');
+                        Alert.alert('Something went wrong', 'We couldn\'t cancel your reservation. Please try again or contact the restaurant.');
                     }
-                } },
+                },
+            },
         ]);
     };
 
@@ -76,27 +212,37 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
 
     // ── Status config ─────────────────────────────────────────────────────────
     const statusConfig: Record<string, { badge: object; textColor: string; label: string }> = {
-        confirmed: { badge: styles.statusConfirmed, textColor: Colors.success,  label: 'CONFIRMED' },
-        pending:   { badge: styles.statusPending,   textColor: Colors.warning,  label: 'PENDING'   },
-        completed: { badge: styles.statusCompleted, textColor: NAVY,            label: 'COMPLETED' },
-        cancelled: { badge: styles.statusCancelled, textColor: Colors.error,    label: 'CANCELLED' },
-        no_show:   { badge: styles.statusNoShow,    textColor: Colors.warning,  label: 'NO SHOW'   } };
+        confirmed:               { badge: styles.statusConfirmed,  textColor: Colors.success,  label: 'CONFIRMED'                 },
+        checked_in:              { badge: styles.statusConfirmed,  textColor: Colors.success,  label: 'CHECKED IN'                },
+        pending:                 { badge: styles.statusPending,    textColor: Colors.warning,  label: 'PENDING'                   },
+        on_hold:                 { badge: styles.statusOnHold,     textColor: Colors.orange,   label: 'AWAITING PAYMENT'          },
+        cancellation_hold:       { badge: styles.statusOnHold,     textColor: Colors.orange,   label: 'HOLD PLACED'               },
+        completed:               { badge: styles.statusCompleted,  textColor: NAVY,            label: 'COMPLETED'                 },
+        cancelled:               { badge: styles.statusCancelled,  textColor: Colors.error,    label: 'CANCELLED'                 },
+        cancelled_by_restaurant: { badge: styles.statusCancelled,  textColor: Colors.error,    label: 'CANCELLED BY RESTAURANT'  },
+        no_show:                 { badge: styles.statusNoShow,     textColor: Colors.warning,  label: 'NO SHOW'                   } };
 
     // ── Status accent colour (left strip + header tint) ───────────────────────
     const statusAccent: Record<string, string> = {
-        confirmed: Colors.success,
-        pending:   Colors.warning,
-        completed: NAVY,
-        cancelled: Colors.error,
-        no_show:   Colors.warning };
+        confirmed:               Colors.success,
+        checked_in:              Colors.success,
+        pending:                 Colors.warning,
+        on_hold:                 Colors.orange,
+        cancellation_hold:       Colors.orange,
+        completed:               NAVY,
+        cancelled:               Colors.error,
+        cancelled_by_restaurant: Colors.error,
+        no_show:                 Colors.warning };
 
     // ── Booking card ──────────────────────────────────────────────────────────
     const renderBookingCard = (reservation: Reservation) => {
         const isPast    = isReservationPast(reservation.date, reservation.time);
         const isNoShow  = reservation.status === 'no_show';
-        const canCancel = (reservation.status === 'confirmed' || reservation.status === 'pending') && !isPast;
+        const isCancellationHold = reservation.status === 'on_hold'
+            && reservation.paymentTransactionType === 'CANCELLATION_FEE';
+        const canCancel = (reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'on_hold') && !isPast;
         const canReview = reservation.canReview && reservation.status === 'completed';
-        const key       = isNoShow ? 'no_show' : reservation.status;
+        const key       = isNoShow ? 'no_show' : isCancellationHold ? 'cancellation_hold' : reservation.status;
         const { badge, textColor, label } = statusConfig[key] ?? statusConfig.pending;
         const accent    = statusAccent[key] ?? NAVY;
 
@@ -137,6 +283,40 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
                     </View>
                 </View>
 
+                {reservation.status === 'cancelled_by_restaurant' && (
+                    <View style={styles.noticeRow}>
+                        <AppText variant="caption" color={Colors.textOnLightSecondary}>
+                            Cancelled by restaurant. Contact restaurant for more details.
+                        </AppText>
+                    </View>
+                )}
+
+                {/* ── Payment summary pill ── */}
+                {reservation.paymentAmount != null && reservation.paymentCurrency && (
+                    <View style={styles.paymentRow}>
+                        <AppText style={styles.pillIcon}>💳</AppText>
+                        <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                            {(() => {
+                                const amt = reservation.paymentAmount!.toLocaleString('en-GB', {
+                                    style: 'currency',
+                                    currency: reservation.paymentCurrency!,
+                                });
+                                const cancelledByRestaurant = reservation.status === 'cancelled_by_restaurant';
+                                switch (reservation.paymentTransactionType) {
+                                    case 'CANCELLATION_FEE':
+                                        return cancelledByRestaurant ? `Hold released: ${amt}` : `Cancellation hold: ${amt}`;
+                                    case 'DEPOSIT':
+                                        return cancelledByRestaurant ? `Deposit refunded: ${amt}` : `Deposit paid: ${amt}`;
+                                    case 'BOOKING_FEE':
+                                        return cancelledByRestaurant ? `Booking fee refunded: ${amt}` : `Booking fee paid: ${amt}`;
+                                    default:
+                                        return cancelledByRestaurant ? `Refunded: ${amt}` : `Payment: ${amt}`;
+                                }
+                            })()}
+                        </AppText>
+                    </View>
+                )}
+
                 {/* ── Confirmation code ── */}
                 <View style={styles.codeRow}>
                     <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.codeLabel}>REF</AppText>
@@ -176,7 +356,7 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
                 {(canCancel || canReview) && (
                     <View style={styles.actions}>
                         {canCancel && (
-                            <TouchableOpacity style={styles.cancelBtn} onPress={() => handleCancelReservation(reservation.id)}>
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => handleCancelReservation(reservation)}>
                                 <AppText variant="captionMedium" color={Colors.error}>✕  Cancel</AppText>
                             </TouchableOpacity>
                         )}
@@ -351,6 +531,7 @@ const styles = StyleSheet.create({
     statusText: { letterSpacing: 0.5, fontSize: FontSize.xs },
     statusConfirmed: { backgroundColor: Colors.successFaded,  borderColor: Colors.success },
     statusPending:   { backgroundColor: Colors.warningFaded,  borderColor: Colors.warning },
+    statusOnHold:    { backgroundColor: Colors.orangeFaded,    borderColor: Colors.orange },
     statusCompleted: { backgroundColor: 'rgba(15,51,70,0.07)', borderColor: Colors.cardBorder },
     statusCancelled: { backgroundColor: Colors.errorFaded,    borderColor: Colors.error },
     statusNoShow:    { backgroundColor: Colors.warningFaded,  borderColor: Colors.warning },
@@ -372,6 +553,18 @@ const styles = StyleSheet.create({
         height: r(3),
         borderRadius: r(2),
         backgroundColor: Colors.cardBorder },
+
+    // Payment summary pill
+    paymentRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+        backgroundColor: Colors.backgroundSecondary ?? 'rgba(0,0,0,0.04)',
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: Spacing['1'],
+        borderRadius: r(6),
+        alignSelf: 'flex-start' as const },
 
     // Confirmation code
     codeRow: {
@@ -416,6 +609,17 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing['2'],
         marginBottom: Spacing['2'] },
     requestIcon: { fontSize: rf(13), marginTop: r(1) },
+
+    // Cancellation notice
+    noticeRow: {
+        backgroundColor: Colors.cardBackground,
+        borderRadius: Radius.md,
+        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['2'],
+        marginBottom: Spacing['2'],
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+    },
 
     // Actions
     actions: {

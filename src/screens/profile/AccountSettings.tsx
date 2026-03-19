@@ -28,7 +28,7 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ navigatio
         {
             label: '⚙️  MORE',
             items: [
-                { icon: 'card-outline' as const,               label: 'Payment Methods', sub: 'Manage saved cards',             onPress: () => showComingSoon('Payment Methods'), enabled: false },
+                { icon: 'card-outline' as const,               label: 'Payment Methods', sub: 'Manage saved cards',             onPress: () => navigation.navigate('PaymentMethods'), enabled: true },
                 { icon: 'help-circle-outline' as const,        label: 'Help & Support',  sub: 'FAQs and contact us',            onPress: () => showComingSoon('Help & Support'),  enabled: false },
                 { icon: 'information-circle-outline' as const, label: 'Terms & Privacy', sub: 'Legal information',              onPress: () => showComingSoon('Terms & Privacy'), enabled: false },
             ] },

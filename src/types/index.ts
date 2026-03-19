@@ -88,11 +88,23 @@ export interface Reservation {
     customerName: string;
     customerPhone: string;
     customerEmail?: string;
-    status: 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'no_show';
+    status: 'confirmed' | 'pending' | 'cancelled' | 'cancelled_by_restaurant' | 'completed' | 'no_show' | 'on_hold' | 'checked_in';
     confirmationCode: string;
     specialRequests?: string;
     canReview?: boolean;
     tags?: ReservationTagMapping[];
+    /** Amount charged/held at booking time. Null for non-payment bookings. */
+    paymentAmount?: number;
+    /** ISO-4217 currency code, e.g. "GBP". */
+    paymentCurrency?: string;
+    /** "DEPOSIT", "BOOKING_FEE", or "CANCELLATION_FEE". */
+    paymentTransactionType?: string;
+    /**
+     * The DineEasePayments policy ID that was active when this reservation was booked.
+     * Fetch the full policy on-demand via processingService.getReservationPolicy(paymentPolicyId)
+     * when the user needs to see cancellation/refund terms (e.g. taps "Cancel").
+     */
+    paymentPolicyId?: number;
 }
 
 export interface TimeSlot {
