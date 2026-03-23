@@ -75,3 +75,38 @@ EAS submits to **Internal testing** automatically. To promote to **Closed testin
 | `google-play-service-account.json` | Google Play API credentials for `eas submit` (gitignored — keep safe) |
 | `.env` | Local environment variables (gitignored — never commit) |
 | `local/` | Personal scratch scripts, not committed to git (gitignored) |
+
+---
+
+## EAS Secrets (Sensitive Build-time Variables)
+
+Sensitive environment variables — such as the live Stripe publishable key — are **not stored in `eas.json`**. They are stored server-side in Expo's secret vault and injected automatically at build time.
+
+### How it works
+
+When `eas build` runs, EAS injects all project-scoped secrets as environment variables into the build machine environment. `app.config.js` reads them via `process.env.STRIPE_PUBLISHABLE_KEY` exactly as if they were in `eas.json`. The value is baked into the JS bundle — the app has no awareness of where the value came from.
+
+**Resolution priority** (highest wins): `eas.json env block` → EAS project secret.
+
+This is why `development` and `preview` profiles keep the test key in `eas.json` — it overrides the live secret for those builds. The `production` and `preview-release` profiles have no key in `eas.json`, so they fall through to the live secret automatically.
+
+### Managing secrets
+
+```bash
+# Store or update the live Stripe key (run once; key is never committed to git)
+eas secret:create --scope project --name STRIPE_PUBLISHABLE_KEY --value "pk_live_..."
+
+# List all stored secrets (values are masked)
+eas secret:list
+
+# Delete a secret
+eas secret:delete --name STRIPE_PUBLISHABLE_KEY --scope project
+```
+
+### Current secrets
+
+| Secret name | Used by profiles | Notes |
+|---|---|---|
+| `STRIPE_PUBLISHABLE_KEY` | `production`, `preview-release` | Live Stripe publishable key — never commit to git |
+
+> `development` and `preview` profiles override this secret with the test key (`pk_test_...`) directly in `eas.json`, which is safe to commit.
