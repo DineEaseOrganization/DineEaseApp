@@ -19,6 +19,7 @@ import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
 import {
     AvailableSlot,
     BookingResponseWithPayment,
+    MobileBookingSection,
     PaymentPolicyResponse,
     ReservationTag,
     ReservationTagRequest
@@ -34,12 +35,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useStripe } from '@stripe/stripe-react-native';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
-    const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime } = route.params;
+    const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime, selectedSection: initialSelectedSection } = route.params;
     const { isAuthenticated, user } = useAuth();
     const isFocused = useIsFocused();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+
+    // Section state must be declared before useAvailabilityStream so the hook
+    // can react to section selection changes. Pre-populated from the detail screen
+    // when the user already chose an area there; otherwise starts as null (all areas).
+    const [availableSections, setAvailableSections] = useState<MobileBookingSection[]>([]);
+    const [sectionsLoading, setSectionsLoading] = useState(false);
+    const [selectedSection, setSelectedSection] = useState<string | null>(initialSelectedSection ?? null);
 
     const {
         slots: streamedSlots,
@@ -48,6 +56,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         restaurantId: restaurant.id,
         date: dateStr,
         partySize,
+        sectionName: selectedSection ?? undefined,
+        // Always fetch availability — section is optional, not a gate.
+        // When a section is selected, availability is scoped to that area;
+        // when null, restaurant-wide availability is returned.
         enabled: isAuthenticated,
         isFocused,
         isAuthenticated,
@@ -106,15 +118,36 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         fetchTags();
     }, [restaurant.id]);
 
+    // Fetch sections configured for mobile booking. When sections exist the user
+    // must pick one before availability is fetched, so slots are always scoped
+    // to a specific area. If no sections are configured this effect is a no-op
+    // and the restaurant-wide availability flow continues unchanged.
+    useEffect(() => {
+        const fetchSections = async () => {
+            setSectionsLoading(true);
+            try {
+                const response = await processingService.getAvailableSections(restaurant.id);
+                setAvailableSections(response.sections || []);
+            } catch {
+                // Non-critical — fall back to restaurant-wide availability with no section picker
+            } finally {
+                setSectionsLoading(false);
+            }
+        };
+        fetchSections();
+    }, [restaurant.id]);
+
     // Fetch the restaurant's active payment policy so we can show the user
     // exactly what charge / hold will apply before they confirm the booking.
+    // Re-fetches whenever the selected section changes so a section-level
+    // policy override is reflected immediately.
     useEffect(() => {
         const fetchPolicy = async () => {
-            const policy = await paymentService.getEffectivePolicy(restaurant.id);
+            const policy = await paymentService.getEffectivePolicy(restaurant.id, selectedSection ?? undefined);
             setPaymentPolicy(policy?.enabled ? policy : null);
         };
         fetchPolicy();
-    }, [restaurant.id]);
+    }, [restaurant.id, selectedSection]);
 
     const handleTagToggle = (tagId: number) => {
         setSelectedTags(prev => {
@@ -210,6 +243,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 isSmoking: false,
                 customer: { name: customerName, phoneNumber, phoneCountryCode, email: customerEmail || undefined },
                 restaurantId: restaurant.id,
+                area: selectedSection ?? undefined,
                 state: 'CONFIRMED',
                 comments: specialRequests || undefined,
                 tagRequests: selectedTags.length > 0 ? selectedTags : undefined };
@@ -524,11 +558,80 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                     </AppText>
                 </View>
 
+                {/* ── Seating Area (optional, only shown when restaurant has sections configured) ── */}
+                {(sectionsLoading || availableSections.length > 0) && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Seating Area</AppText>
+                        </View>
+
+                        {sectionsLoading ? (
+                            <View style={styles.loadingRow}>
+                                <ActivityIndicator size="small" color={Colors.accent} />
+                                <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['2'] }}>
+                                    Loading seating areas...
+                                </AppText>
+                            </View>
+                        ) : (
+                            // Always-visible grid — "Any area" is pre-selected and communicates optionality
+                            <View style={styles.sectionGrid}>
+                                <TouchableOpacity
+                                    style={[styles.sectionCard, selectedSection === null && styles.sectionCardSelected]}
+                                    onPress={() => { setSelectedSection(null); setSelectedTime(''); }}
+                                    activeOpacity={0.75}
+                                >
+                                    <Ionicons
+                                        name="apps-outline"
+                                        size={rf(20)}
+                                        color={selectedSection === null ? Colors.white : Colors.primary}
+                                        style={{ marginBottom: r(6) }}
+                                    />
+                                    <AppText
+                                        variant="bodySemiBold"
+                                        color={selectedSection === null ? Colors.white : Colors.primary}
+                                        style={{ textAlign: 'center' }}
+                                    >
+                                        Any area
+                                    </AppText>
+                                </TouchableOpacity>
+                                {availableSections.map((section) => {
+                                    const isSelected = selectedSection === section.sectionName;
+                                    return (
+                                        <TouchableOpacity
+                                            key={section.sectionName}
+                                            style={[styles.sectionCard, isSelected && styles.sectionCardSelected]}
+                                            onPress={() => { setSelectedSection(isSelected ? null : section.sectionName); setSelectedTime(''); }}
+                                            activeOpacity={0.75}
+                                        >
+                                            <Ionicons
+                                                name="location-outline"
+                                                size={rf(20)}
+                                                color={isSelected ? Colors.white : Colors.primary}
+                                                style={{ marginBottom: r(6) }}
+                                            />
+                                            <AppText
+                                                variant="bodySemiBold"
+                                                color={isSelected ? Colors.white : Colors.primary}
+                                                style={{ textAlign: 'center' }}
+                                            >
+                                                {section.sectionName}
+                                            </AppText>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        )}
+                    </View>
+                )}
+
                 {/* ── Select Time ── */}
                 <View style={styles.section}>
                     <View style={styles.sectionLabelRow}>
                         <View style={styles.sectionTick} />
-                        <AppText variant="sectionTitle" color={Colors.primary}>Select Time</AppText>
+                        <AppText variant="sectionTitle" color={Colors.primary}>
+                            {selectedSection ? `Select Time · ${selectedSection}` : 'Select Time'}
+                        </AppText>
                         {!slotsLoading && !availabilityError && availableSlots.filter(s => s.isAvailable).length > 6 && (
                             <TouchableOpacity onPress={() => setShowAllSlotsModal(true)} style={styles.viewAllBtn}>
                                 <AppText variant="captionMedium" color={Colors.accent}>View all →</AppText>
@@ -821,6 +924,39 @@ const styles = StyleSheet.create({
         borderRadius: r(2) },
     viewAllBtn: {
         marginLeft: 'auto' },
+
+    // ── Section picker ─────────────────────────────────────────────────────────
+    sectionGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing['3'],
+        paddingBottom: Spacing['2'] },
+    sectionCard: {
+        flex: 1,
+        minWidth: r(100),
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: Spacing['4'],
+        paddingHorizontal: Spacing['3'],
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.cardBorder,
+        backgroundColor: Colors.cardBackground },
+    sectionCardSelected: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary },
+    selectedSectionRow: {
+        paddingBottom: Spacing['2'] },
+    selectedSectionChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingVertical: Spacing['2'],
+        paddingHorizontal: Spacing['3'],
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.accent,
+        backgroundColor: Colors.cardBackground },
 
     // ── Time slots ─────────────────────────────────────────────────────────────
     slotScroll: {

@@ -8,6 +8,7 @@ export interface UseAvailabilityStreamOptions {
   restaurantId: number;
   date: string; // YYYY-MM-DD format
   partySize: number;
+  sectionName?: string; // Optional. When provided, restricts slots to tables in that section
   enabled?: boolean; // Whether to enable the hook (default: true)
   isFocused?: boolean; // Whether the screen is focused - pauses SSE/polling when false (default: true)
   isAuthenticated?: boolean; // Whether user is authenticated (enables SSE/polling, default: false)
@@ -48,6 +49,7 @@ export function useAvailabilityStream(
     restaurantId,
     date,
     partySize,
+    sectionName,
     enabled = true,
     isFocused = true,
     isAuthenticated = false,
@@ -108,12 +110,13 @@ export function useAvailabilityStream(
         restaurantId,
         date,
         partySize,
+        sectionName,
       );
       handleAvailabilityData(response);
     } catch (err: any) {
       console.error('[useAvailabilityStream] Refresh error:', err);
     }
-  }, [restaurantId, date, partySize, handleAvailabilityData]);
+  }, [restaurantId, date, partySize, sectionName, handleAvailabilityData]);
 
   // Effect: Initial data fetch and SSE connection
   // This effect runs when restaurantId, date, partySize, or focus state changes.
@@ -163,6 +166,7 @@ export function useAvailabilityStream(
             restaurantId,
             date,
             partySize,
+            sectionName,
           );
           if (isMountedRef.current) {
             handleAvailabilityData(response);
@@ -180,6 +184,7 @@ export function useAvailabilityStream(
           restaurantId,
           date,
           partySize,
+          sectionName,
         );
         if (isMountedRef.current) {
           handleAvailabilityData(response);
@@ -239,7 +244,8 @@ export function useAvailabilityStream(
           {
             maxReconnectAttempts: maxRetries,
             reconnectDelayMs: retryDelayMs,
-          }
+          },
+          sectionName
         ).then(subscription => {
           if (isMountedRef.current) {
             subscriptionRef.current = subscription;
@@ -269,7 +275,7 @@ export function useAvailabilityStream(
       isMountedRef.current = false;
       cleanup();
     };
-  }, [enabled, isFocused, restaurantId, date, partySize, pollingIntervalMs, handleAvailabilityData, cleanup]);
+  }, [enabled, isFocused, restaurantId, date, partySize, sectionName, pollingIntervalMs, handleAvailabilityData, cleanup]);
 
   return {
     slots,
