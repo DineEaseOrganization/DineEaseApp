@@ -5,6 +5,8 @@
   "scripts": {
     "start": "expo start --port 8090",
     "android": "expo start --android --port 8090 --clear",
+    "android:build": "expo run:android --variant debug --port 8090",
+    "android:prod": "cross-env NODE_ENV=production expo run:android --variant release --port 8090",
     "ios": "expo start --ios --port 8090",
     "web": "expo start --web --port 8090",
     "update-ip": "node update-local-ip.js",
@@ -43,6 +45,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "cross-env": "^7.0.3",
     "@eslint/js": "^9.39.3",
     "@types/react": "~19.1.10",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
