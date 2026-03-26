@@ -434,10 +434,17 @@ class AvailabilityStreamService {
     }
 
     // Parse subscription key to get parameters for unsubscribe call.
-    // Strip the optional '|sectionName' suffix before splitting on '-'.
-    const baseKey = subscriptionKey.split('|')[0];
+    // Key format: "restaurantId-YYYY-MM-DD-partySize" or "restaurantId-YYYY-MM-DD-partySize|sectionName".
+    // Extract the optional sectionName suffix BEFORE stripping it so it can be forwarded
+    // to the backend — without it the backend builds a restaurant-wide key and cannot
+    // find or close the section-scoped emitter.
+    const pipeIndex = subscriptionKey.indexOf('|');
+    const sectionName = pipeIndex !== -1 ? subscriptionKey.substring(pipeIndex + 1) : undefined;
+    const baseKey = pipeIndex !== -1 ? subscriptionKey.substring(0, pipeIndex) : subscriptionKey;
     const parts = baseKey.split('-');
-    if (parts.length >= 3) {
+    // Base key always has exactly 5 parts: restaurantId, YYYY, MM, DD, partySize.
+    // Guard with === 5 to avoid constructing undefined date/partySize on malformed keys.
+    if (parts.length === 5) {
       const restaurantId = parts[0];
       // Date is parts[1]-parts[2]-parts[3] (YYYY-MM-DD)
       const date = `${parts[1]}-${parts[2]}-${parts[3]}`;
@@ -445,7 +452,8 @@ class AvailabilityStreamService {
 
       // Call backend unsubscribe endpoint to force cleanup
       // Use fetch with async/await since React Native doesn't support synchronous XHR
-      const unsubscribeUrl = `${this.BASE_URL}/unsubscribe/${restaurantId}?date=${date}&partySize=${partySize}`;
+      const sectionParam = sectionName ? `&sectionName=${sectionName}` : '';
+      const unsubscribeUrl = `${this.BASE_URL}/unsubscribe/${restaurantId}?date=${date}&partySize=${partySize}${sectionParam}`;
 
       // Fire-and-forget async unsubscribe request
       fetch(unsubscribeUrl, {

@@ -119,9 +119,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     }, [restaurant.id]);
 
     // Fetch sections configured for mobile booking. When sections exist the user
-    // must pick one before availability is fetched, so slots are always scoped
-    // to a specific area. If no sections are configured this effect is a no-op
-    // and the restaurant-wide availability flow continues unchanged.
+    // can optionally pick one to scope availability to a specific area; if no
+    // section is selected, availability is fetched restaurant-wide (via a null
+    // sectionName). If no sections are configured this effect is a no-op and the
+    // restaurant-wide availability flow continues unchanged.
     useEffect(() => {
         const fetchSections = async () => {
             setSectionsLoading(true);
