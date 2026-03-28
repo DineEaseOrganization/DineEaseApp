@@ -96,14 +96,14 @@ class PaymentService {
    * If there is a section-level override the backend returns that,
    * otherwise the restaurant-level policy is returned.
    *
-   * GET /payments/policy/{restaurantId}/effective[?sectionId=]
+   * GET /payments/policy/{restaurantId}/effective[?sectionName=]
    */
   async getEffectivePolicy(
     restaurantId: number,
-    sectionId?: number
+    sectionName?: string
   ): Promise<PaymentPolicyResponse | null> {
     try {
-      const params = sectionId ? `?sectionId=${sectionId}` : '';
+      const params = sectionName ? `?sectionName=${encodeURIComponent(sectionName)}` : '';
       return await apiClient.get<PaymentPolicyResponse>(
         `${this.BASE_URL}${API_CONFIG.ENDPOINTS.PAYMENT_POLICY_EFFECTIVE}/${restaurantId}/effective${params}`
       );

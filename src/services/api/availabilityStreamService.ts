@@ -100,8 +100,11 @@ class AvailabilityStreamService {
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private readonly RECONNECT_DELAY_MS = 3000;
 
-  private getSubscriptionKey(restaurantId: number, date: string, partySize: number): string {
-    return `${restaurantId}-${date}-${partySize}`;
+  private getSubscriptionKey(restaurantId: number, date: string, partySize: number, sectionName?: string): string {
+    // Section name is appended with '|' so it doesn't interfere with the '-' delimiter
+    // used when parsing restaurantId/date/partySize in closeConnection.
+    const base = `${restaurantId}-${date}-${partySize}`;
+    return sectionName ? `${base}|${sectionName}` : base;
   }
 
   /**
@@ -113,9 +116,10 @@ class AvailabilityStreamService {
     date: string,
     partySize: number,
     callbacks: AvailabilityStreamCallbacks,
-    config?: AvailabilityStreamConfig
+    config?: AvailabilityStreamConfig,
+    sectionName?: string
   ): Promise<AvailabilitySubscription> {
-    const subscriptionKey = this.getSubscriptionKey(restaurantId, date, partySize);
+    const subscriptionKey = this.getSubscriptionKey(restaurantId, date, partySize, sectionName);
 
     // Apply configuration overrides
     const connectionTimeoutMs = config?.connectionTimeoutMs ?? 3600000; // 1 hour default
@@ -130,6 +134,10 @@ class AvailabilityStreamService {
       date: date,
       partySize: partySize.toString(),
     });
+
+    if (sectionName) {
+      params.set('sectionName', sectionName);
+    }
 
     const url = `${this.BASE_URL}/subscribe/${restaurantId}?${params}`;
 
@@ -196,7 +204,7 @@ class AvailabilityStreamService {
             if (newToken) {
               console.log('[AvailabilityStream] Token refreshed, reconnecting SSE...');
               // Reconnect with new token
-              this.subscribe(restaurantId, date, partySize, callbacks, config)
+              this.subscribe(restaurantId, date, partySize, callbacks, config, sectionName)
                 .then(_subscription => {
                   // Update the subscription reference in the parent hook
                   // (The hook will handle this via the onConnected callback)
@@ -231,7 +239,7 @@ class AvailabilityStreamService {
 
         // Only attempt reconnect if this wasn't an intentional closure
         if (!this.intentionalClosures.has(subscriptionKey)) {
-          this.scheduleReconnect(subscriptionKey, restaurantId, date, partySize, callbacks, config);
+          this.scheduleReconnect(subscriptionKey, restaurantId, date, partySize, callbacks, config, sectionName);
         }
       }
     };
@@ -250,7 +258,7 @@ class AvailabilityStreamService {
           if (newToken) {
             console.log('[AvailabilityStream] Token refreshed in onerror, reconnecting SSE...');
             // Reconnect with new token
-            this.subscribe(restaurantId, date, partySize, callbacks, config)
+            this.subscribe(restaurantId, date, partySize, callbacks, config, sectionName)
               .then(_subscription => {
                 console.log('[AvailabilityStream] Successfully reconnected with new token after onerror');
               })
@@ -280,7 +288,7 @@ class AvailabilityStreamService {
 
       // Only attempt reconnect if this wasn't an intentional closure
       if (!this.intentionalClosures.has(subscriptionKey)) {
-        this.scheduleReconnect(subscriptionKey, restaurantId, date, partySize, callbacks, config);
+        this.scheduleReconnect(subscriptionKey, restaurantId, date, partySize, callbacks, config, sectionName);
       }
     };
 
@@ -291,7 +299,7 @@ class AvailabilityStreamService {
 
       // Only attempt reconnect if this wasn't an intentional closure
       if (!this.intentionalClosures.has(subscriptionKey)) {
-        this.scheduleReconnect(subscriptionKey, restaurantId, date, partySize, callbacks, config);
+        this.scheduleReconnect(subscriptionKey, restaurantId, date, partySize, callbacks, config, sectionName);
       }
     };
 
@@ -384,7 +392,8 @@ class AvailabilityStreamService {
     date: string,
     partySize: number,
     callbacks: AvailabilityStreamCallbacks,
-    config?: AvailabilityStreamConfig
+    config?: AvailabilityStreamConfig,
+    sectionName?: string
   ): void {
     const attempts = this.reconnectAttempts.get(subscriptionKey) || 0;
     const maxReconnectAttempts = config?.maxReconnectAttempts ?? this.MAX_RECONNECT_ATTEMPTS;
@@ -407,7 +416,7 @@ class AvailabilityStreamService {
 
     const timeout = setTimeout(async () => {
       this.reconnectAttempts.set(subscriptionKey, attempts + 1);
-      await this.subscribe(restaurantId, date, partySize, callbacks, config);
+      await this.subscribe(restaurantId, date, partySize, callbacks, config, sectionName);
     }, delay);
 
     this.reconnectTimeouts.set(subscriptionKey, timeout);
@@ -424,9 +433,18 @@ class AvailabilityStreamService {
       this.reconnectTimeouts.delete(subscriptionKey);
     }
 
-    // Parse subscription key to get parameters for unsubscribe call
-    const parts = subscriptionKey.split('-');
-    if (parts.length >= 3) {
+    // Parse subscription key to get parameters for unsubscribe call.
+    // Key format: "restaurantId-YYYY-MM-DD-partySize" or "restaurantId-YYYY-MM-DD-partySize|sectionName".
+    // Extract the optional sectionName suffix BEFORE stripping it so it can be forwarded
+    // to the backend — without it the backend builds a restaurant-wide key and cannot
+    // find or close the section-scoped emitter.
+    const pipeIndex = subscriptionKey.indexOf('|');
+    const sectionName = pipeIndex !== -1 ? subscriptionKey.substring(pipeIndex + 1) : undefined;
+    const baseKey = pipeIndex !== -1 ? subscriptionKey.substring(0, pipeIndex) : subscriptionKey;
+    const parts = baseKey.split('-');
+    // Base key always has exactly 5 parts: restaurantId, YYYY, MM, DD, partySize.
+    // Guard with === 5 to avoid constructing undefined date/partySize on malformed keys.
+    if (parts.length === 5) {
       const restaurantId = parts[0];
       // Date is parts[1]-parts[2]-parts[3] (YYYY-MM-DD)
       const date = `${parts[1]}-${parts[2]}-${parts[3]}`;
@@ -434,7 +452,8 @@ class AvailabilityStreamService {
 
       // Call backend unsubscribe endpoint to force cleanup
       // Use fetch with async/await since React Native doesn't support synchronous XHR
-      const unsubscribeUrl = `${this.BASE_URL}/unsubscribe/${restaurantId}?date=${date}&partySize=${partySize}`;
+      const sectionParam = sectionName ? `&sectionName=${sectionName}` : '';
+      const unsubscribeUrl = `${this.BASE_URL}/unsubscribe/${restaurantId}?date=${date}&partySize=${partySize}${sectionParam}`;
 
       // Fire-and-forget async unsubscribe request
       fetch(unsubscribeUrl, {

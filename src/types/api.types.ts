@@ -351,6 +351,22 @@ export interface AvailabilitySlotsResponse {
   allSlots?: AvailableSlot[]; // NEW: All slots including unavailable ones
 }
 
+/** A single section the restaurant has enabled for mobile booking. */
+export interface MobileBookingSection {
+  sectionName: string;
+  displayOrder: number;
+}
+
+/**
+ * Response from GET /mobile/availability/{restaurantId}/sections.
+ * An empty sections array means the restaurant has no section config — the app
+ * should skip the section picker and show restaurant-wide availability.
+ */
+export interface AvailableSectionsResponse {
+  restaurantId: number;
+  sections: MobileBookingSection[];
+}
+
 // ============ RESERVATION/BOOKING API TYPES ============
 
 export enum ReservationState {

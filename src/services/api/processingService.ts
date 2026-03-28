@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
-import { AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest } from '../../types/api.types';
+import { AvailableSectionsResponse, AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest } from '../../types/api.types';
 
 export interface SubmitReviewRequest {
   reservationId: number;
@@ -45,22 +45,45 @@ class ProcessingService {
   }
 
   /**
+   * Get the sections that a restaurant has enabled for mobile booking.
+   * Endpoint: GET /mobile/availability/{restaurantId}/sections
+   *
+   * Returns an empty sections array when the restaurant has no section configuration.
+   * The app should skip the section picker in that case.
+   *
+   * @param restaurantId - Restaurant ID
+   */
+  async getAvailableSections(restaurantId: number): Promise<AvailableSectionsResponse> {
+    return await apiClient.get<AvailableSectionsResponse>(
+      `${this.BASE_URL}/availability/${restaurantId}/sections`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
    * Get available time slots for a restaurant
-   * Endpoint: GET /mobile/availability/{restaurantId}?date=YYYY-MM-DD&partySize=2
+   * Endpoint: GET /mobile/availability/{restaurantId}?date=YYYY-MM-DD&partySize=2[&sectionName=Terrace]
    *
    * @param restaurantId - Restaurant ID
    * @param date - Date in YYYY-MM-DD format
    * @param partySize - Number of people
+   * @param sectionName - Optional. When provided, restricts slots to tables in that section
+   *                      and applies the section-level payment policy.
    */
   async getAvailableSlots(
     restaurantId: number,
     date: string,
-    partySize: number
+    partySize: number,
+    sectionName?: string
   ): Promise<AvailabilitySlotsResponse> {
     const params = new URLSearchParams({
       date: date,
       partySize: partySize.toString(),
     });
+
+    if (sectionName) {
+      params.append('sectionName', sectionName);
+    }
 
     return await apiClient.get<AvailabilitySlotsResponse>(
       `${this.BASE_URL}/availability/${restaurantId}?${params}`,

@@ -10,7 +10,7 @@ import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
 import { useRestaurantDetail } from '../../hooks/useRestaurantQueries';
 import { useAuth } from '../../context/AuthContext';
 import { Restaurant, mapRestaurantDetailToRestaurant } from '../../types';
-import { AvailableSlot } from '../../types/api.types';
+import { AvailableSlot, MobileBookingSection } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
@@ -18,6 +18,7 @@ import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutil
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
+import { processingService } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 const heroHeight = Math.round(width * 0.5);
@@ -42,11 +43,32 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     const [showPickerModal, setShowPickerModal] = useState(false);
     const [showAllSlotsModal, setShowAllSlotsModal] = useState(false);
 
+    // Optional seating area filter — fetched once per restaurant.
+    // When a section is selected, availability is scoped to that area only.
+    const [availableSections, setAvailableSections] = useState<MobileBookingSection[]>([]);
+    const [sectionsLoading, setSectionsLoading] = useState(false);
+    const [selectedSection, setSelectedSection] = useState<string | null>(null);
+
     const { data: restaurantDetails } = useRestaurantDetail(initialRestaurant.id);
 
     useEffect(() => {
         if (restaurantDetails) setRestaurant(mapRestaurantDetailToRestaurant(restaurantDetails));
     }, [restaurantDetails]);
+
+    useEffect(() => {
+        const fetchSections = async () => {
+            setSectionsLoading(true);
+            try {
+                const response = await processingService.getAvailableSections(initialRestaurant.id);
+                setAvailableSections(response.sections || []);
+            } catch {
+                // Non-critical — detail screen works without section filtering
+            } finally {
+                setSectionsLoading(false);
+            }
+        };
+        fetchSections();
+    }, [initialRestaurant.id]);
 
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
@@ -58,6 +80,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
         restaurantId: restaurant.id,
         date: dateStr,
         partySize,
+        sectionName: selectedSection ?? undefined,
         enabled: true,
         isFocused,
         isAuthenticated,
@@ -125,7 +148,13 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
 
     const handleTimeSlotSelect = (slot: AvailableSlot) => {
         setShowAllSlotsModal(false);
-        navigation.navigate('BookingScreen', { restaurant, selectedDate, partySize, selectedTime: slot.time });
+        navigation.navigate('BookingScreen', {
+            restaurant,
+            selectedDate,
+            partySize,
+            selectedTime: slot.time,
+            selectedSection: selectedSection ?? undefined,
+        });
     };
 
     const handleAdvanceNoticeSlotPress = (slot: AvailableSlot) => {
@@ -265,10 +294,52 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                         </TouchableOpacity>
                     </View>
 
+                    {/* ── Seating area filter (optional, only shown when restaurant has sections) ── */}
+                    {(sectionsLoading || availableSections.length > 0) && (
+                        <View style={styles.section}>
+                            <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
+                                Seating Area
+                            </AppText>
+                            {sectionsLoading ? (
+                                <ActivityIndicator size="small" color={Colors.accent} style={{ alignSelf: 'flex-start' }} />
+                            ) : (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sectionChipsRow}>
+                                    {/* "Any area" is always first and active when nothing is selected */}
+                                    <TouchableOpacity
+                                        style={[styles.sectionChip, selectedSection === null && styles.sectionChipSelected]}
+                                        onPress={() => setSelectedSection(null)}
+                                        activeOpacity={0.75}
+                                    >
+                                        <AppText variant="captionMedium" color={selectedSection === null ? Colors.white : Colors.primary}>
+                                            Any area
+                                        </AppText>
+                                    </TouchableOpacity>
+                                    {availableSections.map((section) => {
+                                        const isSelected = selectedSection === section.sectionName;
+                                        return (
+                                            <TouchableOpacity
+                                                key={section.sectionName}
+                                                style={[styles.sectionChip, isSelected && styles.sectionChipSelected]}
+                                                onPress={() => setSelectedSection(isSelected ? null : section.sectionName)}
+                                                activeOpacity={0.75}
+                                            >
+                                                <AppText variant="captionMedium" color={isSelected ? Colors.white : Colors.primary}>
+                                                    {section.sectionName}
+                                                </AppText>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </ScrollView>
+                            )}
+                        </View>
+                    )}
+
                     {/* ── Available times ── */}
                     <View style={styles.section}>
                         <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
-                            {selectedTime === 'ASAP' ? 'Available Times' : `Times near ${selectedTime}`}
+                            {selectedTime === 'ASAP'
+                                ? (selectedSection ? `Available Times · ${selectedSection}` : 'Available Times')
+                                : `Times near ${selectedTime}`}
                         </AppText>
 
                         {slotsLoading ? (
@@ -463,6 +534,20 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['5'] },
     sectionTitle: {
         marginBottom: Spacing['3'] },
+    sectionChipsRow: {
+        flexDirection: 'row',
+        gap: Spacing['2'],
+        paddingVertical: Spacing['1'] },
+    sectionChip: {
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['2'],
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.primary,
+        backgroundColor: Colors.cardBackground },
+    sectionChipSelected: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary },
 
     // ── Selector button ───────────────────────────────────────────────────────
     selectorButton: {
