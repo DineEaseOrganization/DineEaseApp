@@ -337,6 +337,8 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         const key       = isNoShow ? 'no_show' : isCancellationHold ? 'cancellation_hold' : reservation.status;
         const { badge, textColor, label } = statusConfig[key] ?? statusConfig.pending;
         const accent    = statusAccent[key] ?? NAVY;
+        const areaLabel = reservation.area?.trim();
+        const tableTypeLabel = reservation.tableType?.trim();
 
         return (
             <View key={reservation.id} style={[styles.card, { borderLeftColor: accent, borderLeftWidth: r(3) }]}>
@@ -374,6 +376,28 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
                         </AppText>
                     </View>
                 </View>
+
+                {(areaLabel || tableTypeLabel) && (
+                    <View style={styles.pillRow}>
+                        {areaLabel && (
+                            <View style={styles.pill}>
+                                <AppText style={styles.pillIcon}>📍</AppText>
+                                <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                                    Area: {areaLabel}
+                                </AppText>
+                            </View>
+                        )}
+                        {areaLabel && tableTypeLabel && <View style={styles.pillDot} />}
+                        {tableTypeLabel && (
+                            <View style={styles.pill}>
+                                <AppText style={styles.pillIcon}>🪑</AppText>
+                                <AppText variant="captionMedium" color={Colors.textOnLightSecondary}>
+                                    Table: {tableTypeLabel}
+                                </AppText>
+                            </View>
+                        )}
+                    </View>
+                )}
 
                 {reservation.status === 'cancelled_by_restaurant' && (
                     <View style={styles.noticeRow}>

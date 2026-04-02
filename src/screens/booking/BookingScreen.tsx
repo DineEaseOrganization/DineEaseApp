@@ -448,7 +448,14 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             }
         } catch (error: any) {
             setIsLoading(false);
-            Alert.alert('Booking Failed', error.message || 'Unable to create reservation. Please try again.', [{ text: 'OK' }]);
+            const isConflict = error.status === 409;
+            Alert.alert(
+                isConflict ? 'Slot No Longer Available' : 'Booking Failed',
+                isConflict
+                    ? 'This time slot has just been taken. Please select a different time.'
+                    : (error.message || 'Unable to create reservation. Please try again.'),
+                [{ text: 'OK', onPress: isConflict ? () => refresh() : undefined }]
+            );
         }
     };
 
@@ -705,21 +712,18 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing['2'] }}>
                                 {tableTypes.map((tt) => {
                                     const isSelected = selectedTableType === tt.shape;
-                                    const isDisabled = tt.availableCount === 0;
                                     return (
                                         <TouchableOpacity
                                             key={tt.shape}
                                             style={[
                                                 styles.tableTypeChip,
                                                 isSelected && styles.tableTypeChipSelected,
-                                                isDisabled && { opacity: 0.4 },
                                             ]}
                                             onPress={() => {
-                                                if (isDisabled) return;
                                                 setSelectedTableType(isSelected ? null : tt.shape);
                                                 setSelectedTime('');
                                             }}
-                                            activeOpacity={isDisabled ? 1 : 0.75}
+                                            activeOpacity={0.75}
                                         >
                                             <AppText
                                                 variant="captionMedium"
@@ -732,7 +736,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                                                 color={isSelected ? Colors.white : Colors.textOnLightSecondary}
                                                 style={{ marginLeft: Spacing['1'] }}
                                             >
-                                                {tt.availableCount > 0 ? `${tt.availableCount} available` : 'Unavailable'}
+                                                {`${tt.availableCount} available`}
                                             </AppText>
                                         </TouchableOpacity>
                                     );

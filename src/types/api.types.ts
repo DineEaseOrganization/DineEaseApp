@@ -417,6 +417,7 @@ export interface ReservationDto {
   restaurantId: number;
   restaurantName?: string; // Restaurant name fetched from Restaurant service
   area?: string;
+  tableType?: string;
   tableNumbers?: string[];
   state: ReservationState;
   comments?: string;

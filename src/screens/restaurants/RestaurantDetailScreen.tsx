@@ -386,26 +386,23 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sectionChipsRow}>
                                     {tableTypes.map((tt) => {
                                         const isSelected = selectedTableType === tt.shape;
-                                        const isDisabled = tt.availableCount === 0;
                                         return (
                                             <TouchableOpacity
                                                 key={tt.shape}
                                                 style={[
                                                     styles.sectionChip,
                                                     isSelected && styles.sectionChipSelected,
-                                                    isDisabled && { opacity: 0.4 },
                                                 ]}
                                                 onPress={() => {
-                                                    if (isDisabled) return;
                                                     setSelectedTableType(isSelected ? null : tt.shape);
                                                 }}
-                                                activeOpacity={isDisabled ? 1 : 0.75}
+                                                activeOpacity={0.75}
                                             >
                                                 <AppText variant="captionMedium" color={isSelected ? Colors.white : Colors.primary}>
                                                     {tt.label || tt.shape}
                                                 </AppText>
                                                 <AppText variant="caption" color={isSelected ? Colors.white : Colors.textOnLightSecondary} style={{ marginTop: r(1) }}>
-                                                    {tt.availableCount > 0 ? `${tt.availableCount} available` : 'Unavailable'}
+                                                    {`${tt.availableCount} available`}
                                                 </AppText>
                                             </TouchableOpacity>
                                         );

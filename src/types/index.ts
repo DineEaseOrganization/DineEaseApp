@@ -85,6 +85,8 @@ export interface Reservation {
     date: string;
     time: string;
     partySize: number;
+    area?: string;
+    tableType?: string;
     customerName: string;
     customerPhone: string;
     customerEmail?: string;
