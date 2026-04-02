@@ -1,5 +1,5 @@
 // src/screens/booking/BookingsScreen.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDateDayMonthYear } from '../../utils/Datetimeutils';
 import { Alert, FlatList, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { useReservations } from '../../hooks/useReservations';
 import { mapReservationDtosToReservations } from '../../utils/reservationMapper';
 import { processingService } from '../../services/api/processingService';
 import { paymentService } from '../../services/api/paymentService';
+import { useStripe } from '@stripe/stripe-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
@@ -38,12 +39,80 @@ const FILTERS = [
 
 type FilterKey = typeof FILTERS[number]['key'];
 
+/** Returns a live countdown string (e.g. "12:34") and urgency flag for a hold expiry timestamp. */
+const useHoldCountdown = (holdExpiresAt?: string) => {
+    const [remaining, setRemaining] = useState<number | null>(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval>>();
+
+    useEffect(() => {
+        if (!holdExpiresAt) { setRemaining(null); return; }
+
+        const tick = () => {
+            const diff = new Date(holdExpiresAt).getTime() - Date.now();
+            setRemaining(diff > 0 ? diff : 0);
+        };
+        tick();
+        intervalRef.current = setInterval(tick, 1000);
+        return () => clearInterval(intervalRef.current);
+    }, [holdExpiresAt]);
+
+    if (remaining == null) return { text: null, isUrgent: false, isExpired: false };
+
+    const isExpired = remaining <= 0;
+    const isUrgent = remaining > 0 && remaining <= 2 * 60 * 1000; // <2 min
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    const text = isExpired ? 'Expired' : `${mins}:${secs.toString().padStart(2, '0')}`;
+    return { text, isUrgent, isExpired };
+};
+
 const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
     const [filter, setFilter] = useState<FilterKey>('all');
     const [reviewedReservationIds, setReviewedReservationIds] = useState<Set<number>>(new Set());
+    const [payingReservationId, setPayingReservationId] = useState<number | null>(null);
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const { reservations: reservationDtos, isLoading, error, refetch, cancelReservation: cancelReservationApi, hasMore, loadMore } =
         useReservations({ usePagination: true, filter, pageSize: 20 });
+
+    const handleCompletePayment = async (reservation: Reservation) => {
+        setPayingReservationId(reservation.id);
+        try {
+            const { clientSecret } = await paymentService.retryPaymentIntent(reservation.id);
+            const { ephemeralKeySecret, customerId } = await paymentService.getEphemeralKey();
+
+            const { error: initError } = await initPaymentSheet({
+                paymentIntentClientSecret: clientSecret,
+                customerEphemeralKeySecret: ephemeralKeySecret,
+                customerId,
+                merchantDisplayName: reservation.restaurant.name,
+            });
+
+            if (initError) {
+                Alert.alert('Payment Error', initError.message);
+                return;
+            }
+
+            const { error: presentError } = await presentPaymentSheet();
+
+            if (presentError) {
+                if (presentError.code !== 'Canceled') {
+                    Alert.alert('Payment Failed', presentError.message, [
+                        { text: 'OK' },
+                        { text: 'Try Again', onPress: () => handleCompletePayment(reservation) },
+                    ]);
+                }
+                return;
+            }
+
+            Alert.alert('Payment Complete', 'Your reservation is now confirmed.');
+            refetch();
+        } catch (e: any) {
+            Alert.alert('Payment Error', e?.message || 'Could not process payment. Please try again.');
+        } finally {
+            setPayingReservationId(null);
+        }
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -234,12 +303,35 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
         cancelled_by_restaurant: Colors.error,
         no_show:                 Colors.warning };
 
+    // ── Hold countdown row (rendered inside card for ON_HOLD reservations) ──
+    const HoldCountdownRow: React.FC<{ reservation: Reservation }> = ({ reservation: res }) => {
+        const { text, isUrgent, isExpired } = useHoldCountdown(res.holdExpiresAt);
+        if (!text || res.status !== 'on_hold') return null;
+
+        useEffect(() => {
+            if (isExpired) refetch();
+        }, [isExpired]);
+
+        return (
+            <View style={[styles.holdCountdownRow, isUrgent && styles.holdCountdownUrgent]}>
+                <AppText style={styles.pillIcon}>⏳</AppText>
+                <AppText
+                    variant="captionMedium"
+                    color={isExpired ? Colors.error : isUrgent ? Colors.error : Colors.orange}
+                >
+                    {isExpired ? 'Hold expired — slot released' : `Complete payment within ${text}`}
+                </AppText>
+            </View>
+        );
+    };
+
     // ── Booking card ──────────────────────────────────────────────────────────
     const renderBookingCard = (reservation: Reservation) => {
         const isPast    = isReservationPast(reservation.date, reservation.time);
         const isNoShow  = reservation.status === 'no_show';
         const isCancellationHold = reservation.status === 'on_hold'
             && reservation.paymentTransactionType === 'CANCELLATION_FEE';
+        const isAwaitingPayment = reservation.status === 'on_hold' && !isCancellationHold;
         const canCancel = (reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'on_hold') && !isPast;
         const canReview = reservation.canReview && reservation.status === 'completed';
         const key       = isNoShow ? 'no_show' : isCancellationHold ? 'cancellation_hold' : reservation.status;
@@ -315,6 +407,24 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
                             })()}
                         </AppText>
                     </View>
+                )}
+
+                {/* ── Hold countdown + Complete Payment ── */}
+                {isAwaitingPayment && (
+                    <>
+                        <HoldCountdownRow reservation={reservation} />
+                        <TouchableOpacity
+                            style={[styles.completePaymentBtn, payingReservationId === reservation.id && { opacity: 0.6 }]}
+                            onPress={() => handleCompletePayment(reservation)}
+                            disabled={payingReservationId === reservation.id}
+                            activeOpacity={0.8}
+                        >
+                            {payingReservationId === reservation.id
+                                ? <ActivityIndicator size="small" color={Colors.white} />
+                                : <AppText variant="captionMedium" color={Colors.white}>💳  Complete Payment</AppText>
+                            }
+                        </TouchableOpacity>
+                    </>
                 )}
 
                 {/* ── Confirmation code ── */}
@@ -620,6 +730,33 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.cardBorder,
     },
+
+    // Hold countdown
+    holdCountdownRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing['2'],
+        marginBottom: Spacing['2'],
+        backgroundColor: Colors.orangeFaded,
+        paddingHorizontal: Spacing['2'],
+        paddingVertical: Spacing['1'],
+        borderRadius: r(6),
+        alignSelf: 'flex-start' as const },
+    holdCountdownUrgent: {
+        backgroundColor: Colors.errorFaded,
+        borderWidth: 1,
+        borderColor: Colors.error },
+    completePaymentBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Spacing['2'],
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['2'],
+        borderRadius: Radius.md,
+        backgroundColor: Colors.success,
+        marginBottom: Spacing['2'],
+        alignSelf: 'stretch' as const },
 
     // Actions
     actions: {

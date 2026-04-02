@@ -60,7 +60,6 @@ export const formatDateWeekdayLongDayMonthYear = (date: Date): string => {
 /**
  * Formats party size, date, and time into a display string
  * Examples:
- * - "2 • Now" (today, ASAP)
  * - "4 • 19:00" (today, specific time)
  * - "2 • Tomorrow 18:30"
  * - "6 • Jan 15 20:00"
@@ -73,9 +72,7 @@ export const formatPartyDateTime = (
   const today = new Date();
   const isToday = selectedDate.toDateString() === today.toDateString();
 
-  if (isToday && selectedTime === 'ASAP') {
-    return `${partySize} • Now`;
-  } else if (isToday) {
+  if (isToday) {
     return `${partySize} • ${selectedTime}`;
   } else {
     const tomorrow = new Date();

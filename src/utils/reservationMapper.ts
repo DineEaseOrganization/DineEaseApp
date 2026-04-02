@@ -75,6 +75,7 @@ export function mapReservationDtoToReservation(
     paymentCurrency: dto.paymentCurrency,
     paymentTransactionType: dto.paymentTransactionType,
     paymentPolicyId: dto.paymentPolicyId,
+    holdExpiresAt: dto.holdExpiresAt,
   };
 }
 

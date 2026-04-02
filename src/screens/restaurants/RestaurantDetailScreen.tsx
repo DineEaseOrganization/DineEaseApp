@@ -10,7 +10,7 @@ import { useAvailabilityStream } from '../../hooks/useAvailabilityStream';
 import { useRestaurantDetail } from '../../hooks/useRestaurantQueries';
 import { useAuth } from '../../context/AuthContext';
 import { Restaurant, mapRestaurantDetailToRestaurant } from '../../types';
-import { AvailableSlot, MobileBookingSection } from '../../types/api.types';
+import { AvailableSlot, MobileBookingSection, TableTypeOption } from '../../types/api.types';
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
@@ -36,7 +36,15 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     const [restaurant, setRestaurant] = useState<Restaurant>(initialRestaurant);
     const [selectedDate, setSelectedDate] = useState(initialSelectedDate || new Date());
     const [partySize, setPartySize] = useState(initialPartySize || 2);
-    const [selectedTime, setSelectedTime] = useState(initialSelectedTime || 'ASAP');
+    const [selectedTime, setSelectedTime] = useState(() => {
+        if (initialSelectedTime && initialSelectedTime !== 'ASAP') return initialSelectedTime;
+        // Default to current time rounded to next 15-minute mark
+        const now = new Date();
+        const m = now.getMinutes();
+        const nextQuarter = Math.ceil((m + 1) / 15) * 15;
+        const h = nextQuarter >= 60 ? now.getHours() + 1 : now.getHours();
+        return `${(h % 24).toString().padStart(2, '0')}:${(nextQuarter % 60).toString().padStart(2, '0')}`;
+    });
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
@@ -48,6 +56,11 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     const [availableSections, setAvailableSections] = useState<MobileBookingSection[]>([]);
     const [sectionsLoading, setSectionsLoading] = useState(false);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
+
+    // Table type state — shown when the selected section has showTableTypes=true
+    const [tableTypes, setTableTypes] = useState<TableTypeOption[]>([]);
+    const [selectedTableType, setSelectedTableType] = useState<string | null>(null);
+    const [tableTypesLoading, setTableTypesLoading] = useState(false);
 
     const { data: restaurantDetails } = useRestaurantDetail(initialRestaurant.id);
 
@@ -72,6 +85,30 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
 
     const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
 
+    // Fetch table types when the selected section has showTableTypes enabled.
+    useEffect(() => {
+        setSelectedTableType(null);
+        setTableTypes([]);
+
+        const section = availableSections.find(s => s.sectionName === selectedSection);
+        if (!section?.showTableTypes || !selectedSection) return;
+
+        const fetchTableTypes = async () => {
+            setTableTypesLoading(true);
+            try {
+                const response = await processingService.getTableTypesForSection(
+                    restaurant.id, selectedSection, dateStr, partySize
+                );
+                setTableTypes(response.tableTypes || []);
+            } catch {
+                setTableTypes([]);
+            } finally {
+                setTableTypesLoading(false);
+            }
+        };
+        fetchTableTypes();
+    }, [restaurant.id, selectedSection, dateStr, partySize, availableSections]);
+
     const {
         slots: streamedSlots,
         allSlots: streamedAllSlots,
@@ -81,9 +118,9 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
         date: dateStr,
         partySize,
         sectionName: selectedSection ?? undefined,
+        tableType: selectedTableType ?? undefined,
         enabled: true,
         isFocused,
-        isAuthenticated,
         pollingIntervalMs: 30000 });
 
     const availableSlots = streamedSlots;
@@ -106,10 +143,6 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     }, [streamError, slotsLoading, availableSlots]);
 
     const timeToMinutes = (timeStr: string): number => {
-        if (timeStr === 'ASAP') {
-            const now = new Date();
-            return now.getHours() * 60 + now.getMinutes();
-        }
         const [h, m] = timeStr.split(':').map(Number);
         return h * 60 + m;
     };
@@ -124,6 +157,12 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
         closest.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
         return closest;
     };
+
+    // When the selected section has showTableTypes enabled, require a table type
+    // selection before showing time slots — prevents booking with ambiguous payment terms.
+    const detailTableTypeRequired = selectedSection != null
+        && availableSections.find(s => s.sectionName === selectedSection)?.showTableTypes === true
+        && !selectedTableType;
 
     const handleCallRestaurant = () => {
         if (!restaurant.phoneNumber) {
@@ -154,6 +193,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
             partySize,
             selectedTime: slot.time,
             selectedSection: selectedSection ?? undefined,
+            selectedTableType: selectedTableType ?? undefined,
         });
     };
 
@@ -307,7 +347,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                                     {/* "Any area" is always first and active when nothing is selected */}
                                     <TouchableOpacity
                                         style={[styles.sectionChip, selectedSection === null && styles.sectionChipSelected]}
-                                        onPress={() => setSelectedSection(null)}
+                                        onPress={() => { setSelectedSection(null); setSelectedTableType(null); }}
                                         activeOpacity={0.75}
                                     >
                                         <AppText variant="captionMedium" color={selectedSection === null ? Colors.white : Colors.primary}>
@@ -320,7 +360,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                                             <TouchableOpacity
                                                 key={section.sectionName}
                                                 style={[styles.sectionChip, isSelected && styles.sectionChipSelected]}
-                                                onPress={() => setSelectedSection(isSelected ? null : section.sectionName)}
+                                                onPress={() => { setSelectedSection(isSelected ? null : section.sectionName); setSelectedTableType(null); }}
                                                 activeOpacity={0.75}
                                             >
                                                 <AppText variant="captionMedium" color={isSelected ? Colors.white : Colors.primary}>
@@ -334,15 +374,60 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                         </View>
                     )}
 
+                    {/* ── Table Type picker (shown when selected section has showTableTypes) ── */}
+                    {selectedSection && availableSections.find(s => s.sectionName === selectedSection)?.showTableTypes && (
+                        <View style={styles.section}>
+                            <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
+                                Table Type
+                            </AppText>
+                            {tableTypesLoading ? (
+                                <ActivityIndicator size="small" color={Colors.accent} style={{ alignSelf: 'flex-start' }} />
+                            ) : tableTypes.length > 0 ? (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sectionChipsRow}>
+                                    {tableTypes.map((tt) => {
+                                        const isSelected = selectedTableType === tt.shape;
+                                        const isDisabled = tt.availableCount === 0;
+                                        return (
+                                            <TouchableOpacity
+                                                key={tt.shape}
+                                                style={[
+                                                    styles.sectionChip,
+                                                    isSelected && styles.sectionChipSelected,
+                                                    isDisabled && { opacity: 0.4 },
+                                                ]}
+                                                onPress={() => {
+                                                    if (isDisabled) return;
+                                                    setSelectedTableType(isSelected ? null : tt.shape);
+                                                }}
+                                                activeOpacity={isDisabled ? 1 : 0.75}
+                                            >
+                                                <AppText variant="captionMedium" color={isSelected ? Colors.white : Colors.primary}>
+                                                    {tt.label || tt.shape}
+                                                </AppText>
+                                                <AppText variant="caption" color={isSelected ? Colors.white : Colors.textOnLightSecondary} style={{ marginTop: r(1) }}>
+                                                    {tt.availableCount > 0 ? `${tt.availableCount} available` : 'Unavailable'}
+                                                </AppText>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </ScrollView>
+                            ) : null}
+                        </View>
+                    )}
+
                     {/* ── Available times ── */}
                     <View style={styles.section}>
                         <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
-                            {selectedTime === 'ASAP'
-                                ? (selectedSection ? `Available Times · ${selectedSection}` : 'Available Times')
+                            {selectedSection
+                                ? `Times near ${selectedTime} · ${selectedSection}`
                                 : `Times near ${selectedTime}`}
                         </AppText>
 
-                        {slotsLoading ? (
+                        {detailTableTypeRequired ? (
+                            <AppText variant="body" color={Colors.textOnLightSecondary} style={{ fontStyle: 'italic' }}>
+                                Please select a table type to see available times
+                            </AppText>
+                        ) : slotsLoading ? (
                             <View style={styles.loadingSlots}>
                                 <ActivityIndicator size="large" color={Colors.accent} />
                                 <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginTop: Spacing['2'] }}>

@@ -29,7 +29,13 @@ const NAVY = Colors.primary; // #0f3346
 
 const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation }) => {
   const [partySize, setPartySize] = useState(2);
-  const [selectedTime, setSelectedTime] = useState('ASAP');
+  const [selectedTime, setSelectedTime] = useState(() => {
+    const now = new Date();
+    const m = now.getMinutes();
+    const nextQuarter = Math.ceil((m + 1) / 15) * 15;
+    const h = nextQuarter >= 60 ? now.getHours() + 1 : now.getHours();
+    return `${(h % 24).toString().padStart(2, '0')}:${(nextQuarter % 60).toString().padStart(2, '0')}`;
+  });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [locationName, setLocationName] = useState('Loading...');
