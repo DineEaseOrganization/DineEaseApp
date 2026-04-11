@@ -83,7 +83,12 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
         fetchSections();
     }, [initialRestaurant.id]);
 
-    const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+    const dateStr = useMemo(() => {
+        const y = selectedDate.getFullYear();
+        const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const d = String(selectedDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }, [selectedDate]);
 
     // Fetch table types when the selected section has showTableTypes enabled.
     useEffect(() => {
@@ -338,7 +343,10 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                     {(sectionsLoading || availableSections.length > 0) && (
                         <View style={styles.section}>
                             <AppText variant="sectionTitle" color={Colors.primary} style={styles.sectionTitle}>
-                                Seating Area
+                                Area Preference (optional)
+                            </AppText>
+                            <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: r(4) }}>
+                                Only listed areas can be requested. Other areas are assigned by the restaurant.
                             </AppText>
                             {sectionsLoading ? (
                                 <ActivityIndicator size="small" color={Colors.accent} style={{ alignSelf: 'flex-start' }} />
@@ -400,9 +408,6 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
                                             >
                                                 <AppText variant="captionMedium" color={isSelected ? Colors.white : Colors.primary}>
                                                     {tt.label || tt.shape}
-                                                </AppText>
-                                                <AppText variant="caption" color={isSelected ? Colors.white : Colors.textOnLightSecondary} style={{ marginTop: r(1) }}>
-                                                    {`${tt.availableCount} available`}
                                                 </AppText>
                                             </TouchableOpacity>
                                         );
