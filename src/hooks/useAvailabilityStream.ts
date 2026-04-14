@@ -101,11 +101,12 @@ export function useAvailabilityStream(
 
     if (!isFocused) {
       // Screen lost focus — stop polling but preserve existing slot data
+      isMountedRef.current = false;
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
-      return;
+      return () => { isMountedRef.current = false; };
     }
 
     // Reset UI state for new params

@@ -49,7 +49,12 @@ const useHoldCountdown = (holdExpiresAt?: string) => {
 
         const tick = () => {
             const diff = new Date(holdExpiresAt).getTime() - Date.now();
-            setRemaining(diff > 0 ? diff : 0);
+            if (diff <= 0) {
+                setRemaining(0);
+                clearInterval(intervalRef.current);
+                return;
+            }
+            setRemaining(diff);
         };
         tick();
         intervalRef.current = setInterval(tick, 1000);

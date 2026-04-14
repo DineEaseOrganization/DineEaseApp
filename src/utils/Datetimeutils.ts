@@ -85,6 +85,18 @@ export const formatPartyDateTime = (
 };
 
 /**
+ * Returns the current time rounded up to the next 15-minute mark as "HH:MM".
+ * e.g. 14:03 → "14:15", 14:47 → "15:00", 23:58 → "00:00"
+ */
+export const currentTimeRounded = (): string => {
+  const now = new Date();
+  const m = now.getMinutes();
+  const nextQuarter = Math.ceil((m + 1) / 15) * 15;
+  const h = nextQuarter >= 60 ? now.getHours() + 1 : now.getHours();
+  return `${(h % 24).toString().padStart(2, '0')}:${(nextQuarter % 60).toString().padStart(2, '0')}`;
+};
+
+/**
  * Formats a date to display format
  * Examples:
  * - "Today"

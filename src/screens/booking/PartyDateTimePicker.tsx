@@ -10,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { formatDateWeekdayShortDayMonthYear } from '../../utils/Datetimeutils';
+import { currentTimeRounded, formatDateWeekdayShortDayMonthYear } from '../../utils/Datetimeutils';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
@@ -26,14 +26,6 @@ interface PartyDateTimePickerProps {
     onTimeChange: (_time: string) => void;
 }
 
-/** Round current time up to the next 15-minute mark and return "HH:MM". */
-export function currentTimeRounded(): string {
-    const now = new Date();
-    const m = now.getMinutes();
-    const nextQuarter = Math.ceil((m + 1) / 15) * 15;
-    const h = nextQuarter >= 60 ? now.getHours() + 1 : now.getHours();
-    return `${(h % 24).toString().padStart(2, '0')}:${(nextQuarter % 60).toString().padStart(2, '0')}`;
-}
 
 function parseTime(time: string): { hour: string; minute: string } {
     if (!time || time === 'ASAP') {

@@ -14,7 +14,7 @@ import { AvailableSlot, MobileBookingSection, TableTypeOption } from '../../type
 import { parseAvailabilityError, AvailabilityError } from '../../utils/errorHandlers';
 import { AvailabilityErrorDisplay, AllSlotsModal, TimeSlotDisplay } from '../../components/availability';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
-import { formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
+import { currentTimeRounded, formatDateDisplay, formatPartyDateTime } from '../../utils/Datetimeutils';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
@@ -38,12 +38,7 @@ const RestaurantDetailScreen: React.FC<RestaurantDetailScreenProps> = ({ route, 
     const [partySize, setPartySize] = useState(initialPartySize || 2);
     const [selectedTime, setSelectedTime] = useState(() => {
         if (initialSelectedTime && initialSelectedTime !== 'ASAP') return initialSelectedTime;
-        // Default to current time rounded to next 15-minute mark
-        const now = new Date();
-        const m = now.getMinutes();
-        const nextQuarter = Math.ceil((m + 1) / 15) * 15;
-        const h = nextQuarter >= 60 ? now.getHours() + 1 : now.getHours();
-        return `${(h % 24).toString().padStart(2, '0')}:${(nextQuarter % 60).toString().padStart(2, '0')}`;
+        return currentTimeRounded();
     });
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
