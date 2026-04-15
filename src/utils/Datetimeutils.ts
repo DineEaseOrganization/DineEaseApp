@@ -85,7 +85,7 @@ export const formatPartyDateTime = (
 };
 
 /**
- * Returns the current time rounded up to the next 15-minute mark as "HH:MM".
+ * Returns the current time rounded up to the next 15-minute mark as "HH:mm".
  * e.g. 14:03 → "14:15", 14:47 → "15:00", 23:58 → "00:00"
  */
 export const currentTimeRounded = (): string => {

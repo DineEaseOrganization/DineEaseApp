@@ -311,11 +311,12 @@ const BookingsScreen: React.FC<BookingsScreenProps> = ({ navigation }) => {
     // ── Hold countdown row (rendered inside card for ON_HOLD reservations) ──
     const HoldCountdownRow: React.FC<{ reservation: Reservation }> = ({ reservation: res }) => {
         const { text, isUrgent, isExpired } = useHoldCountdown(res.holdExpiresAt);
-        if (!text || res.status !== 'on_hold') return null;
 
         useEffect(() => {
-            if (isExpired) refetch();
-        }, [isExpired]);
+            if (res.status === 'on_hold' && text && isExpired) refetch();
+        }, [isExpired, refetch, res.status, text]);
+
+        if (!text || res.status !== 'on_hold') return null;
 
         return (
             <View style={[styles.holdCountdownRow, isUrgent && styles.holdCountdownUrgent]}>
