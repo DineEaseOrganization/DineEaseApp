@@ -85,6 +85,8 @@ export interface Reservation {
     date: string;
     time: string;
     partySize: number;
+    area?: string;
+    tableType?: string;
     customerName: string;
     customerPhone: string;
     customerEmail?: string;
@@ -105,6 +107,8 @@ export interface Reservation {
      * when the user needs to see cancellation/refund terms (e.g. taps "Cancel").
      */
     paymentPolicyId?: number;
+    /** ISO timestamp — when the ON_HOLD reservation will be auto-cancelled if payment is not completed. */
+    holdExpiresAt?: string;
 }
 
 export interface TimeSlot {

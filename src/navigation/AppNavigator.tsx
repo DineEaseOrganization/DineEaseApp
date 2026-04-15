@@ -89,7 +89,7 @@ export type DiscoverStackParamList = {
         radius?: number;
     };
     RestaurantDetail: { restaurant: Restaurant; partySize?: number; selectedDate?: Date; selectedTime?: string };
-  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string; selectedSection?: string };
+  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string; selectedSection?: string; selectedTableType?: string };
   BookingConfirmation: { booking: BookingConfirmationParams };
   ReviewScreen: { reservation: Reservation; updateId?: number };
 };
@@ -98,7 +98,7 @@ export type SearchStackParamList = {
   SearchMap: undefined;
   RestaurantSearch: undefined;
   RestaurantDetail: { restaurant: Restaurant };
-  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedSection?: string };
+  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedSection?: string; selectedTableType?: string };
 };
 
 export type BookingsStackParamList = {
@@ -112,7 +112,7 @@ export type ProfileStackParamList = {
   AllReviews: undefined;
   Favorites: undefined;
   RestaurantDetail: { restaurant: Restaurant; partySize?: number; selectedDate?: Date; selectedTime?: string };
-  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string; selectedSection?: string };
+  BookingScreen: { restaurant: Restaurant; selectedDate: Date; partySize: number; selectedTime?: string; selectedSection?: string; selectedTableType?: string };
   BookingConfirmation: { booking: BookingConfirmationParams };
   AccountSettings: undefined;
   YourDetails: undefined;

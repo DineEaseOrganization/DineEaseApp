@@ -4,6 +4,7 @@ import { formatDateWeekdayLongDayMonthYear } from '../../utils/Datetimeutils';
 import {
     ActivityIndicator,
     Alert,
+    FlatList,
     Modal,
     ScrollView,
     StyleSheet,
@@ -22,7 +23,8 @@ import {
     MobileBookingSection,
     PaymentPolicyResponse,
     ReservationTag,
-    ReservationTagRequest
+    ReservationTagRequest,
+    TableTypeOption
 } from '../../types/api.types';
 import { AvailabilityError, parseAvailabilityError } from '../../utils/errorHandlers';
 import { AllSlotsModal, AvailabilityErrorDisplay, TimeSlotDisplay } from '../../components/availability';
@@ -35,12 +37,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useStripe } from '@stripe/stripe-react-native';
 
 const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
-    const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime, selectedSection: initialSelectedSection } = route.params;
+    const { restaurant, selectedDate, partySize, selectedTime: initialSelectedTime, selectedSection: initialSelectedSection, selectedTableType: initialSelectedTableType } = route.params;
     const { isAuthenticated, user } = useAuth();
     const isFocused = useIsFocused();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-    const dateStr = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+    const dateStr = useMemo(() => {
+        const y = selectedDate.getFullYear();
+        const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const d = String(selectedDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }, [selectedDate]);
 
     // Section state must be declared before useAvailabilityStream so the hook
     // can react to section selection changes. Pre-populated from the detail screen
@@ -49,20 +56,26 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [sectionsLoading, setSectionsLoading] = useState(false);
     const [selectedSection, setSelectedSection] = useState<string | null>(initialSelectedSection ?? null);
 
+    // Table type state — shown when the selected section has showTableTypes=true
+    const [tableTypes, setTableTypes] = useState<TableTypeOption[]>([]);
+    const [selectedTableType, setSelectedTableType] = useState<string | null>(initialSelectedTableType ?? null);
+    const [tableTypesLoading, setTableTypesLoading] = useState(false);
+
     const {
         slots: streamedSlots,
         isLoading: slotsLoading,
-        error: streamError } = useAvailabilityStream({
+        error: streamError,
+        refresh } = useAvailabilityStream({
         restaurantId: restaurant.id,
         date: dateStr,
         partySize,
         sectionName: selectedSection ?? undefined,
+        tableType: selectedTableType ?? undefined,
         // Always fetch availability — section is optional, not a gate.
         // When a section is selected, availability is scoped to that area;
         // when null, restaurant-wide availability is returned.
         enabled: isAuthenticated,
         isFocused,
-        isAuthenticated,
         pollingIntervalMs: 30000 });
 
     const [availabilityError, setAvailabilityError] = useState<AvailabilityError | null>(null);
@@ -81,15 +94,13 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
     const [selectedTags, setSelectedTags] = useState<ReservationTagRequest[]>([]);
     const [paymentPolicy, setPaymentPolicy] = useState<PaymentPolicyResponse | null>(null);
 
-    const slotScrollRef = useRef<ScrollView>(null);
-    const slotPositions = useRef<Record<string, number>>({ });
+    // When the selected section has showTableTypes enabled, the user must pick a
+    // table type before they can see time slots or confirm the booking.
+    const tableTypeRequired = selectedSection != null
+        && availableSections.find(s => s.sectionName === selectedSection)?.showTableTypes === true
+        && !selectedTableType;
 
-    const scrollToSelectedSlot = (time: string) => {
-        const x = slotPositions.current[time];
-        if (typeof x === 'number') {
-            slotScrollRef.current?.scrollTo({ x: Math.max(0, x - Spacing['4']), animated: true });
-        }
-    };
+    const slotListRef = useRef<FlatList<AvailableSlot>>(null);
 
     useEffect(() => {
         if (user) {
@@ -138,17 +149,60 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         fetchSections();
     }, [restaurant.id]);
 
+    // Fetch table types when the selected section has showTableTypes enabled.
+    // Resets selectedTableType when the user changes section, but preserves
+    // the initial value passed from navigation params on first render.
+    // We track the previous section so we only reset when the user actively
+    // switches section, not when availableSections loads for the first time.
+    const prevSectionRef = useRef<string | null | undefined>(undefined);
+    useEffect(() => {
+        if (prevSectionRef.current === undefined) {
+            // First run — store the initial section, don't reset table type
+            prevSectionRef.current = selectedSection;
+        } else if (prevSectionRef.current !== selectedSection) {
+            // User changed section — reset table type
+            prevSectionRef.current = selectedSection;
+            setSelectedTableType(null);
+        }
+        // Re-run triggered by availableSections loading — don't reset
+        setTableTypes([]);
+
+        const section = availableSections.find(s => s.sectionName === selectedSection);
+        if (!section?.showTableTypes || !selectedSection) {
+            return;
+        }
+
+        const fetchTableTypes = async () => {
+            setTableTypesLoading(true);
+            try {
+                const response = await processingService.getTableTypesForSection(
+                    restaurant.id, selectedSection, dateStr, partySize
+                );
+                setTableTypes(response.tableTypes || []);
+            } catch {
+                setTableTypes([]);
+            } finally {
+                setTableTypesLoading(false);
+            }
+        };
+        fetchTableTypes();
+    }, [restaurant.id, selectedSection, dateStr, partySize, availableSections]);
+
     // Fetch the restaurant's active payment policy so we can show the user
     // exactly what charge / hold will apply before they confirm the booking.
-    // Re-fetches whenever the selected section changes so a section-level
-    // policy override is reflected immediately.
+    // Re-fetches whenever the selected section or table type changes so
+    // table-type / section / restaurant level policy is reflected immediately.
     useEffect(() => {
         const fetchPolicy = async () => {
-            const policy = await paymentService.getEffectivePolicy(restaurant.id, selectedSection ?? undefined);
+            const policy = await paymentService.getEffectivePolicy(
+                restaurant.id,
+                selectedSection ?? undefined,
+                selectedTableType ?? undefined
+            );
             setPaymentPolicy(policy?.enabled ? policy : null);
         };
         fetchPolicy();
-    }, [restaurant.id, selectedSection]);
+    }, [restaurant.id, selectedSection, selectedTableType]);
 
     const handleTagToggle = (tagId: number) => {
         setSelectedTags(prev => {
@@ -176,11 +230,23 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
         }
     }, [streamError, slotsLoading, availableSlots]);
 
+    // Scroll FlatList to the selected slot whenever selectedTime or the slot data changes.
     useEffect(() => {
-        if (selectedTime) {
-            scrollToSelectedSlot(selectedTime);
-        }
+        if (!selectedTime || availableSlots.length === 0) return;
+        const available = availableSlots.filter(s => s.isAvailable);
+        const index = available.findIndex(s => s.time === selectedTime);
+        if (index === -1) return;
+        slotListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
     }, [selectedTime, availableSlots]);
+
+    // Clear the selected time if it is no longer available after a section or
+    // table type change. This lets the new slots load first before deciding,
+    // rather than clearing eagerly on every section/table-type tap.
+    useEffect(() => {
+        if (!selectedTime || slotsLoading || availableSlots.length === 0) return;
+        const stillAvailable = availableSlots.some(s => s.time === selectedTime && s.isAvailable);
+        if (!stillAvailable) setSelectedTime('');
+    }, [availableSlots, slotsLoading]);
 
     const formatDate = (date: Date) => formatDateWeekdayLongDayMonthYear(date);
 
@@ -210,6 +276,10 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
 
     const handleConfirmBooking = async () => {
         if (!isAuthenticated) { setShowAuthPrompt(true); return; }
+        if (tableTypeRequired) {
+            Alert.alert('Table Type Required', 'Please select a table type for this area.');
+            return;
+        }
         if (!selectedTime || !customerName || !customerPhone) {
             Alert.alert('Missing Information', 'Please fill in all required fields.');
             return;
@@ -235,7 +305,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
 
             const { phoneNumber, phoneCountryCode } = parsePhoneNumber(customerPhone);
             const reservation = {
-                reservationDate: selectedDate.toISOString().split('T')[0],
+                reservationDate: dateStr,
                 reservationStartTime: selectedTime,
                 reservationDuration: 120,
                 partySize,
@@ -245,6 +315,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                 customer: { name: customerName, phoneNumber, phoneCountryCode, email: customerEmail || undefined },
                 restaurantId: restaurant.id,
                 area: selectedSection ?? undefined,
+                tableType: selectedTableType ?? undefined,
                 state: 'CONFIRMED',
                 comments: specialRequests || undefined,
                 tagRequests: selectedTags.length > 0 ? selectedTags : undefined };
@@ -388,20 +459,21 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
             }
         } catch (error: any) {
             setIsLoading(false);
-            Alert.alert('Booking Failed', error.message || 'Unable to create reservation. Please try again.', [{ text: 'OK' }]);
+            const isConflict = error.status === 409;
+            Alert.alert(
+                isConflict ? 'Slot No Longer Available' : 'Booking Failed',
+                isConflict
+                    ? 'This time slot has just been taken. Please select a different time.'
+                    : (error.message || 'Unable to create reservation. Please try again.'),
+                [{ text: 'OK', onPress: isConflict ? () => refresh() : undefined }]
+            );
         }
     };
 
-    const getVisibleSlots = (): AvailableSlot[] => {
-        const available = availableSlots.filter(s => s.isAvailable);
-        if (available.length <= 8) return available;
-        if (!selectedTime) return available.slice(0, 8);
-        const selectedIndex = available.findIndex(s => s.time === selectedTime);
-        if (selectedIndex === -1) return available.slice(0, 8);
-        const start = Math.max(0, selectedIndex - 3);
-        const end = Math.min(available.length, start + 9);
-        return available.slice(Math.max(0, end - 8), end);
-    };
+    const availableSlotData = useMemo(
+        () => availableSlots.filter(s => s.isAvailable),
+        [availableSlots]
+    );
 
     const renderAuthPrompt = () => (
         <Modal visible={showAuthPrompt} transparent animationType="fade" onRequestClose={handleGoBack}>
@@ -564,8 +636,11 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                     <View style={styles.section}>
                         <View style={styles.sectionLabelRow}>
                             <View style={styles.sectionTick} />
-                            <AppText variant="sectionTitle" color={Colors.primary}>Seating Area</AppText>
+                            <AppText variant="sectionTitle" color={Colors.primary}>Area Preference (optional)</AppText>
                         </View>
+                        <AppText variant="caption" color={Colors.textOnLightSecondary} style={{ marginTop: r(4) }}>
+                            Only listed areas can be requested. Other areas are assigned by the restaurant.
+                        </AppText>
 
                         {sectionsLoading ? (
                             <View style={styles.loadingRow}>
@@ -579,7 +654,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                             <View style={styles.sectionGrid}>
                                 <TouchableOpacity
                                     style={[styles.sectionCard, selectedSection === null && styles.sectionCardSelected]}
-                                    onPress={() => { setSelectedSection(null); setSelectedTime(''); }}
+                                    onPress={() => { setSelectedSection(null); setSelectedTableType(null); }}
                                     activeOpacity={0.75}
                                 >
                                     <Ionicons
@@ -602,7 +677,7 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                                         <TouchableOpacity
                                             key={section.sectionName}
                                             style={[styles.sectionCard, isSelected && styles.sectionCardSelected]}
-                                            onPress={() => { setSelectedSection(isSelected ? null : section.sectionName); setSelectedTime(''); }}
+                                            onPress={() => { setSelectedSection(isSelected ? null : section.sectionName); setSelectedTableType(null); }}
                                             activeOpacity={0.75}
                                         >
                                             <Ionicons
@@ -626,6 +701,51 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                     </View>
                 )}
 
+                {/* ── Table Type picker (shown when selected section has showTableTypes) ── */}
+                {selectedSection && availableSections.find(s => s.sectionName === selectedSection)?.showTableTypes && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionLabelRow}>
+                            <View style={styles.sectionTick} />
+                            <AppText variant="sectionTitle" color={Colors.primary}>Table Type</AppText>
+                        </View>
+
+                        {tableTypesLoading ? (
+                            <View style={styles.loadingRow}>
+                                <ActivityIndicator size="small" color={Colors.accent} />
+                                <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['2'] }}>
+                                    Loading table types...
+                                </AppText>
+                            </View>
+                        ) : tableTypes.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing['2'] }}>
+                                {tableTypes.map((tt) => {
+                                    const isSelected = selectedTableType === tt.shape;
+                                    return (
+                                        <TouchableOpacity
+                                            key={tt.shape}
+                                            style={[
+                                                styles.tableTypeChip,
+                                                isSelected && styles.tableTypeChipSelected,
+                                            ]}
+                                            onPress={() => {
+                                                setSelectedTableType(isSelected ? null : tt.shape);
+                                            }}
+                                            activeOpacity={0.75}
+                                        >
+                                            <AppText
+                                                variant="captionMedium"
+                                                color={isSelected ? Colors.white : Colors.primary}
+                                            >
+                                                {tt.label}
+                                            </AppText>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
+                        ) : null}
+                    </View>
+                )}
+
                 {/* ── Select Time ── */}
                 <View style={styles.section}>
                     <View style={styles.sectionLabelRow}>
@@ -633,14 +753,18 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                         <AppText variant="sectionTitle" color={Colors.primary}>
                             {selectedSection ? `Select Time · ${selectedSection}` : 'Select Time'}
                         </AppText>
-                        {!slotsLoading && !availabilityError && availableSlots.filter(s => s.isAvailable).length > 6 && (
+                        {!tableTypeRequired && !slotsLoading && !availabilityError && availableSlotData.length > 6 && (
                             <TouchableOpacity onPress={() => setShowAllSlotsModal(true)} style={styles.viewAllBtn}>
                                 <AppText variant="captionMedium" color={Colors.accent}>View all →</AppText>
                             </TouchableOpacity>
                         )}
                     </View>
 
-                    {slotsLoading ? (
+                    {tableTypeRequired ? (
+                        <AppText variant="body" color={Colors.textOnLightSecondary} style={{ fontStyle: 'italic' }}>
+                            Please select a table type to see available times
+                        </AppText>
+                    ) : slotsLoading ? (
                         <View style={styles.loadingRow}>
                             <ActivityIndicator size="small" color={Colors.accent} />
                             <AppText variant="body" color={Colors.textOnLightSecondary} style={{ marginLeft: Spacing['2'] }}>
@@ -649,32 +773,30 @@ const BookingScreen: React.FC<BookingScreenProps> = ({ route, navigation }) => {
                         </View>
                     ) : availabilityError ? (
                         <AvailabilityErrorDisplay error={availabilityError} onContactRestaurant={handleCallRestaurant} />
-                    ) : availableSlots.filter(s => s.isAvailable).length > 0 ? (
-                        <ScrollView
-                            ref={slotScrollRef}
+                    ) : availableSlotData.length > 0 ? (
+                        <FlatList
+                            ref={slotListRef}
                             horizontal
                             showsHorizontalScrollIndicator={false}
+                            data={availableSlotData}
+                            keyExtractor={(item) => item.time}
                             contentContainerStyle={styles.slotScroll}
-                        >
-                            {getVisibleSlots().map((slot, i) => (
-                                <View
-                                    key={i}
-                                    onLayout={(e) => {
-                                        slotPositions.current[slot.time] = e.nativeEvent.layout.x;
-                                        if (selectedTime === slot.time) {
-                                            scrollToSelectedSlot(slot.time);
-                                        }
-                                    }}
-                                >
-                                    <TimeSlotDisplay
-                                        slot={slot}
-                                        onPress={() => setSelectedTime(slot.time)}
-                                        variant="modal"
-                                        isSelected={selectedTime === slot.time}
-                                    />
-                                </View>
-                            ))}
-                        </ScrollView>
+                            ItemSeparatorComponent={() => <View style={{ width: Spacing['2'] }} />}
+                            renderItem={({ item }) => (
+                                <TimeSlotDisplay
+                                    slot={item}
+                                    onPress={() => setSelectedTime(item.time)}
+                                    variant="default"
+                                    isSelected={selectedTime === item.time}
+                                />
+                            )}
+                            onScrollToIndexFailed={(info) => {
+                                slotListRef.current?.scrollToOffset({
+                                    offset: info.averageItemLength * info.index,
+                                    animated: true,
+                                });
+                            }}
+                        />
                     ) : (
                         <AppText variant="body" color={Colors.textOnLightSecondary} style={{ fontStyle: 'italic' }}>
                             No time slots available
@@ -933,17 +1055,30 @@ const styles = StyleSheet.create({
         gap: Spacing['3'],
         paddingBottom: Spacing['2'] },
     sectionCard: {
-        flex: 1,
-        minWidth: r(100),
+        flexGrow: 0,
+        flexShrink: 0,
+        minWidth: r(90),
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: Spacing['4'],
-        paddingHorizontal: Spacing['3'],
+        paddingVertical: Spacing['3'],
+        paddingHorizontal: Spacing['2'],
         borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         backgroundColor: Colors.cardBackground },
     sectionCardSelected: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary },
+    tableTypeChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing['4'],
+        paddingVertical: Spacing['2'],
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.primary,
+        backgroundColor: Colors.cardBackground },
+    tableTypeChipSelected: {
         backgroundColor: Colors.primary,
         borderColor: Colors.primary },
     selectedSectionRow: {
@@ -961,7 +1096,6 @@ const styles = StyleSheet.create({
 
     // ── Time slots ─────────────────────────────────────────────────────────────
     slotScroll: {
-        gap: Spacing['2'],
         paddingBottom: Spacing['3'] },
     loadingRow: {
         flexDirection: 'row',

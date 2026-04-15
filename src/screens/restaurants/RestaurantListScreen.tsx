@@ -8,7 +8,7 @@ import { CuisineStat, TopCategory } from '../../types/api.types';
 import { useLocation } from '../../hooks/useLocation';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
 import PartyDateTimePicker from '../booking/PartyDateTimePicker';
-import { formatPartyDateTime } from '../../utils/Datetimeutils';
+import { currentTimeRounded, formatPartyDateTime } from '../../utils/Datetimeutils';
 import FavoriteButton from '../../components/FavoriteButton';
 import { CachedImage } from '../../components/CachedImage';
 import {
@@ -29,7 +29,7 @@ const NAVY = Colors.primary; // #0f3346
 
 const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation }) => {
   const [partySize, setPartySize] = useState(2);
-  const [selectedTime, setSelectedTime] = useState('ASAP');
+  const [selectedTime, setSelectedTime] = useState(() => currentTimeRounded());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [locationName, setLocationName] = useState('Loading...');

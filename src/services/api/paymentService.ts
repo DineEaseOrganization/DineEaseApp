@@ -93,17 +93,20 @@ class PaymentService {
 
   /**
    * Fetch the effective payment policy for a restaurant.
-   * If there is a section-level override the backend returns that,
-   * otherwise the restaurant-level policy is returned.
+   * Three-tier resolution: TABLE_TYPE → SECTION → RESTAURANT.
    *
-   * GET /payments/policy/{restaurantId}/effective[?sectionName=]
+   * GET /payments/policy/{restaurantId}/effective[?sectionName=][&tableType=]
    */
   async getEffectivePolicy(
     restaurantId: number,
-    sectionName?: string
+    sectionName?: string,
+    tableType?: string
   ): Promise<PaymentPolicyResponse | null> {
     try {
-      const params = sectionName ? `?sectionName=${encodeURIComponent(sectionName)}` : '';
+      const queryParts: string[] = [];
+      if (sectionName) queryParts.push(`sectionName=${encodeURIComponent(sectionName)}`);
+      if (tableType) queryParts.push(`tableType=${encodeURIComponent(tableType)}`);
+      const params = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
       return await apiClient.get<PaymentPolicyResponse>(
         `${this.BASE_URL}${API_CONFIG.ENDPOINTS.PAYMENT_POLICY_EFFECTIVE}/${restaurantId}/effective${params}`
       );

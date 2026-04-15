@@ -355,6 +355,21 @@ export interface AvailabilitySlotsResponse {
 export interface MobileBookingSection {
   sectionName: string;
   displayOrder: number;
+  showTableTypes: boolean;
+}
+
+/** A table type option with availability count, returned by the table-types endpoint. */
+export interface TableTypeOption {
+  shape: string;
+  label: string;
+  availableCount: number;
+  displayOrder: number;
+}
+
+/** Response from GET /mobile/availability/{restaurantId}/sections/{sectionName}/table-types */
+export interface SectionTableTypesResponse {
+  sectionName: string;
+  tableTypes: TableTypeOption[];
 }
 
 /**
@@ -402,6 +417,7 @@ export interface ReservationDto {
   restaurantId: number;
   restaurantName?: string; // Restaurant name fetched from Restaurant service
   area?: string;
+  tableType?: string;
   tableNumbers?: string[];
   state: ReservationState;
   comments?: string;
@@ -423,6 +439,8 @@ export interface ReservationDto {
    * See paymentService.getReservationPolicy().
    */
   paymentPolicyId?: number;
+  /** ISO timestamp — when the ON_HOLD reservation will be auto-cancelled if payment is not completed. */
+  holdExpiresAt?: string;
 }
 
 /**
@@ -574,9 +592,10 @@ export interface PaymentPolicyResponse {
   policyId: number;
   restaurantId: number;
   policyName: string;
-  policyLevel: 'RESTAURANT' | 'SECTION';
+  policyLevel: 'RESTAURANT' | 'SECTION' | 'TABLE_TYPE';
   sectionId: number | null;
   sectionName: string | null;
+  tableType: string | null;
   enabled: boolean;
   depositEnabled: boolean;
   depositType: FeeType | null;
@@ -669,6 +688,8 @@ export interface BookingResponseWithPayment {
   holdAmount?: number;
   holdCurrency?: string;
   holdCaptureDeadline?: string;
+  /** ISO timestamp — when the ON_HOLD reservation will be auto-cancelled if payment is not completed. */
+  holdExpiresAt?: string;
 }
 
 

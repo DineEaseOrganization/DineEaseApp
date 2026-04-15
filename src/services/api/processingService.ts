@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 import { API_CONFIG } from '../../config/api.config';
-import { AvailableSectionsResponse, AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest } from '../../types/api.types';
+import { AvailableSectionsResponse, AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest, SectionTableTypesResponse } from '../../types/api.types';
 
 export interface SubmitReviewRequest {
   reservationId: number;
@@ -62,19 +62,21 @@ class ProcessingService {
 
   /**
    * Get available time slots for a restaurant
-   * Endpoint: GET /mobile/availability/{restaurantId}?date=YYYY-MM-DD&partySize=2[&sectionName=Terrace]
+   * Endpoint: GET /mobile/availability/{restaurantId}?date=YYYY-MM-DD&partySize=2[&sectionName=Terrace][&tableType=cabana]
    *
    * @param restaurantId - Restaurant ID
    * @param date - Date in YYYY-MM-DD format
    * @param partySize - Number of people
-   * @param sectionName - Optional. When provided, restricts slots to tables in that section
-   *                      and applies the section-level payment policy.
+   * @param sectionName - Optional. When provided, restricts slots to tables in that section.
+   * @param tableType - Optional. When provided (with sectionName), restricts slots to tables
+   *                    of that shape within the section.
    */
   async getAvailableSlots(
     restaurantId: number,
     date: string,
     partySize: number,
-    sectionName?: string
+    sectionName?: string,
+    tableType?: string
   ): Promise<AvailabilitySlotsResponse> {
     const params = new URLSearchParams({
       date: date,
@@ -84,9 +86,40 @@ class ProcessingService {
     if (sectionName) {
       params.append('sectionName', sectionName);
     }
+    if (tableType) {
+      params.append('tableType', tableType);
+    }
 
     return await apiClient.get<AvailabilitySlotsResponse>(
       `${this.BASE_URL}/availability/${restaurantId}?${params}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Get table type availability for a section.
+   * Endpoint: GET /mobile/availability/{restaurantId}/sections/{sectionName}/table-types?date=X&partySize=Y
+   *
+   * Returns per-type availability counts so the app can show e.g. "Cabana (3 available)".
+   *
+   * @param restaurantId - Restaurant ID
+   * @param sectionName - Section name
+   * @param date - Date in YYYY-MM-DD format
+   * @param partySize - Number of people
+   */
+  async getTableTypesForSection(
+    restaurantId: number,
+    sectionName: string,
+    date: string,
+    partySize: number
+  ): Promise<SectionTableTypesResponse> {
+    const params = new URLSearchParams({
+      date,
+      partySize: partySize.toString(),
+    });
+
+    return await apiClient.get<SectionTableTypesResponse>(
+      `${this.BASE_URL}/availability/${restaurantId}/sections/${encodeURIComponent(sectionName)}/table-types?${params}`,
       { headers: this.getHeaders() }
     );
   }
@@ -114,6 +147,7 @@ class ProcessingService {
     };
     restaurantId: number;
     area?: string;
+    tableType?: string;
     tableNumbers?: string[];
     state: string; // e.g., "CONFIRMED"
     comments?: string;

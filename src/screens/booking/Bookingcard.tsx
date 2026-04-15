@@ -40,7 +40,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             setLoading(true);
             setError(null);
             setSelectedTime(null);
-            const dateStr = selectedDate.toISOString().split('T')[0];
+            const y = selectedDate.getFullYear();
+            const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
             const response = await processingService.getAvailableSlots(restaurantId, dateStr, partySize);
             setAvailableSlots(response.slots || []);
             if (!response.slots || response.slots.length === 0) {

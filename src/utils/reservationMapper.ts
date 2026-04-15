@@ -62,6 +62,8 @@ export function mapReservationDtoToReservation(
     date: dto.reservationDate, // Already in YYYY-MM-DD format
     time: dto.reservationStartTime, // Already in HH:mm format
     partySize: dto.partySize,
+    area: dto.area,
+    tableType: dto.tableType,
     customerName: dto.customer.name,
     customerPhone: dto.customer.phoneNumber,
     customerEmail: dto.customer.email,
@@ -75,6 +77,7 @@ export function mapReservationDtoToReservation(
     paymentCurrency: dto.paymentCurrency,
     paymentTransactionType: dto.paymentTransactionType,
     paymentPolicyId: dto.paymentPolicyId,
+    holdExpiresAt: dto.holdExpiresAt,
   };
 }
 

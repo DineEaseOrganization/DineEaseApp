@@ -10,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { formatDateWeekdayShortDayMonthYear } from '../../utils/Datetimeutils';
+import { currentTimeRounded, formatDateWeekdayShortDayMonthYear } from '../../utils/Datetimeutils';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
@@ -26,10 +26,15 @@ interface PartyDateTimePickerProps {
     onTimeChange: (_time: string) => void;
 }
 
+
 function parseTime(time: string): { hour: string; minute: string } {
-    if (time === 'ASAP') return { hour: '', minute: '' };
+    if (!time || time === 'ASAP') {
+        const rounded = currentTimeRounded();
+        const [h, m] = rounded.split(':');
+        return { hour: h, minute: m };
+    }
     const [h, m] = time.split(':');
-    return { hour: h, minute: m };
+    return { hour: h ?? '', minute: m ?? '' };
 }
 
 const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
@@ -44,11 +49,22 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
 }) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const minuteRef = useRef<TextInput>(null);
+    const hourRef = useRef<TextInput>(null);
 
-    const isAsap = selectedTime === 'ASAP';
     const { hour: initHour, minute: initMinute } = parseTime(selectedTime);
     const [hourInput, setHourInput] = useState(initHour);
     const [minuteInput, setMinuteInput] = useState(initMinute);
+
+    // If selectedTime is still ASAP when the picker opens, immediately emit a real time
+    React.useEffect(() => {
+        if (visible && (selectedTime === 'ASAP' || !selectedTime)) {
+            const rounded = currentTimeRounded();
+            const { hour, minute } = parseTime(rounded);
+            setHourInput(hour);
+            setMinuteInput(minute);
+            onTimeChange(rounded);
+        }
+    }, [visible]);
 
     // Sync local input state when selectedTime changes externally
     React.useEffect(() => {
@@ -56,6 +72,14 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
         setHourInput(hour);
         setMinuteInput(minute);
     }, [selectedTime]);
+
+    // Auto-focus the hour field when the picker becomes visible
+    React.useEffect(() => {
+        if (visible) {
+            const timer = setTimeout(() => hourRef.current?.focus(), 350);
+            return () => clearTimeout(timer);
+        }
+    }, [visible]);
 
     const commitTime = (h: string, m: string) => {
         const hNum = parseInt(h);
@@ -99,30 +123,12 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
         }
     };
 
-    const handleAsapToggle = () => {
-        if (isAsap) {
-            const now = new Date();
-            const h = now.getHours().toString().padStart(2, '0');
-            const m = (now.getMinutes() < 30 ? 30 : 0).toString().padStart(2, '0');
-            const nextH = now.getMinutes() < 30 ? h : (now.getHours() + 1).toString().padStart(2, '0');
-            setHourInput(nextH);
-            setMinuteInput(m);
-            onTimeChange(`${nextH}:${m}`);
-        } else {
-            setHourInput('');
-            setMinuteInput('');
-            onTimeChange('ASAP');
-        }
-    };
-
     const formatDate = (d: Date) => formatDateWeekdayShortDayMonthYear(d);
 
     const handleDone = () => {
         setShowDatePicker(false);
         onClose();
     };
-
-    const summaryTime = isAsap ? 'ASAP' : selectedTime;
 
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -221,68 +227,51 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
                                 </AppText>
                             </View>
 
-                            {/* ASAP toggle */}
-                            <TouchableOpacity
-                                style={[styles.rowCard, isAsap && styles.rowCardActive]}
-                                onPress={handleAsapToggle}
-                                activeOpacity={0.8}
-                            >
-                                <AppText style={styles.rowIcon}>⚡</AppText>
-                                <AppText variant="bodyMedium" color={isAsap ? Colors.white : Colors.textOnLightSecondary}>
-                                    As soon as possible
-                                </AppText>
-                                <View style={[styles.checkCircle, isAsap && styles.checkCircleActive]}>
-                                    {isAsap && <AppText style={styles.checkMark}>✓</AppText>}
+                            <View style={styles.timeInputRow}>
+                                {/* Hour */}
+                                <View style={styles.timeInputWrap}>
+                                    <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.timeInputLabel}>
+                                        HH
+                                    </AppText>
+                                    <TextInput
+                                        ref={hourRef}
+                                        style={styles.timeInput}
+                                        value={hourInput}
+                                        onChangeText={handleHourChange}
+                                        onBlur={handleHourBlur}
+                                        keyboardType="number-pad"
+                                        maxLength={2}
+                                        placeholder="00"
+                                        placeholderTextColor={Colors.textOnLightTertiary}
+                                        returnKeyType="next"
+                                        onSubmitEditing={() => minuteRef.current?.focus()}
+                                        selectTextOnFocus
+                                    />
                                 </View>
-                            </TouchableOpacity>
 
-                            {/* Time input — shown when not ASAP */}
-                            {!isAsap && (
-                                <View style={styles.timeInputRow}>
-                                    {/* Hour */}
-                                    <View style={styles.timeInputWrap}>
-                                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.timeInputLabel}>
-                                            HH
-                                        </AppText>
-                                        <TextInput
-                                            style={styles.timeInput}
-                                            value={hourInput}
-                                            onChangeText={handleHourChange}
-                                            onBlur={handleHourBlur}
-                                            keyboardType="number-pad"
-                                            maxLength={2}
-                                            placeholder="00"
-                                            placeholderTextColor={Colors.textOnLightTertiary}
-                                            returnKeyType="next"
-                                            onSubmitEditing={() => minuteRef.current?.focus()}
-                                            selectTextOnFocus
-                                        />
-                                    </View>
+                                <AppText style={styles.timeSeparator}>:</AppText>
 
-                                    <AppText style={styles.timeSeparator}>:</AppText>
-
-                                    {/* Minute */}
-                                    <View style={styles.timeInputWrap}>
-                                        <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.timeInputLabel}>
-                                            MM
-                                        </AppText>
-                                        <TextInput
-                                            ref={minuteRef}
-                                            style={styles.timeInput}
-                                            value={minuteInput}
-                                            onChangeText={handleMinuteChange}
-                                            onBlur={handleMinuteBlur}
-                                            keyboardType="number-pad"
-                                            maxLength={2}
-                                            placeholder="00"
-                                            placeholderTextColor={Colors.textOnLightTertiary}
-                                            returnKeyType="done"
-                                            onSubmitEditing={handleDone}
-                                            selectTextOnFocus
-                                        />
-                                    </View>
+                                {/* Minute */}
+                                <View style={styles.timeInputWrap}>
+                                    <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.timeInputLabel}>
+                                        MM
+                                    </AppText>
+                                    <TextInput
+                                        ref={minuteRef}
+                                        style={styles.timeInput}
+                                        value={minuteInput}
+                                        onChangeText={handleMinuteChange}
+                                        onBlur={handleMinuteBlur}
+                                        keyboardType="number-pad"
+                                        maxLength={2}
+                                        placeholder="00"
+                                        placeholderTextColor={Colors.textOnLightTertiary}
+                                        returnKeyType="done"
+                                        onSubmitEditing={handleDone}
+                                        selectTextOnFocus
+                                    />
                                 </View>
-                            )}
+                            </View>
                         </View>
                     </ScrollView>
 
@@ -290,7 +279,7 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
                     <View style={styles.footer}>
                         <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85}>
                             <AppText variant="button" color={Colors.white}>
-                                {`Confirm  —  ${summaryTime}  ·  ${partySize} guest${partySize > 1 ? 's' : ''}`}
+                                {`Confirm  —  ${selectedTime}  ·  ${partySize} guest${partySize > 1 ? 's' : ''}`}
                             </AppText>
                         </TouchableOpacity>
                     </View>
@@ -394,7 +383,7 @@ const styles = StyleSheet.create({
     },
     sizeBtnText: { fontSize: FontSize.lg },
 
-    // ── Row card (date / asap) ──────────────────────────────────────────────────
+    // ── Row card (date) ────────────────────────────────────────────────────────
     rowCard: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -406,32 +395,7 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing['3'],
         paddingHorizontal: Spacing['4'],
     },
-    rowCardActive: {
-        backgroundColor: Colors.primary,
-        borderColor: Colors.primary,
-    },
     rowIcon: { fontSize: FontSize.lg },
-
-    // ── ASAP check ─────────────────────────────────────────────────────────────
-    checkCircle: {
-        marginLeft: 'auto',
-        width: r(22),
-        height: r(22),
-        borderRadius: Radius.full,
-        borderWidth: 1.5,
-        borderColor: Colors.cardBorder,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    checkCircleActive: {
-        backgroundColor: Colors.success,
-        borderColor: Colors.success,
-    },
-    checkMark: {
-        fontSize: FontSize.xs,
-        color: Colors.white,
-        fontFamily: FontFamily.bold,
-    },
 
     // ── Time inputs ────────────────────────────────────────────────────────────
     timeInputRow: {
@@ -439,7 +403,6 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         justifyContent: 'center',
         gap: Spacing['2'],
-        marginTop: Spacing['3'],
     },
     timeInputWrap: {
         alignItems: 'center',

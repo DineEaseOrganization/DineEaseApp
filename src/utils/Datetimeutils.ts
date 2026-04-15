@@ -60,7 +60,6 @@ export const formatDateWeekdayLongDayMonthYear = (date: Date): string => {
 /**
  * Formats party size, date, and time into a display string
  * Examples:
- * - "2 • Now" (today, ASAP)
  * - "4 • 19:00" (today, specific time)
  * - "2 • Tomorrow 18:30"
  * - "6 • Jan 15 20:00"
@@ -73,9 +72,7 @@ export const formatPartyDateTime = (
   const today = new Date();
   const isToday = selectedDate.toDateString() === today.toDateString();
 
-  if (isToday && selectedTime === 'ASAP') {
-    return `${partySize} • Now`;
-  } else if (isToday) {
+  if (isToday) {
     return `${partySize} • ${selectedTime}`;
   } else {
     const tomorrow = new Date();
@@ -85,6 +82,18 @@ export const formatPartyDateTime = (
     const dateStr = isTomorrow ? 'Tomorrow' : formatDateDayMonth(selectedDate);
     return `${partySize} • ${dateStr} • ${selectedTime}`;
   }
+};
+
+/**
+ * Returns the current time rounded up to the next 15-minute mark as "HH:mm".
+ * e.g. 14:03 → "14:15", 14:47 → "15:00", 23:58 → "00:00"
+ */
+export const currentTimeRounded = (): string => {
+  const now = new Date();
+  const m = now.getMinutes();
+  const nextQuarter = Math.ceil((m + 1) / 15) * 15;
+  const h = nextQuarter >= 60 ? now.getHours() + 1 : now.getHours();
+  return `${(h % 24).toString().padStart(2, '0')}:${(nextQuarter % 60).toString().padStart(2, '0')}`;
 };
 
 /**
