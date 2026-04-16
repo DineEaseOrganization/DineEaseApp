@@ -1,8 +1,12 @@
 // src/components/booking/PartyDateTimePicker.tsx
 import React, { useRef, useState } from 'react';
 import {
-    Modal,
+    Animated,
+    BackHandler,
+    Dimensions,
+    Keyboard,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -26,7 +30,6 @@ interface PartyDateTimePickerProps {
     onTimeChange: (_time: string) => void;
 }
 
-
 function parseTime(time: string): { hour: string; minute: string } {
     if (!time || time === 'ASAP') {
         const rounded = currentTimeRounded();
@@ -36,6 +39,8 @@ function parseTime(time: string): { hour: string; minute: string } {
     const [h, m] = time.split(':');
     return { hour: h ?? '', minute: m ?? '' };
 }
+
+const SLIDE_DURATION = 300;
 
 const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
     visible,
@@ -48,8 +53,17 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
     onTimeChange,
 }) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [mounted, setMounted] = useState(visible);
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
     const minuteRef = useRef<TextInput>(null);
     const hourRef = useRef<TextInput>(null);
+    const isEditingTime = useRef(false);
+    const hourFreshFocus = useRef(false);
+    const minuteFreshFocus = useRef(false);
+    const scrollViewRef = useRef<ScrollView>(null);
+    const slideAnim = useRef(new Animated.Value(600)).current;
+    const backdropAnim = useRef(new Animated.Value(0)).current;
+    const keyboardOffset = useRef(new Animated.Value(0)).current;
 
     const { hour: initHour, minute: initMinute } = parseTime(selectedTime);
     const [hourInput, setHourInput] = useState(initHour);
@@ -66,20 +80,78 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
         }
     }, [visible]);
 
-    // Sync local input state when selectedTime changes externally
+    // Sync local input state when selectedTime changes externally.
+    // Skip while the user is actively editing to prevent the commitTime →
+    // onTimeChange → effect loop from overwriting their in-progress input.
     React.useEffect(() => {
+        if (isEditingTime.current) return;
         const { hour, minute } = parseTime(selectedTime);
         setHourInput(hour);
         setMinuteInput(minute);
     }, [selectedTime]);
 
-    // Auto-focus the hour field when the picker becomes visible
+    // Animate in/out — replaces Modal so the sheet renders in the main Activity
+    // window, which is required for the Android soft keyboard to appear.
     React.useEffect(() => {
         if (visible) {
-            const timer = setTimeout(() => hourRef.current?.focus(), 350);
-            return () => clearTimeout(timer);
+            // Dismiss any stale keyboard state from a previous session before
+            // the new TextInputs mount — prevents Android IME from auto-refocusing.
+            Keyboard.dismiss();
+            slideAnim.setValue(600);
+            setMounted(true);
+            Animated.parallel([
+                Animated.timing(slideAnim, { toValue: 0, duration: SLIDE_DURATION, useNativeDriver: true }),
+                Animated.timing(backdropAnim, { toValue: 1, duration: SLIDE_DURATION, useNativeDriver: true }),
+            ]).start();
+        } else {
+            Keyboard.dismiss();
+            Animated.parallel([
+                Animated.timing(slideAnim, { toValue: 1000, duration: 250, useNativeDriver: true }),
+                Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+                Animated.timing(keyboardOffset, { toValue: 0, duration: 200, useNativeDriver: true }),
+            ]).start(() => setMounted(false));
         }
     }, [visible]);
+
+    // Lift the sheet above the keyboard when it appears, lower it when it hides.
+    // adjustResize does not propagate into absolute overlays inside the nav hierarchy,
+    // so we handle the offset manually here.
+    React.useEffect(() => {
+        if (!mounted) return;
+        const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+            setKeyboardVisible(true);
+            const windowHeight = Dimensions.get('window').height;
+            // Don't push the sheet higher than 10% from the top of the screen
+            const maxLift = windowHeight * 0.9;
+            const lift = Math.min(e.endCoordinates.height, maxLift);
+            Animated.timing(keyboardOffset, {
+                toValue: -lift,
+                duration: 200,
+                useNativeDriver: true,
+            }).start(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            });
+        });
+        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardVisible(false);
+            Animated.timing(keyboardOffset, {
+                toValue: 0,
+                duration: 200,
+                useNativeDriver: true,
+            }).start();
+        });
+        return () => { showSub.remove(); hideSub.remove(); };
+    }, [mounted]);
+
+    // Handle Android hardware back button
+    React.useEffect(() => {
+        if (!mounted) return;
+        const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+            if (visible) { onClose(); return true; }
+            return false;
+        });
+        return () => sub.remove();
+    }, [mounted, visible, onClose]);
 
     const commitTime = (h: string, m: string) => {
         const hNum = parseInt(h);
@@ -90,9 +162,19 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
     };
 
     const handleHourChange = (text: string) => {
-        const clean = text.replace(/\D/g, '').slice(0, 2);
+        const allDigits = text.replace(/\D/g, '');
+        let clean: string;
+        if (hourFreshFocus.current) {
+            // First keystroke after focus: take only the newly typed digit(s),
+            // not the old value that Android appended onto.
+            hourFreshFocus.current = false;
+            const prevLen = hourInput.replace(/\D/g, '').length;
+            const newChars = allDigits.slice(prevLen);
+            clean = (newChars || allDigits).slice(0, 2);
+        } else {
+            clean = allDigits.slice(0, 2);
+        }
         setHourInput(clean);
-        // Auto-jump to minutes when 2 digits entered or value > 2
         if (clean.length === 2 || parseInt(clean) > 2) {
             minuteRef.current?.focus();
         }
@@ -100,27 +182,45 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
     };
 
     const handleMinuteChange = (text: string) => {
-        const clean = text.replace(/\D/g, '').slice(0, 2);
+        const allDigits = text.replace(/\D/g, '');
+        let clean: string;
+        if (minuteFreshFocus.current) {
+            minuteFreshFocus.current = false;
+            const prevLen = minuteInput.replace(/\D/g, '').length;
+            const newChars = allDigits.slice(prevLen);
+            clean = (newChars || allDigits).slice(0, 2);
+        } else {
+            clean = allDigits.slice(0, 2);
+        }
         setMinuteInput(clean);
         commitTime(hourInput, clean);
     };
 
+    const handleHourFocus = () => {
+        isEditingTime.current = true;
+        hourFreshFocus.current = true;
+    };
+    const handleMinuteFocus = () => {
+        isEditingTime.current = true;
+        minuteFreshFocus.current = true;
+    };
+
     const handleHourBlur = () => {
+        isEditingTime.current = false;
         const hNum = parseInt(hourInput);
-        if (!isNaN(hNum)) {
-            const clamped = Math.min(23, Math.max(0, hNum)).toString().padStart(2, '0');
-            setHourInput(clamped);
-            commitTime(clamped, minuteInput);
-        }
+        const clamped = isNaN(hNum) ? 0 : Math.min(23, Math.max(0, hNum));
+        const padded = clamped.toString().padStart(2, '0');
+        setHourInput(padded);
+        commitTime(padded, minuteInput);
     };
 
     const handleMinuteBlur = () => {
+        isEditingTime.current = false;
         const mNum = parseInt(minuteInput);
-        if (!isNaN(mNum)) {
-            const clamped = Math.min(59, Math.max(0, mNum)).toString().padStart(2, '0');
-            setMinuteInput(clamped);
-            commitTime(hourInput, clamped);
-        }
+        const clamped = isNaN(mNum) ? 0 : Math.min(59, Math.max(0, mNum));
+        const padded = clamped.toString().padStart(2, '0');
+        setMinuteInput(padded);
+        commitTime(hourInput, padded);
     };
 
     const formatDate = (d: Date) => formatDateWeekdayShortDayMonthYear(d);
@@ -130,10 +230,28 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
         onClose();
     };
 
+    if (!mounted) return null;
+
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-            <View style={styles.overlay}>
-                <View style={styles.sheet}>
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+            {/* Dimmed backdrop — tap to dismiss */}
+            <Pressable
+                style={StyleSheet.absoluteFillObject}
+                onPress={() => {
+                    if (keyboardVisible) {
+                        Keyboard.dismiss();
+                    } else {
+                        onClose();
+                    }
+                }}
+            >
+                <Animated.View style={[StyleSheet.absoluteFillObject, styles.backdrop, { opacity: backdropAnim }]} />
+            </Pressable>
+
+            {/* Sheet slides up from the bottom, lifts further when keyboard appears */}
+            <Animated.View style={[styles.sheet, { transform: [{ translateY: Animated.add(slideAnim, keyboardOffset) }] }]}>
+                {/* Absorb touches so they don't fall through to the backdrop */}
+                <View onStartShouldSetResponder={() => true}>
 
                     {/* Handle */}
                     <View style={styles.handle} />
@@ -149,8 +267,9 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
                     </View>
 
                     <ScrollView
+                        ref={scrollViewRef}
                         showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
+                        keyboardShouldPersistTaps="always"
                         contentContainerStyle={styles.scrollContent}
                     >
                         {/* ── Party Size ── */}
@@ -238,14 +357,14 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
                                         style={styles.timeInput}
                                         value={hourInput}
                                         onChangeText={handleHourChange}
+                                        onFocus={handleHourFocus}
                                         onBlur={handleHourBlur}
                                         keyboardType="number-pad"
-                                        maxLength={2}
                                         placeholder="00"
                                         placeholderTextColor={Colors.textOnLightTertiary}
                                         returnKeyType="next"
                                         onSubmitEditing={() => minuteRef.current?.focus()}
-                                        selectTextOnFocus
+                                        showSoftInputOnFocus={true}
                                     />
                                 </View>
 
@@ -261,14 +380,14 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
                                         style={styles.timeInput}
                                         value={minuteInput}
                                         onChangeText={handleMinuteChange}
+                                        onFocus={handleMinuteFocus}
                                         onBlur={handleMinuteBlur}
                                         keyboardType="number-pad"
-                                        maxLength={2}
                                         placeholder="00"
                                         placeholderTextColor={Colors.textOnLightTertiary}
                                         returnKeyType="done"
                                         onSubmitEditing={handleDone}
-                                        selectTextOnFocus
+                                        showSoftInputOnFocus={true}
                                     />
                                 </View>
                             </View>
@@ -285,18 +404,20 @@ const PartyDateTimePicker: React.FC<PartyDateTimePickerProps> = ({
                     </View>
 
                 </View>
-            </View>
-        </Modal>
+            </Animated.View>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
+    backdrop: {
         backgroundColor: 'rgba(9,31,43,0.55)',
-        justifyContent: 'flex-end',
     },
     sheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: Colors.appBackground,
         borderTopLeftRadius: Radius['2xl'],
         borderTopRightRadius: Radius['2xl'],

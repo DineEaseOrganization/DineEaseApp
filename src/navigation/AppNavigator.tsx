@@ -4,6 +4,7 @@ import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
 import {BottomTabNavigationProp, createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {StyleSheet, Text, View} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {navigationRef} from '../utils/navigationHelper';
 import { Colors, FontSize } from '../theme';
 import { r, rf } from '../theme/responsive';
@@ -455,6 +456,7 @@ const tabBadgeStyles = StyleSheet.create({
 
 // Main Tab Navigator
 const MainTabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -465,9 +467,9 @@ const MainTabNavigator: React.FC = () => {
           backgroundColor: Colors.primary,             // Navy — mirrors the header
           borderTopColor: 'rgba(255,255,255,0.08)',     // Very subtle white separator
           borderTopWidth: 1,
-          paddingBottom: r(6),
+          paddingBottom: r(6) + insets.bottom,
           paddingTop: r(6),
-          height: r(62),
+          height: r(62) + insets.bottom,
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter_600SemiBold',

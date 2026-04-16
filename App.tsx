@@ -1,6 +1,7 @@
 // App.tsx
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useFonts,
@@ -46,6 +47,7 @@ const App = () => {
     }
 
     return (
+        <SafeAreaProvider>
         <StripeProvider
             publishableKey={process.env.STRIPE_PUBLISHABLE_KEY ?? ''}
             merchantIdentifier="merchant.com.dineease"
@@ -64,6 +66,7 @@ const App = () => {
                 </ErrorBoundary>
             </QueryClientProvider>
         </StripeProvider>
+        </SafeAreaProvider>
     );
 };
 
