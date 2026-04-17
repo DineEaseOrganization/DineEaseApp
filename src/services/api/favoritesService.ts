@@ -12,7 +12,7 @@ import {
 class FavoritesService {
   // Favorites are managed by the Restaurant Service (domain: restaurant-customer relationships)
   private readonly BASE_URL = API_CONFIG.RESTAURANT_SERVICE_URL;
-  private readonly API_KEY = 'dineease-mobile-2024-secret';
+  private readonly API_KEY = process.env.MOBILE_API_KEY || '';
 
   private getHeaders() {
     return {

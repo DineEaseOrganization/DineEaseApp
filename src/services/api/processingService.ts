@@ -33,7 +33,7 @@ export interface RatingCategory {
 
 class ProcessingService {
   private readonly BASE_URL = `${API_CONFIG.PROCESSING_SERVICE_URL}/mobile`;
-  private readonly API_KEY = 'dineease-mobile-2024-secret';
+  private readonly API_KEY = process.env.MOBILE_API_KEY || '';
 
   private getHeaders() {
     return {
