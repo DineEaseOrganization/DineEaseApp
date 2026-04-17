@@ -17,7 +17,7 @@ import {
 
 class RestaurantService {
   private readonly BASE_URL = `${API_CONFIG.RESTAURANT_SERVICE_URL}/customer/restaurants`;
-  private readonly API_KEY = 'dineease-mobile-2024-secret';
+  private readonly API_KEY = process.env.MOBILE_API_KEY || '';
 
   private getHeaders() {
     return {
