@@ -1,5 +1,6 @@
 // API Configuration
 // Use environment variables if available, otherwise fallback to production URLs
+import Constants from 'expo-constants';
 
 // Check if we're in development mode
 const isDevelopment = typeof __DEV__ !== 'undefined' && __DEV__;
@@ -92,6 +93,10 @@ export const API_CONFIG = {
   },
   TIMEOUT: 30000, // 30 seconds
 };
+
+// Mobile API key — read from app.config.js extra (set at build time from EAS Secret)
+export const MOBILE_API_KEY: string =
+  (Constants.expoConfig?.extra?.mobileApiKey as string) || '';
 
 // Storage keys
 export const STORAGE_KEYS = {

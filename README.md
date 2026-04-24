@@ -51,16 +51,77 @@ EAS submits to **Internal testing** automatically. To promote to **Closed testin
 
 ---
 
+## iOS Production Release Checklist
+
+### Every time you release to App Store Connect/TestFlight
+
+#### 1. Bump iOS version/build in `app.json`
+
+Open `app.json` and update iOS values:
+
+```json
+"version": "5.0.2",         // user-visible version string
+"ios": {
+  "buildNumber": "5.0.2"    // must be higher/newer than the previous iOS upload
+}
+```
+
+> App Store Connect rejects duplicate iOS `buildNumber` values for the same app/version.
+
+---
+
+#### 2. Configure App Store submit values in `eas.json`
+
+In `eas.json`, set real values under `submit.production.ios`:
+
+- `appleId`: your Apple account email
+- `ascAppId`: App Store Connect app ID (numeric)
+- `appleTeamId`: Apple Developer Team ID
+
+These are placeholders in this repo and must be updated before submitting.
+
+---
+
+#### 3. Build the iOS production binary with EAS
+
+Run from the `DineEaseApp` directory:
+
+```bash
+eas build --platform ios --profile production
+```
+
+This uses the `production` iOS profile in `eas.json` (`Release` configuration).
+
+Track the build at https://expo.dev
+
+---
+
+#### 4. Submit the completed build to App Store Connect
+
+```bash
+eas submit --platform ios --profile production
+```
+
+After submit completes:
+1. Open App Store Connect → your app → **TestFlight**
+2. Wait for Apple processing
+3. Add internal/external testers and release notes when ready
+
+---
+
 ## Useful Commands
 
 | Command | What it does |
 |---|---|
 | `eas build --platform android --profile production --auto-submit` | Build AAB + auto-submit to Internal track |
 | `eas build --platform android --profile production` | Build only (submit later) |
-| `eas submit --platform android --profile production` | Submit the latest completed build |
+| `eas submit --platform android --profile production` | Submit the latest completed Android build |
+| `eas build --platform ios --profile production` | Build iOS production binary |
+| `eas submit --platform ios --profile production` | Submit iOS build to App Store Connect |
 | `eas build:list` | List all past builds and their status |
 | `npm run update-ip` | Update `.env` with your current local IP (dev only) |
 | `npm run android` | Run on a local Android device/emulator (dev only, clears Metro cache) |
+| `npm run ios` | Run on iOS simulator via Expo start (dev only) |
 
 ---
 

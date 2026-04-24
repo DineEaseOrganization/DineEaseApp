@@ -1,7 +1,7 @@
 // src/services/api/favoritesService.ts
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
-import { API_CONFIG } from '../../config/api.config';
+import { API_CONFIG, MOBILE_API_KEY } from '../../config/api.config';
 import {
   FavoritesListResponse,
   AddFavoriteResponse,
@@ -12,7 +12,7 @@ import {
 class FavoritesService {
   // Favorites are managed by the Restaurant Service (domain: restaurant-customer relationships)
   private readonly BASE_URL = API_CONFIG.RESTAURANT_SERVICE_URL;
-  private readonly API_KEY = process.env.MOBILE_API_KEY || '';
+  private readonly API_KEY = MOBILE_API_KEY;
 
   private getHeaders() {
     return {

@@ -11,6 +11,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import Constants from 'expo-constants';
 import { CACHE_CONFIG } from './src/config/cache.config';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider } from './src/context/AuthContext';
@@ -49,7 +50,7 @@ const App = () => {
     return (
         <SafeAreaProvider>
         <StripeProvider
-            publishableKey={process.env.STRIPE_PUBLISHABLE_KEY ?? ''}
+            publishableKey={Constants.expoConfig?.extra?.stripePublishableKey ?? ''}
             merchantIdentifier="merchant.com.dineease"
         >
             <QueryClientProvider client={queryClient}>
