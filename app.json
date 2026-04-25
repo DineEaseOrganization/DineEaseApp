@@ -2,7 +2,7 @@
   "expo": {
     "name": "DineEase",
     "slug": "dineease",
-    "version": "5.0.3",
+    "version": "5.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dineeaze.app",
-      "buildNumber": "5.0.3",
+      "buildNumber": "5.0.4",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "DineEase needs your location to show nearby restaurants.",
         "NSCameraUsageDescription": "DineEase uses your camera to let you upload a profile photo.",
@@ -39,7 +39,7 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.dineease.app",
-      "versionCode": 11,
+      "versionCode": 12,
       "jsEngine": "hermes",
       "config": {
         "googleMaps": {
