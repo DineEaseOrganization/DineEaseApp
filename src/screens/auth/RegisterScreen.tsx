@@ -1,8 +1,9 @@
 
     
 // src/screens/auth/RegisterScreen.tsx
-import React, {useState} from 'react';
+import React, {useRef, useState} from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import PhoneInput from 'react-native-phone-number-input';
 import {useAuth} from '../../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,12 +14,18 @@ interface RegisterScreenProps {
   navigation: any;
 }
 
+const getFlagEmoji = (isoCode: string) =>
+  isoCode.toUpperCase().replace(/./g, c =>
+    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
+  );
+
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [phoneCountryCode, setPhoneCountryCode] = useState('+357');
+  const [selectedIso, setSelectedIso] = useState('CY');
+  const phoneInputRef = useRef<PhoneInput>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,8 +46,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       return;
     }
 
-    if (!isValidPhone(phone)) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number.');
+    if (!phoneInputRef.current?.isValidNumber(phone)) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number for the selected country.');
       return;
     }
 
@@ -62,12 +69,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     setIsLoading(true);
 
     try {
+      const callingCode = phoneInputRef.current?.getCallingCode() ?? '357';
       const result = await register({
         firstName,
         lastName,
         email,
         phone,
-        phoneCountryCode,
+        phoneCountryCode: `+${callingCode}`,
         password
       });
 
@@ -99,11 +107,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  };
-
-  const isValidPhone = (phone: string) => {
-    const phoneRegex = /^[+]?[\d\s-()]{8,}$/;
-    return phoneRegex.test(phone);
   };
 
   const handleSignIn = () => {
@@ -196,24 +199,28 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Phone Number</Text>
-                <View style={styles.phoneInputContainer}>
-                  <TextInput
-                    style={styles.countryCodeInput}
-                    value={phoneCountryCode}
-                    onChangeText={setPhoneCountryCode}
-                    placeholder="+357"
-                    keyboardType="phone-pad"
-                    editable={!isLoading}
-                  />
-                  <TextInput
-                    style={styles.phoneInput}
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="99 123456"
-                    keyboardType="phone-pad"
-                    editable={!isLoading}
-                  />
-                </View>
+                <PhoneInput
+                  ref={phoneInputRef}
+                  defaultCode="CY"
+                  layout="first"
+                  onChangeText={setPhone}
+                  onChangeCountry={(country) => setSelectedIso(country.cca2 as string)}
+                  placeholder="Phone number"
+                  disabled={isLoading}
+                  withFlag={false}
+                  countryPickerProps={{ disableNativeModal: false }}
+                  renderDropdownImage={
+                    <View style={styles.phoneFlagContent}>
+                      <Text style={styles.phoneFlagEmoji}>{getFlagEmoji(selectedIso)}</Text>
+                      <Ionicons name="chevron-down" size={14} color="#555" />
+                    </View>
+                  }
+                  containerStyle={styles.phoneInputContainer}
+                  textContainerStyle={styles.phoneTextContainer}
+                  textInputStyle={styles.phoneTextInput}
+                  codeTextStyle={styles.phoneCodeText}
+                  flagButtonStyle={styles.phoneFlagButton}
+                />
               </View>
 
               <View style={styles.inputContainer}>
@@ -407,26 +414,40 @@ const styles = StyleSheet.create({
     padding: r(2),
   },
   phoneInputContainer: {
-    flexDirection: 'row',
-    gap: Spacing['2'] },
-  countryCodeInput: {
+    width: '100%',
+    height: r(52),
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: r(12),
-    paddingHorizontal: Spacing['4'],
-    paddingVertical: r(14),
-    fontSize: FontSize.lg,
-    backgroundColor: 'white',
-    width: r(80) },
-  phoneInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: r(12),
-    paddingHorizontal: Spacing['4'],
-    paddingVertical: r(14),
-    fontSize: FontSize.lg,
     backgroundColor: 'white' },
+  phoneTextContainer: {
+    backgroundColor: 'white',
+    paddingVertical: 0,
+    borderTopRightRadius: r(12),
+    borderBottomRightRadius: r(12) },
+  phoneTextInput: {
+    fontSize: FontSize.lg,
+    color: '#333',
+    height: r(50),
+    paddingVertical: 0,
+    marginVertical: 0 },
+  phoneCodeText: {
+    fontSize: FontSize.lg,
+    color: '#333' },
+  phoneFlagButton: {
+    width: 88,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopLeftRadius: r(12),
+    borderBottomLeftRadius: r(12) },
+  phoneFlagContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4 },
+  phoneFlagEmoji: {
+    fontSize: 24,
+    lineHeight: 30 },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
