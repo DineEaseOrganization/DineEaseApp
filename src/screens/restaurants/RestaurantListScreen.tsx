@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { RestaurantListScreenProps } from '../../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import { CuisineStat, TopCategory } from '../../types/api.types';
 import { useLocation } from '../../hooks/useLocation';
 import { mapRestaurantDetailToRestaurant, Restaurant } from '../../types';
@@ -36,13 +37,14 @@ const RestaurantListScreen: React.FC<RestaurantListScreenProps> = ({ navigation 
   const [searchRadius, setSearchRadius] = useState(10);
   const [activeTopCategory, setActiveTopCategory] = useState<TopCategory>(TopCategory.BOOKED);
 
+  const isFocused = useIsFocused();
   const lastGeocodeCoords = useRef<{ lat: number; lng: number } | null>(null);
   const { location: userLocation, loading: locationLoading, refreshLocation, isUsingDefault } = useLocation();
 
-  const { data: nearbyData, isLoading: loadingNearby } = useNearbyRestaurants(userLocation, searchRadius);
-  const { data: featuredData, isLoading: loadingFeatured, refetch: refetchFeatured } = useFeaturedRestaurants(userLocation, searchRadius);
-  const { data: topData, isLoading: loadingTop } = useTopRestaurants(activeTopCategory, userLocation, searchRadius);
-  const { data: cuisinesData, isLoading: loadingCuisines } = useAvailableCuisines(userLocation, searchRadius);
+  const { data: nearbyData, isLoading: loadingNearby } = useNearbyRestaurants(userLocation, searchRadius, isFocused);
+  const { data: featuredData, isLoading: loadingFeatured, refetch: refetchFeatured } = useFeaturedRestaurants(userLocation, searchRadius, isFocused);
+  const { data: topData, isLoading: loadingTop } = useTopRestaurants(activeTopCategory, userLocation, searchRadius, isFocused);
+  const { data: cuisinesData, isLoading: loadingCuisines } = useAvailableCuisines(userLocation, searchRadius, isFocused);
 
   const nearbyRestaurants: Restaurant[] = nearbyData?.restaurants.map(mapRestaurantDetailToRestaurant) ?? [];
   const featuredRestaurants: Restaurant[] = featuredData?.map(mapRestaurantDetailToRestaurant) ?? [];

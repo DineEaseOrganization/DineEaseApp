@@ -26,7 +26,7 @@ export const restaurantKeys = {
  * Nearby restaurants — stale time from CACHE_CONFIG.NEARBY_RESTAURANTS.
  * Refetches automatically when location or radius changes.
  */
-export function useNearbyRestaurants(location: LocationData | null, radius: number) {
+export function useNearbyRestaurants(location: LocationData | null, radius: number, enabled = true) {
   return useQuery({
     queryKey: restaurantKeys.nearby(
       location?.latitude ?? 0,
@@ -42,7 +42,7 @@ export function useNearbyRestaurants(location: LocationData | null, radius: numb
         0,
         20,
       ),
-    enabled: !!location,
+    enabled: enabled && !!location,
     staleTime: CACHE_CONFIG.NEARBY_RESTAURANTS,
   });
 }
@@ -50,7 +50,7 @@ export function useNearbyRestaurants(location: LocationData | null, radius: numb
 /**
  * Featured restaurants — stale time from CACHE_CONFIG.FEATURED_RESTAURANTS.
  */
-export function useFeaturedRestaurants(location: LocationData | null, radius: number) {
+export function useFeaturedRestaurants(location: LocationData | null, radius: number, enabled = true) {
   return useQuery({
     queryKey: restaurantKeys.featured(
       location?.latitude ?? 0,
@@ -64,7 +64,7 @@ export function useFeaturedRestaurants(location: LocationData | null, radius: nu
         location!.longitude,
         radius,
       ),
-    enabled: !!location,
+    enabled: enabled && !!location,
     staleTime: CACHE_CONFIG.FEATURED_RESTAURANTS,
   });
 }
@@ -77,6 +77,7 @@ export function useTopRestaurants(
   category: TopCategory,
   location: LocationData | null,
   radius: number,
+  enabled = true,
 ) {
   return useQuery({
     queryKey: restaurantKeys.top(
@@ -106,7 +107,7 @@ export function useTopRestaurants(
       }
       return data;
     },
-    enabled: !!location,
+    enabled: enabled && !!location,
     staleTime: CACHE_CONFIG.TOP_RESTAURANTS,
   });
 }
@@ -114,7 +115,7 @@ export function useTopRestaurants(
 /**
  * Available cuisine types — stale time from CACHE_CONFIG.CUISINES.
  */
-export function useAvailableCuisines(location: LocationData | null, radius: number) {
+export function useAvailableCuisines(location: LocationData | null, radius: number, enabled = true) {
   return useQuery({
     queryKey: restaurantKeys.cuisines(
       location?.latitude ?? 0,
@@ -127,7 +128,7 @@ export function useAvailableCuisines(location: LocationData | null, radius: numb
         location!.longitude,
         radius,
       ),
-    enabled: !!location,
+    enabled: enabled && !!location,
     staleTime: CACHE_CONFIG.CUISINES,
   });
 }
