@@ -102,7 +102,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   };
 
   const isValidPhone = (phone: string) => {
-    const phoneRegex = /^[+]?[\d\s-()]{8 }$/;
+    const phoneRegex = /^[+]?[\d\s-()]{8,}$/;
     return phoneRegex.test(phone);
   };
 
