@@ -70,15 +70,19 @@ Open `app.json` and update iOS values:
 
 ---
 
-#### 2. Configure App Store submit values in `eas.json`
+#### 2. App Store submit values are sourced from EAS environment variables
 
-In `eas.json`, set real values under `submit.production.ios`:
+`eas.json` references the three iOS submit values via env vars rather than hardcoding them:
 
-- `appleId`: your Apple account email
-- `ascAppId`: App Store Connect app ID (numeric)
-- `appleTeamId`: Apple Developer Team ID
+```json
+"ios": {
+  "appleId": "$APPLE_ID",
+  "ascAppId": "$ASC_APP_ID",
+  "appleTeamId": "$APPLE_TEAM_ID"
+}
+```
 
-These are placeholders in this repo and must be updated before submitting.
+`$APPLE_ID`, `$ASC_APP_ID`, and `$APPLE_TEAM_ID` are stored in EAS (production environment) — see [Apple submit env vars](#apple-submit-env-vars) below for the one-time setup. No changes are needed in `eas.json` per release.
 
 ---
 
@@ -171,3 +175,65 @@ eas secret:delete --name STRIPE_PUBLISHABLE_KEY --scope project
 | `STRIPE_PUBLISHABLE_KEY` | `production`, `preview-release` | Live Stripe publishable key — never commit to git |
 
 > `development` and `preview` profiles override this secret with the test key (`pk_test_...`) directly in `eas.json`, which is safe to commit.
+
+---
+
+## Apple submit env vars
+
+The three iOS submit values used by `eas submit --platform ios --profile production` are referenced in `eas.json` as `$APPLE_ID`, `$ASC_APP_ID`, `$APPLE_TEAM_ID` and resolved from EAS environment variables (production environment). This keeps the Apple ID (PII) and team identifiers out of source control.
+
+### One-time setup
+
+Run from the `DineEaseApp` directory:
+
+```bash
+# Apple ID (email used for App Store Connect login) — sensitive (PII)
+eas env:create --scope project --environment production \
+  --name APPLE_ID --value "you@example.com" --visibility sensitive
+
+# App Store Connect numeric app ID (visible in the App Store URL — not a secret, but kept consistent here)
+eas env:create --scope project --environment production \
+  --name ASC_APP_ID --value "1234567890" --visibility plaintext
+
+# Apple Developer Team ID (embedded in signed binaries — not a secret)
+eas env:create --scope project --environment production \
+  --name APPLE_TEAM_ID --value "ABCDE12345" --visibility plaintext
+```
+
+Visibility levels:
+- `sensitive` — hidden in build logs, only project admins can read the value
+- `plaintext` — readable by anyone with project access
+- `secret` — write-only, never readable after creation
+
+### Managing the values later
+
+```bash
+# Inspect what's set in the production environment
+eas env:list --environment production
+
+# Rotate a value (e.g. new Apple ID)
+eas env:update --environment production --name APPLE_ID
+
+# Remove
+eas env:delete --environment production --name APPLE_ID
+```
+
+### Submitting
+
+After setup, no extra flags are needed:
+
+```bash
+eas submit --platform ios --profile production
+```
+
+EAS substitutes `$APPLE_ID`, `$ASC_APP_ID`, and `$APPLE_TEAM_ID` from the production environment at submit time.
+
+> **Recommended alternative:** the App Store Connect API Key flow (`eas credentials` → "Set up an API Key") is the modern path. It avoids 2FA prompts during submit and means you don't need `APPLE_ID` at all. Consider migrating when convenient.
+
+### Current Apple submit env vars
+
+| Env var | Used by | Visibility | Notes |
+|---|---|---|---|
+| `APPLE_ID` | `submit.production.ios.appleId` | `sensitive` | Apple account email — PII |
+| `ASC_APP_ID` | `submit.production.ios.ascAppId` | `plaintext` | App Store Connect app ID |
+| `APPLE_TEAM_ID` | `submit.production.ios.appleTeamId` | `plaintext` | Apple Developer Team ID |

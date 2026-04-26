@@ -9,15 +9,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FontSize, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
+import { getFlagEmoji } from '../../utils/flagEmoji';
+import { ValidationUtils } from '../../utils/validation';
 
 interface RegisterScreenProps {
   navigation: any;
 }
-
-const getFlagEmoji = (isoCode: string) =>
-  isoCode.toUpperCase().replace(/./g, c =>
-    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
-  );
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const [firstName, setFirstName] = useState('');
@@ -41,7 +38,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       return;
     }
 
-    if (!isValidEmail(email)) {
+    if (!ValidationUtils.isValidEmail(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
@@ -102,11 +99,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   };
 
   const handleSignIn = () => {

@@ -94,7 +94,11 @@ export const API_CONFIG = {
   TIMEOUT: 30000, // 30 seconds
 };
 
-// Mobile API key — read from app.config.js extra (set at build time from EAS Secret)
+// Mobile API key — read from app.config.js extra (injected at build time via EAS).
+// NOTE: Values placed in expoConfig.extra are bundled into the app binary and are
+// trivially extractable. Treat this as a PUBLIC app identifier, not a secret.
+// Backend protections (rate limiting, key rotation, JWT for user auth) are what
+// actually defend the API; this key only identifies the mobile client.
 export const MOBILE_API_KEY: string =
   (Constants.expoConfig?.extra?.mobileApiKey as string) || '';
 

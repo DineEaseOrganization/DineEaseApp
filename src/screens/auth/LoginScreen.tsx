@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
+import { ValidationUtils } from '../../utils/validation';
 
 const NAVY = Colors.primary;
 
@@ -21,11 +22,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const [isLoading, setIsLoading] = useState(false);
   const {login} = useAuth();
 
-  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
   const handleLogin = async () => {
     if (!email || !password) { Alert.alert('Missing Information', 'Please fill in all fields.'); return; }
-    if (!isValidEmail(email)) { Alert.alert('Invalid Email', 'Please enter a valid email address.'); return; }
+    if (!ValidationUtils.isValidEmail(email)) { Alert.alert('Invalid Email', 'Please enter a valid email address.'); return; }
 
     setIsLoading(true);
     try {

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {ApiError, passwordService} from '../../services/api';
 import { FontSize, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
+import { ValidationUtils } from '../../utils/validation';
 
 interface ForgotPasswordScreenProps {
   navigation: any;
@@ -32,7 +33,7 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({navigation})
       return;
     }
 
-    if (!isValidEmail(email)) {
+    if (!ValidationUtils.isValidEmail(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
@@ -73,11 +74,6 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({navigation})
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   };
 
   const isButtonDisabled = isLoading || cooldownSeconds > 0;

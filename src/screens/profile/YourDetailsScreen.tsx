@@ -11,13 +11,9 @@ import { profileService } from '../../services/api';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
+import { getFlagEmoji } from '../../utils/flagEmoji';
 
 const NAVY = Colors.primary;
-
-const getFlagEmoji = (isoCode: string) =>
-  isoCode.toUpperCase().replace(/./g, c =>
-    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
-  );
 
 const phoneUtil = PhoneNumberUtil.getInstance();
 const DEFAULT_ISO = 'CY';
@@ -54,6 +50,9 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
         }
         if (phone.length > 32) {
             Alert.alert('Invalid Input', 'Phone number must not exceed 32 characters.'); return;
+        }
+        if (!phoneInputRef.current?.isValidNumber(phone)) {
+            Alert.alert('Invalid Phone', 'Please enter a valid phone number for the selected country.'); return;
         }
 
         const callingCode = phoneInputRef.current?.getCallingCode() ?? '357';
