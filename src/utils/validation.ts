@@ -9,12 +9,9 @@ export const ValidationUtils = {
     return emailRegex.test(email);
   },
 
-  /**
-   * Validate phone number format
-   */
   isValidPhone(phone: string): boolean {
-    const phoneRegex = /^[+]?[\d\s-()]{8,}$/;
-    return phoneRegex.test(phone);
+    const digits = phone.replace(/\D/g, '');
+    return digits.length >= 4 && digits.length <= 15;
   },
 
   /**

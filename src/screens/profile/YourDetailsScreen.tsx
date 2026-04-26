@@ -1,6 +1,9 @@
 // src/screens/profile/YourDetailsScreen.tsx
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import PhoneInput from 'react-native-phone-number-input';
+// @ts-ignore — google-libphonenumber ships no types
+import { PhoneNumberUtil } from 'google-libphonenumber';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -8,8 +11,19 @@ import { profileService } from '../../services/api';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '../../theme';
 import { r, rf } from '../../theme/responsive';
 import AppText from '../../components/ui/AppText';
+import { getFlagEmoji } from '../../utils/flagEmoji';
 
 const NAVY = Colors.primary;
+
+const phoneUtil = PhoneNumberUtil.getInstance();
+const DEFAULT_ISO = 'CY';
+
+const dialCodeToIso = (dialCode?: string): string => {
+  const numeric = parseInt((dialCode || '').replace(/\D/g, ''), 10);
+  if (!numeric) return DEFAULT_ISO;
+  const region = phoneUtil.getRegionCodeForCountryCode(numeric);
+  return region && region !== 'ZZ' ? region : DEFAULT_ISO;
+};
 
 interface YourDetailsScreenProps {
     navigation: any;
@@ -20,10 +34,12 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
 
     const [firstName, setFirstName] = useState(user?.firstName || '');
     const [lastName, setLastName] = useState(user?.lastName || '');
-    const [phoneCountryCode, setPhoneCountryCode] = useState(user?.phoneCountryCode || '+357');
     const [phone, setPhone] = useState(user?.phone || '');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [resetKey, setResetKey] = useState(0);
+    const [selectedIso, setSelectedIso] = useState(dialCodeToIso(user?.phoneCountryCode));
+    const phoneInputRef = useRef<PhoneInput>(null);
 
     const handleSave = async () => {
         if (!firstName || !lastName || !phone) {
@@ -35,9 +51,12 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
         if (phone.length > 32) {
             Alert.alert('Invalid Input', 'Phone number must not exceed 32 characters.'); return;
         }
-        if (!/^\+?[0-9]{1,4}$/.test(phoneCountryCode)) {
-            Alert.alert('Invalid Input', 'Invalid phone country code format.'); return;
+        if (!phoneInputRef.current?.isValidNumber(phone)) {
+            Alert.alert('Invalid Phone', 'Please enter a valid phone number for the selected country.'); return;
         }
+
+        const callingCode = phoneInputRef.current?.getCallingCode() ?? '357';
+        const newPhoneCountryCode = `+${callingCode}`;
 
         setIsSaving(true);
         try {
@@ -45,7 +64,7 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
             if (firstName !== user?.firstName) updateData.firstName = firstName;
             if (lastName !== user?.lastName) updateData.lastName = lastName;
             if (phone !== user?.phone) updateData.phone = phone;
-            if (phoneCountryCode !== user?.phoneCountryCode) updateData.phoneCountryCode = phoneCountryCode;
+            if (newPhoneCountryCode !== user?.phoneCountryCode) updateData.phoneCountryCode = newPhoneCountryCode;
 
             if (Object.keys(updateData).length === 0) { setIsEditing(false); return; }
 
@@ -66,8 +85,9 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
     const handleCancel = () => {
         setFirstName(user?.firstName || '');
         setLastName(user?.lastName || '');
-        setPhoneCountryCode(user?.phoneCountryCode || '+357');
         setPhone(user?.phone || '');
+        setSelectedIso(dialCodeToIso(user?.phoneCountryCode));
+        setResetKey(k => k + 1);
         setIsEditing(false);
     };
 
@@ -202,27 +222,34 @@ const YourDetailsScreen: React.FC<YourDetailsScreenProps> = ({ navigation }) => 
                     <View style={styles.fieldRow}>
                         <AppText variant="label" color={Colors.textOnLightTertiary} style={styles.fieldLabel}>PHONE NUMBER</AppText>
                         <View style={styles.phoneRow}>
-                            <TextInput
-                                style={[styles.countryCodeInput, !isEditing && styles.fieldInputReadOnly]}
-                                value={phoneCountryCode}
-                                onChangeText={setPhoneCountryCode}
-                                placeholder="+357"
-                                placeholderTextColor={Colors.textOnLightTertiary}
-                                keyboardType="phone-pad"
-                                editable={isEditing}
-                                maxLength={5}
+                            <PhoneInput
+                                key={resetKey}
+                                ref={phoneInputRef}
+                                defaultCode={dialCodeToIso(user?.phoneCountryCode) as any}
+                                defaultValue={phone}
+                                layout="first"
+                                onChangeText={setPhone}
+                                onChangeCountry={(country) => setSelectedIso(country.cca2 as string)}
+                                disabled={!isEditing}
+                                withFlag={false}
+                                countryPickerProps={{ disableNativeModal: false }}
+                                renderDropdownImage={
+                                  isEditing ? (
+                                    <View style={styles.phoneFlagContent}>
+                                      <Text style={styles.phoneFlagEmoji}>{getFlagEmoji(selectedIso)}</Text>
+                                      <Ionicons name="chevron-down" size={13} color={Colors.textOnLightTertiary} />
+                                    </View>
+                                  ) : (
+                                    <Text style={styles.phoneFlagEmoji}>{getFlagEmoji(selectedIso)}</Text>
+                                  )
+                                }
+                                containerStyle={[styles.phonePickerContainer, !isEditing && styles.phonePickerReadOnly]}
+                                textContainerStyle={styles.phonePickerTextContainer}
+                                textInputStyle={[styles.phonePickerInput, !isEditing && styles.fieldInputReadOnly]}
+                                codeTextStyle={[styles.phonePickerCode, !isEditing && styles.fieldInputReadOnly]}
+                                flagButtonStyle={styles.phonePickerFlagBtn}
                             />
-                            <View style={{ flex: 1, position: 'relative' }}>
-                                <TextInput
-                                    style={[styles.phoneInput, !isEditing && styles.fieldInputReadOnly, { paddingRight: r(90) }]}
-                                    value={phone}
-                                    onChangeText={setPhone}
-                                    placeholder="Phone number"
-                                    placeholderTextColor={Colors.textOnLightTertiary}
-                                    keyboardType="phone-pad"
-                                    editable={isEditing}
-                                    maxLength={32}
-                                />
+                            <View style={styles.phoneVerifyOverlay}>
                                 {user?.phoneVerified ? (
                                     <View style={styles.phoneVerifiedPill}>
                                         <Ionicons name="checkmark-circle" size={rf(13)} color={Colors.success} />
@@ -392,24 +419,46 @@ const styles = StyleSheet.create({
         borderRadius: Radius.full },
 
     // Phone row
-    phoneRow: { flexDirection: 'row', gap: Spacing['2'] },
-    countryCodeInput: {
-        width: r(64),
+    phoneRow: { position: 'relative' },
+    phonePickerContainer: {
+        width: '100%',
+        height: r(40),
+        backgroundColor: 'transparent',
+        borderBottomWidth: 1,
+        borderColor: Colors.cardBorder },
+    phonePickerReadOnly: {
+        borderBottomWidth: 0 },
+    phonePickerTextContainer: {
+        backgroundColor: 'transparent',
+        paddingVertical: 0 },
+    phonePickerInput: {
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
         color: Colors.textOnLight,
-        paddingVertical: r(4),
-        textAlign: 'center' },
-    phoneInput: {
-        flex: 1,
+        height: r(38),
+        paddingVertical: 0,
+        paddingRight: r(80) },
+    phonePickerCode: {
         fontSize: FontSize.sm,
         fontFamily: FontFamily.regular,
-        color: Colors.textOnLight,
-        paddingVertical: r(4) },
-    phoneVerifiedPill: {
+        color: Colors.textOnLight },
+    phonePickerFlagBtn: {
+        width: 72,
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center' },
+    phoneFlagContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4 },
+    phoneFlagEmoji: {
+        fontSize: 20,
+        lineHeight: 26 },
+    phoneVerifyOverlay: {
         position: 'absolute',
-        right: r(0),
-        top: r(3),
+        right: 0,
+        top: r(8) },
+    phoneVerifiedPill: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing['1'],
@@ -418,9 +467,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing['2'],
         paddingVertical: r(4) },
     phoneVerifyBtn: {
-        position: 'absolute',
-        right: r(0),
-        top: r(1),
         backgroundColor: Colors.accent,
         paddingHorizontal: Spacing['3'],
         paddingVertical: r(4),

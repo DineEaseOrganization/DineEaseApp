@@ -1,7 +1,7 @@
 // src/services/api/restaurantService.ts
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
-import { API_CONFIG } from '../../config/api.config';
+import { API_CONFIG, MOBILE_API_KEY } from '../../config/api.config';
 import {
   CuisineStat,
   NearbyRestaurantsResponse,
@@ -17,7 +17,7 @@ import {
 
 class RestaurantService {
   private readonly BASE_URL = `${API_CONFIG.RESTAURANT_SERVICE_URL}/customer/restaurants`;
-  private readonly API_KEY = process.env.MOBILE_API_KEY || '';
+  private readonly API_KEY = MOBILE_API_KEY;
 
   private getHeaders() {
     return {

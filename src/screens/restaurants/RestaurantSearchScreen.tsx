@@ -53,6 +53,7 @@ const RestaurantSearchScreen = () => {
     const mapRef = useRef<MapView | null>(null);
     const slideAnim = useRef(new Animated.Value(0)).current;
     const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasInitializedRef = useRef(false);
 
     const showPreview = () => {
         Animated.timing(slideAnim, {
@@ -138,9 +139,8 @@ const RestaurantSearchScreen = () => {
         try {
             setLoading(true);
             const res = await restaurantService.getNearbyRestaurants(lat, lng, radius, 0, 50);
-            setRestaurants([]);
             if (res.restaurants.length === 0) {
-                Alert.alert('No Restaurants Found', `No restaurants found within ${radius}km. Try increasing the radius.`, [{ text: 'OK' }]);
+                setRestaurants([]);
                 return;
             }
             const mapped: Restaurant[] = res.restaurants.map((r) => ({
@@ -167,7 +167,8 @@ const RestaurantSearchScreen = () => {
     };
 
     useEffect(() => {
-        if (!location) return;
+        if (!location || hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
         const initialRegion = { latitude: location.latitude, longitude: location.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 };
         setCurrentRegion(initialRegion);
         loadRestaurants(location.latitude, location.longitude);

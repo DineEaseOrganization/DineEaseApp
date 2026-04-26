@@ -1,7 +1,7 @@
 // src/services/api/processingService.ts
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
-import { API_CONFIG } from '../../config/api.config';
+import { API_CONFIG, MOBILE_API_KEY } from '../../config/api.config';
 import { AvailableSectionsResponse, AvailabilitySlotsResponse, ReservationDto, ReservationTagRequest, SectionTableTypesResponse } from '../../types/api.types';
 
 export interface SubmitReviewRequest {
@@ -33,7 +33,7 @@ export interface RatingCategory {
 
 class ProcessingService {
   private readonly BASE_URL = `${API_CONFIG.PROCESSING_SERVICE_URL}/mobile`;
-  private readonly API_KEY = process.env.MOBILE_API_KEY || '';
+  private readonly API_KEY = MOBILE_API_KEY;
 
   private getHeaders() {
     return {

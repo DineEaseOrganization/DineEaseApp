@@ -264,6 +264,7 @@ class AuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
+        phoneCountryCode: data.phoneCountryCode,
         emailVerified: data.emailVerified,
         ...(data.profileImage && {profileImage: data.profileImage}),
       };
