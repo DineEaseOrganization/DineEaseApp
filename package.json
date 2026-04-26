@@ -1,6 +1,6 @@
 {
   "name": "dineeaseapp",
-  "version": "1.0.0",
+  "version": "5.1.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start --port 8090",
