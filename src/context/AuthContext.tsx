@@ -2,6 +2,7 @@ import React, {createContext, ReactNode, useContext, useEffect, useState} from '
 import {useQueryClient} from '@tanstack/react-query';
 import {ApiError, authService} from '../services/api';
 import {authEventEmitter} from '../services/api/apiClient';
+import {restaurantKeys} from '../hooks/useRestaurantQueries';
 
 interface User {
     customerId: string; // UUID (external_ref) - also in JWT as customerId claim (BIGINT mobile_customer_id)
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
     // don't reflect the new caller's `internalTester` claim (e.g. test
     // restaurants vanishing/appearing inconsistently across radius tabs).
     const clearRestaurantCaches = () => {
-        queryClient.removeQueries({queryKey: ['restaurants']});
+        queryClient.removeQueries({queryKey: restaurantKeys.all});
     };
 
     // Check for stored user data on app launch
