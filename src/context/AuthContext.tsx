@@ -89,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
             // Clear invalid auth data
             await authService.logout();
             setUser(null);
+            clearRestaurantCaches();
         } finally {
             setLoading(false);
         }
