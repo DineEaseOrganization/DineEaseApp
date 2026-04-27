@@ -1,6 +1,8 @@
 import React, {createContext, ReactNode, useContext, useEffect, useState} from 'react';
+import {useQueryClient} from '@tanstack/react-query';
 import {ApiError, authService} from '../services/api';
 import {authEventEmitter} from '../services/api/apiClient';
+import {restaurantKeys} from '../hooks/useRestaurantQueries';
 
 interface User {
     customerId: string; // UUID (external_ref) - also in JWT as customerId claim (BIGINT mobile_customer_id)
@@ -49,6 +51,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+
+    // Drop every restaurant-related cache entry. Per-radius/per-location keys
+    // would otherwise survive across identities and serve stale results that
+    // don't reflect the new caller's `internalTester` claim (e.g. test
+    // restaurants vanishing/appearing inconsistently across radius tabs).
+    const clearRestaurantCaches = () => {
+        queryClient.removeQueries({queryKey: restaurantKeys.all});
+    };
 
     // Check for stored user data on app launch
     useEffect(() => {
@@ -60,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
 
         return authEventEmitter.subscribe(() => {
             setUser(null);
+            clearRestaurantCaches();
         });
     }, []);
 
@@ -77,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
             // Clear invalid auth data
             await authService.logout();
             setUser(null);
+            clearRestaurantCaches();
         } finally {
             setLoading(false);
         }
@@ -98,6 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
                     profileImage: response.data.profileImage,
                 };
 
+                clearRestaurantCaches();
                 setUser(userData);
 
                 return {
@@ -150,6 +164,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
                     profileImage: response.data.profileImage,
                 };
 
+                clearRestaurantCaches();
                 setUser(newUser);
 
                 return {
@@ -186,6 +201,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
             console.error('Logout error:', error);
         } finally {
             setUser(null);
+            clearRestaurantCaches();
         }
     };
 

@@ -10,16 +10,17 @@ import { CACHE_CONFIG } from '../config/cache.config';
  * Changing any parameter changes the key → triggers a new query.
  */
 export const restaurantKeys = {
+  all: ['restaurants'] as const,
   nearby: (lat: number, lng: number, radius: number, page: number) =>
-    ['restaurants', 'nearby', lat, lng, radius, page] as const,
+    [...restaurantKeys.all, 'nearby', lat, lng, radius, page] as const,
   featured: (lat: number, lng: number, radius: number) =>
-    ['restaurants', 'featured', lat, lng, radius] as const,
+    [...restaurantKeys.all, 'featured', lat, lng, radius] as const,
   top: (category: string, lat: number, lng: number, radius: number) =>
-    ['restaurants', 'top', category, lat, lng, radius] as const,
+    [...restaurantKeys.all, 'top', category, lat, lng, radius] as const,
   cuisines: (lat: number, lng: number, radius: number) =>
-    ['restaurants', 'cuisines', lat, lng, radius] as const,
+    [...restaurantKeys.all, 'cuisines', lat, lng, radius] as const,
   detail: (id: number) =>
-    ['restaurants', 'detail', id] as const,
+    [...restaurantKeys.all, 'detail', id] as const,
 };
 
 /**
